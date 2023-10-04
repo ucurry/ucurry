@@ -1,0 +1,4 @@
+(executable
+ (public_name ucurry)
+ (name main)
+ (libraries ucurry))
