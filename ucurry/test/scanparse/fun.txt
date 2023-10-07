@@ -1,1 +1,1 @@
-fun addOne 
+fun addOne : int -> int 
