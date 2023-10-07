@@ -27,7 +27,6 @@ type typ =
   | PRODUCT_TY of typ * typ
   | FUNCTION_TY of typ * typ
   | CONSTRUCTOR_TY of string
-  | TY_VAR of string 
 
 type variable = typ * string 
 
