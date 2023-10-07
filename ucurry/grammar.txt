@@ -1,0 +1,39 @@
+program -> { def | comment }
+comment -> ^# 
+def -> fun variable { variable } = expr; -- need to check if this really works
+			|datatype constructor-name = constructor { BAR constructor} -- TODO: distinguish | and |
+			|expr;
+
+expr -> literal
+    | variable-name
+    | variable-name = expr
+    | expr { expr } 
+    | if expr then expr else expr
+    | let { variable = expr }+ in expr
+    | begin { expr; }
+    | expr binop expr 
+    | unop expr 
+    | lambda
+    | constructor-name { expr }
+    | case expr of case-expression { BAR case-expression }
+
+variable -> type variable-name		
+type -> int | str | bool | type list | type * type | type -> type | constructor-name | type-variable | unit
+variable-name -> [a-z|_][a-z|A-Z|0-9|_]* // define legal format for variable name  
+type-variable -> ^'[a-z]$
+
+literal -> integer | string | boolean | list | tuple | unit 
+integer -> ^-?\d+$
+boolean -> true | false
+unit -> ()
+list -> [] | [ { literal, } literal ] -- we will later define a syntax sugar for infinite list
+tuple -> ({ literal, }+ literal)
+
+unop -> not | ~ | hd | tl
+binop -> + | - | * | div | mod | == | != | < | <= | >  | >=
+lambda -> \{ variable } -> expr
+
+cosntructor -> constructor-name of type
+constructor-name -> [A-Z][a-z|A-Z]* 
+case-expression -> pattern => expr
+pattern -> variable-name | constructor-name { literal | constructor-name { pattern } | variable-name } | _ 
