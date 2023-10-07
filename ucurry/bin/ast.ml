@@ -1,7 +1,6 @@
 (* Abstract Syntax Tree and functions for printing it *)
 
 (* TODO: do we want to convert top-level function to global variable binding to a lambda? if so, where should we do this *)
-
 type binop =
   | Add
   | Sub
@@ -27,6 +26,9 @@ type typ =
   | LIST_TY
   | PRODUCT_TY of typ * typ
   | FUNCTION_TY of typ * typ
+  | CONSTRUCTOR_TY of string
+
+type variable = typ * string 
 
 type literal =
   | INT of int
@@ -50,18 +52,18 @@ type expr =
   | Assign of string * expr
   | Apply of expr * expr list
   | If of expr * expr * expr
-  | Let of string * expr * expr
+  | Let of (variable * expr) list  * expr
   | Begin of expr list
   | Binop of expr * binop * expr
   | Unop of uop * expr
-  | Lambda of string * expr * expr
+  | Lambda of variable list * expr
   | Construct of string * expr list
   | Case of expr * case_expr
 
 and case_expr = pattern * expr
 
 type def =
-  | Function of string * string list * expr
+  | Function of variable * variable list * expr
   | Datatype of string * constructor list
   | Exp of expr
 
