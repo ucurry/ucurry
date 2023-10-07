@@ -1,5 +1,5 @@
 program -> { def | comment }
-comment -> ^# 
+comment -> [^--{.}+*]
 def -> fun variable { variable } = expr; -- need to check if this really works
 			|datatype constructor-name = constructor { BAR constructor} -- TODO: distinguish | and |
 			|expr;
