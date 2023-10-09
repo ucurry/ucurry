@@ -1,6 +1,5 @@
 (* Abstract Syntax Tree and functions for printing it *)
 
-(* TODO: do we want to convert top-level function to global variable binding to a lambda? if so, where should we do this *)
 type binop =
   | Add
   | Sub
@@ -19,7 +18,6 @@ type binop =
 
 type uop = Neg | Not | Hd | Tl
 
-(* type -> int | string | boolean | type list | type * type | type -> type *)
 type typ =
   | INT_TY
   | STRING_TY
@@ -37,7 +35,6 @@ type literal =
   | UNIT
 (* | Tuple of literal * literal *)
 
-(* pattern -> variable-name | constructor-name { literal | variable-name } | _  *)
 type pattern =
   | VAR_PAT of string
   | LIT_PAT of literal
@@ -90,12 +87,6 @@ let string_of_binop = function
   | Cons -> "::"
 
 let string_of_uop = function Neg -> "-" | Not -> "!" | Hd -> "hd" | Tl -> "tl"
-
-(* let rec string_of_listLiteral = function
-   | EmptyList -> "[]"
-   | Pair (l, EmptyList) -> "[" ^ string_of_literal l ^ "]"
-   | Pair (l, l') ->
-       "[" ^ string_of_literal l ^ "; " ^ string_of_listLiteral l' ^ "]" *)
 
 let rec string_of_literal = function
   | INT l -> string_of_int l

@@ -29,7 +29,7 @@
 program:
     defs EOF { List.rev $1 }
 
-defs: // TODO: reverse the list of definition at the end  
+defs:   
     /* nothing */            { [] }
     | defs fundef SEMI       { $2 :: $1 }
     | defs vardef SEMI       { $2 :: $1 }
