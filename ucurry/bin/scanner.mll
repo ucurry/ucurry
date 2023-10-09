@@ -77,8 +77,8 @@ rule token = parse
 | "()"       { UNIT }
 | digits as lxm{ INTEGER(int_of_string lxm) }
 | '\"'((simple_char | '\\'escape_char)* as lxm)'\"' { STRINGLIT(lxm) }
-| ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm{ NAME(lxm) }
-| ['A'-'Z']['a'-'z' 'A'-'Z']* as lxm { CAPNAME(lxm) }
+| ['A'-'Z']['a'-'z' 'A'-'Z']* as lxm { CAPNAME(lxm)  }
+| ['a'-'z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm{ NAME(lxm) }
 | _ as char{ raise (Failure("illegal character " ^ Char.escaped char)) }
 
 and comment = parse 

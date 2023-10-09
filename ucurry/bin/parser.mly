@@ -33,8 +33,8 @@ defs: // TODO: reverse the list of definition at the end
     /* nothing */            { [] }
     | defs fundef SEMI       { $2 :: $1 }
     | defs vardef SEMI       { $2 :: $1 }
-    | defs exp SEMI          { (Exp $2) :: $1 }
     | defs datatypedef SEMI  { $2 :: $1 }
+    | defs exp SEMI          { (Exp $2) :: $1 }
 
 fundef:
     FUNCTION COLON funtype COLON NAME formals ASN exp
@@ -44,10 +44,11 @@ vardef:
     typ NAME ASN exp { Variable ($1, $2, $4) }
 
 datatypedef:
-  DATATYPE CAPNAME ASN constructor_list { Datatype ($2, List.rev $4) }
+    DATATYPE CAPNAME ASN constructor_list { Datatype ($2, List.rev $4) }
 
 constructor_list:
-    constructor  { [$1] }
+                 { [] }
+  | constructor  { [$1] }
   | constructor_list BAR constructor { $3 :: $1 }
 
 constructor:
@@ -79,7 +80,8 @@ case_exp_list:
 pattern:
     NAME             { VAR_PAT $1 }
   | literal          { LIT_PAT $1 }
-  | CAPNAME pattern  { CON_PAT ($1, $2) } // currently our parser doesn't support tuple type, thus a value constructor can at most take in one arg
+  | CAPNAME          { CON_PAT ($1, None) }
+  | CAPNAME pattern  { CON_PAT ($1, Some $2) } // currently our parser doesn't support tuple type, thus a value constructor can at most take in one arg
   | WILDCARD         { WILDCARD }
 
 lambda:
@@ -103,6 +105,7 @@ typ:
   | LISTTYPE { BOOL_TY }  
   | BOOLTYPE { LIST_TY }  
   | UNITTYPE { UNIT_TY }
+  | CAPNAME  { CONSTRUCTOR_TY $1}
   | funtype  { $1 }
 
 literal:

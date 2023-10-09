@@ -1,3 +1,13 @@
 -- def -> expr -> case
-int x = case color of Green => 1 | Red => 2 | Black => 3
-int y = case alphaColor of Green alpha => alpha | Red alpha => alpha | _ => 0 ; 
+case color of 1 => 1;
+case color of Green => 1;
+case color of Green x => 1; 
+
+case color of 
+   Green => 1 
+ | Red   => 2 
+ | Black => 3;
+
+case alphaColor of 
+    Green alpha => alpha 
+  | Red alpha   => alpha ; 

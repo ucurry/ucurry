@@ -41,7 +41,7 @@ type literal =
 type pattern =
   | VAR_PAT of string
   | LIT_PAT of literal
-  | CON_PAT of string * pattern
+  | CON_PAT of string * pattern option
   | WILDCARD
 
 type expr =
@@ -68,7 +68,7 @@ type def =
   | Exp of expr
 
 and constructor = ValCon of string * typ option
-
+ 
 type program = def list
 
 (* Pretty-printing functions *)
@@ -108,7 +108,8 @@ let rec string_of_literal = function
 let rec string_of_pattern = function
   | VAR_PAT s -> s
   | LIT_PAT l -> string_of_literal l
-  | CON_PAT (c, pl) -> c ^ "(" ^ string_of_pattern pl ^ ")"
+  | CON_PAT (c, Some pl) -> c ^ " " ^ string_of_pattern pl
+  | CON_PAT (c, None) -> c
   | WILDCARD -> "_"
 
 let rec string_of_typ = function
@@ -122,7 +123,6 @@ let rec string_of_typ = function
   | CONSTRUCTOR_TY s -> s
 
 let string_of_variable (t, s) = string_of_typ t ^ " " ^ s
-let string_of_constructor _ = ""
 
 let rec string_of_expr = function
   | Literal l -> string_of_literal l
@@ -142,76 +142,25 @@ let rec string_of_expr = function
   | Lambda (t, vl, e) ->
       "\\(" ^ string_of_typ t ^ ")" ^ String.concat " " vl ^ " -> " ^ string_of_expr e
   | Construct (c, e) -> "CONSTRUCTOR " ^ c ^ " " ^ string_of_expr e
-  (* | Case (e, cel) ->
-      "case " ^ string_of_expr e ^ " of\n"
-      ^ String.concat " \n| " (List.map string_of_case_expr cel) *)
+  | Case (e, cel) ->
+      "case " ^ string_of_expr e ^ " of\n\t"
+      ^ "  " ^ String.concat " \n\t| " (List.map (fun (pat, exp) -> string_of_pattern pat ^ " => " ^ string_of_expr exp) cel)
   | _ -> "pretty printer not implemented for this AST node\n"
 
-let string_of_def = function
-  (* | Function (v, vl, e) ->
-         "let " ^ string_of_variable v ^ " " ^ String.concat " " vl ^ " = "
-         ^ string_of_expr e
-     | Datatype (c, cl) ->
-         "type " ^ c ^ " = " ^ String.concat " | " (List.map string_of_constructor cl)
-     | Variable (v, e) -> "let " ^ string_of_variable v ^ " = " ^ string_of_expr e *)
+let string_of_constructor = function
+  | ValCon (c, None) -> c
+  | ValCon (c, Some t) -> c ^ " of " ^ string_of_typ t
+
+  let string_of_def = function
+   | Function (ty, f, args, e) ->
+      "fun : " ^ string_of_typ ty ^ ":\n" ^
+      f ^ String.concat " " args ^ " = " ^ string_of_expr e ^ ";"
+  | Datatype (typename, cls) -> 
+      "datatype " ^ typename ^ " = " ^ String.concat " | " (List.map string_of_constructor cls) ^ ";"
   | Exp e -> string_of_expr e ^ ";"
   | Variable (ty, name, e) ->
       string_of_typ ty ^ " " ^ name ^ " = " ^ string_of_expr e
-  | _ -> "We only pretty print expressions right now\n"
 
 let string_of_program defs =
   let () = print_string "Printing Roundtrip\n" in
   String.concat "\n" (List.map string_of_def defs)
-(* | _ -> "go fuck yourself we haven't started yet\n" *)
-
-(* let rec string_of_expr = function
-   | Literal l -> string_of_literal l
-   | Var s -> s
-   | Assign (v, e) -> v ^ " = " ^ string_of_expr e
-   | Apply (e, el) ->
-       string_of_expr e ^ "("
-       ^ String.concat ", " (List.map string_of_expr el)
-       ^ ")"
-   | If (e1, e2, e3) ->
-       "if " ^ string_of_expr e1 ^ " then " ^ string_of_expr e2 ^ " else "
-       ^ string_of_expr e3
-   | Let (ves, e2) ->
-       "let " ^ v ^ " = " ^ string_of_expr e1 ^ " in " ^ string_of_expr e2
-   | Begin el ->
-       "begin " ^ String.concat " " (List.map string_of_expr el) ^ " end"
-   | Binop (e1, o, e2) ->
-       string_of_expr e1 ^ " " ^ string_of_binop o ^ " " ^ string_of_expr e2
-   | Unop (o, e) -> string_of_uop o ^ string_of_expr e
-   | Lambda (v, e1, e2) ->
-       "fun " ^ v ^ " -> " ^ string_of_expr e1 ^ " in " ^ string_of_expr e2
-   | Construct (c, el) ->
-       c ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
-   | Case (e, (p, e1)) ->
-       "case " ^ string_of_expr e ^ " of " ^ string_of_pattern p ^ " -> "
-       ^ string_of_expr e1 *)
-
-(* let rec string_of_typ ty =
-   match ty with
-   | INT_TY -> "int"
-   | STRING_TY -> "string"
-   | BOOL_TY -> "bool"
-   | LIST_TY -> "list"
-   | PRODUCT_TY (t1, t2) ->
-       "(" ^ string_of_typ t1 ^ " * " ^ string_of_typ t2 ^ ")"
-   | FUNCTION_TY (t1, t2) ->
-       "(" ^ string_of_typ t1 ^ " -> " ^ string_of_typ t2 ^ ")" *)
-
-(*
-   let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"
-
-   let string_of_fdecl fdecl =
-     string_of_typ fdecl.typ ^ " " ^
-     fdecl.fname ^ "(" ^ String.concat ", " (List.map snd fdecl.formals) ^
-     ")\n{\n" ^
-     String.concat "" (List.map string_of_vdecl fdecl.locals) ^
-     String.concat "" (List.map string_of_stmt fdecl.body) ^
-     "}\n" *)
-
-(* let string_of_program (vars, funcs) =
-   String.concat "" (List.map string_of_vdecl vars) ^ "\n" ^
-   String.concat "\n" (List.map string_of_fdecl funcs) *)
