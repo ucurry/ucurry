@@ -1,0 +1,4 @@
+-- def -> datatype
+datatype Color = Green; 
+-- datatype AlphaColor = Green of int | Red of int | Black of int ; 
+-- datatype Background = Pure of Color | Number of int ;
