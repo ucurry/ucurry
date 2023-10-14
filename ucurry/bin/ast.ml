@@ -22,7 +22,7 @@ type typ =
   | INT_TY
   | STRING_TY
   | BOOL_TY
-  | LIST_TY
+  | LIST_TY of typ
   | UNIT_TY
   | FUNCTION_TY of typ * typ
   | CONSTRUCTOR_TY of string
@@ -107,7 +107,7 @@ let rec string_of_typ = function
   | INT_TY -> "int"
   | STRING_TY -> "string"
   | BOOL_TY -> "bool"
-  | LIST_TY -> "list"
+  | LIST_TY typ -> (string_of_typ typ) ^ " list"
   | UNIT_TY -> "unit"
   | FUNCTION_TY (t1, t2) ->
       "(" ^ string_of_typ t1 ^ " -> " ^ string_of_typ t2 ^ ")"
@@ -145,12 +145,12 @@ let string_of_constructor = function
   let string_of_def = function
    | Function (ty, f, args, e) ->
       "fun : " ^ string_of_typ ty ^ ":\n" ^
-      f ^ String.concat " " args ^ " = " ^ string_of_expr e ^ ";"
+      f ^ " " ^ String.concat " " args ^ " = " ^ string_of_expr e ^ ";"
   | Datatype (typename, cls) -> 
       "datatype " ^ typename ^ " = " ^ String.concat " | " (List.map string_of_constructor cls) ^ ";"
   | Exp e -> string_of_expr e ^ ";"
   | Variable (ty, name, e) ->
-      string_of_typ ty ^ " " ^ name ^ " = " ^ string_of_expr e
+      string_of_typ ty ^ " " ^ name ^ " = " ^ string_of_expr e ^ ";"
 
 let string_of_program defs =
   let () = print_string "Printing Roundtrip\n" in

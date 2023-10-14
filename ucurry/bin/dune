@@ -16,5 +16,5 @@
 
 (executable
  (public_name ucurry)
- (name main)
+ (name toplevel)
  (libraries ucurry))

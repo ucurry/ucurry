@@ -22,6 +22,19 @@
 %token UNIT
 %token EOF 
 
+
+%right ASN 
+%left OR 
+%left AND 
+%left CONS 
+%left NEQ EQUAL LESS LEQ GREATER GEQ 
+%left ADD SUB  
+%left TIMES DIVIDE MOD 
+%right HD TL NEG NOT 
+%left ARROW
+%left LISTTYPE
+%nonassoc EOF
+
 %start program 
 %type <Ast.program> program
 
@@ -102,10 +115,10 @@ funtype:
 typ:
     INTTYPE  { INT_TY }  
   | STRTYPE  { STRING_TY }  
-  | LISTTYPE { BOOL_TY }  
-  | BOOLTYPE { LIST_TY }  
+  | BOOLTYPE { BOOL_TY }  
   | UNITTYPE { UNIT_TY }
   | CAPNAME  { CONSTRUCTOR_TY $1}
+  | typ LISTTYPE { LIST_TY $1 }  
   | funtype  { $1 }
 
 literal:

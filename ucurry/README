@@ -3,3 +3,26 @@ Command lines:
 
     dune build                 # to compile
     dune exec ucurry -- -a     # to open the interpreter
+
+# The µcurry Compiler
+
+Coded in OCaml, this compiler takes a minimal functional language and compiles 
+it down to LLVM IR. The compiler now only supports scanning and parsing.
+
+## How to compile and execute
+
+In the toplevel directory, run `dune build` to build the compiler. 
+Run `dune exec ucurry -- -a` to run the compiler that prints the scanner and
+parser roundtrip, which scans and parse input text (program) to structured AST
+and pretty-prints back to strings.
+
+## Test Script
+
+## Syntax to be added
+
+## Contact
+
+- Alexander Bai (alexander.bai@tufts.edu)
+- Vivian Li (yike.li@tufts.edu)
+- Stephanie Xu (ziqi.xu@tufts.edu)
+- Matt Zhou (chuxuan.zhou@tufts.edu)

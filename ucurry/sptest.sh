@@ -1,6 +1,6 @@
 #! /bin/sh
 
-for f in test/scanparse/*.uc
+for f in tests/scanparse/*.uc
 do
     echo "Testing $f"
     dune exec ucurry -- -a < $f > $f.out
