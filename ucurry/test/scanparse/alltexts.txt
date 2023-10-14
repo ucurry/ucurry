@@ -1,0 +1,67 @@
+-- def -> datatype
+datatype Color = Green; 
+datatype AlphaColor = Green of int | Red of int | Black of int ; 
+datatype Background = Pure of Color | Number of int ;
+
+-- def -> type var = a
+int a = 1;
+
+-- def -> fun
+fun: int -> int:
+f x = x + 1;-- def -> expr -> binop
+1 + 2;
+2 * 4;
+2 >= 4;-- def -> expr -> case
+case color of 1 => 1;
+case color of Green => 1;
+case color of Green x => 1; 
+
+case color of 
+   Green => 1 
+ | Red   => 2 
+ | Black => 3;
+
+case alphaColor of 
+    Green alpha => alpha 
+  | Red alpha   => alpha ; 
+(f x);
+
+-- def -> expr -> if
+if true then 1 else 2;
+
+-- def -> expr -> lambda
+\(int -> int) x -> x + 1;
+
+-- def -> expr -> let
+let int x = 1 in x;
+let int x = 1, bool v = 2 in if v then x else x;
+
+-- def -> expr -> literal 
+1;
+"c";
+[1, 2]; 
+[1, "c"];
+true;
+false;
+();
+~1;
+01;
+"a\n";
+
+-- def -> expr -> begin
+begin 1, 2, 3, (f 1), if true then 1 else 2;
+
+-- def -> expr -> unop
+~1;
+not true;
+not false;
+hd [1, 2, 3];
+tl [2, 3, 4];
+
+-- def -> expr -> variable-name
+a;
+x;
+
+-- def -> expr -> variable_name = expr
+x = 2;
+a = 3;
