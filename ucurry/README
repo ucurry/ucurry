@@ -1,0 +1,5 @@
+*********************************************************
+Command lines:
+
+    dune build                 # to compile
+    dune exec ucurry -- -a     # to open the interpreter

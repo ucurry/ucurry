@@ -1,6 +1,8 @@
 (* Abstract Syntax Tree and functions for printing it *)
 
 (* TODO: do we want to convert top-level function to global variable binding to a lambda? if so, where should we do this *)
+(* ANSWER: syntatic sugar dealt with during parsing stage *)
+
 type binop =
   | Add
   | Sub
