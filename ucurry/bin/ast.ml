@@ -82,11 +82,11 @@ let string_of_binop = function
   | Leq -> "<="
   | Greater -> ">"
   | Geq -> ">="
-  | And -> "&&"
-  | Or -> "||"
+  | And -> "and"
+  | Or -> "or"
   | Cons -> "::"
 
-let string_of_uop = function Neg -> "-" | Not -> "!" | Hd -> "hd" | Tl -> "tl"
+let string_of_uop = function Neg -> "~" | Not -> "not" | Hd -> "hd" | Tl -> "tl"
 
 let rec string_of_literal = function
   | INT l -> string_of_int l
@@ -109,8 +109,7 @@ let rec string_of_typ = function
   | BOOL_TY -> "bool"
   | LIST_TY typ -> (string_of_typ typ) ^ " list"
   | UNIT_TY -> "unit"
-  | FUNCTION_TY (t1, t2) ->
-      "(" ^ string_of_typ t1 ^ " -> " ^ string_of_typ t2 ^ ")"
+  | FUNCTION_TY (t1, t2) -> string_of_typ t1 ^ " -> " ^ string_of_typ t2  
   | CONSTRUCTOR_TY s -> s
 
 let string_of_variable (t, s) = string_of_typ t ^ " " ^ s
@@ -126,17 +125,20 @@ let rec string_of_expr = function
   | If (e1, e2, e3) ->
       "if " ^ string_of_expr e1 ^ " then " ^ string_of_expr e2 ^ " else "
       ^ string_of_expr e3
-  | Begin el -> "begin " ^ String.concat " " (List.map string_of_expr el) ^ ";"
+  | Begin el -> "(begin " ^ String.concat ", " (List.map string_of_expr el) ^ ")"
   | Binop (e1, o, e2) ->
       string_of_expr e1 ^ " " ^ string_of_binop o ^ " " ^ string_of_expr e2
   | Unop (o, e) -> string_of_uop o ^ string_of_expr e
   | Lambda (t, vl, e) ->
       "\\(" ^ string_of_typ t ^ ")" ^ String.concat " " vl ^ " -> " ^ string_of_expr e
-  | Construct (c, e) -> "CONSTRUCTOR " ^ c ^ " " ^ string_of_expr e
+  | Construct (c, e) -> "(" ^ c ^ " " ^ string_of_expr e ^ ")"
   | Case (e, cel) ->
-      "case " ^ string_of_expr e ^ " of\n\t"
+      "(case " ^ string_of_expr e ^ " of\n\t"
       ^ "  " ^ String.concat " \n\t| " (List.map (fun (pat, exp) -> string_of_pattern pat ^ " => " ^ string_of_expr exp) cel)
-  | _ -> "pretty printer not implemented for this AST node\n"
+      ^ ")"
+  | Let (vl, e) ->
+      "let " ^ String.concat ", " (List.map (fun (t, v, e) -> string_of_typ t ^ " " ^ v ^ " = " ^ string_of_expr e) vl) ^ " in " ^ string_of_expr e
+  | Noexpr -> ""
 
 let string_of_constructor = function
   | ValCon (c, None) -> c
@@ -152,6 +154,5 @@ let string_of_constructor = function
   | Variable (ty, name, e) ->
       string_of_typ ty ^ " " ^ name ^ " = " ^ string_of_expr e ^ ";"
 
-let string_of_program defs =
-  let () = print_string "Printing Roundtrip\n" in
-  String.concat "\n" (List.map string_of_def defs)
+let string_of_program defs = 
+    (String.concat "\n" (List.map string_of_def defs))

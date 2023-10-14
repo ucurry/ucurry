@@ -22,6 +22,6 @@ f x = x + 1;-- def -> expr -> binop
 1 + 2;
 2 * 4;
 2 >= 4;-- def -> expr -> case
-case color of 1 => 1;
-case color of Green => 1;
-case color of Green x => 1; 
+(case color of 1 => 1);
+(case color of Green => 1);
+(case color of Green x => 1); 

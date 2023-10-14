@@ -11,7 +11,7 @@
 // binop 
 %token ASN ADD SUB TIMES DIVIDE MOD EQUAL NEQ LESS LEQ GREATER GEQ AND OR CONS
 // unop 
-%token HD TL NEG NOT 
+%token HD TL NEG NOT
 
 // primitive literal 
 %token <string> CAPNAME
@@ -22,7 +22,7 @@
 %token UNIT
 %token EOF 
 
-
+%nonassoc IN ELSE 
 %right ASN 
 %left OR 
 %left AND 
@@ -33,7 +33,7 @@
 %right HD TL NEG NOT 
 %left ARROW
 %left LISTTYPE
-%nonassoc EOF
+
 
 %start program 
 %type <Ast.program> program
@@ -75,12 +75,14 @@ exp:
   | LBRACE exp args RBRACE    { Apply ($2, List.rev $3) }
   | IF exp THEN exp ELSE exp  { If ($2, $4, $6) }
   | LET bindings IN exp       { Let (List.rev $2, $4) }
-  | BEGIN exp_list            { Begin (List.rev $2) }
+  | LBRACE BEGIN exp_list RBRACE        { Begin (List.rev $3) }
   | binop                     { $1 }
   | unop                      { $1 }
   | lambda                    { $1 }
-  | CAPNAME exp_opt           { Construct ($1, $2) }
-  | CASE exp OF case_exp_list { Case ($2, List.rev $4) }
+  // fix: adding brackets to value constructors avoids shift/reduce conflict
+  | LBRACE CAPNAME  exp_opt RBRACE        { Construct ($2, $3) }
+  | LBRACE CASE exp OF case_exp_list RBRACE { Case ($3, List.rev $5) }
+
 
 exp_opt:
     /* nothing */ { Noexpr }
@@ -93,8 +95,8 @@ case_exp_list:
 pattern:
     NAME             { VAR_PAT $1 }
   | literal          { LIT_PAT $1 }
-  | CAPNAME          { CON_PAT ($1, None) }
-  | CAPNAME pattern  { CON_PAT ($1, Some $2) } // currently our parser doesn't support tuple type, thus a value constructor can at most take in one arg
+  | CAPNAME           { CON_PAT ($1, None) }
+  | CAPNAME pattern   { CON_PAT ($1, Some $2) } // currently our parser doesn't support tuple type, thus a value constructor can at most take in one arg
   | WILDCARD         { WILDCARD }
 
 lambda:

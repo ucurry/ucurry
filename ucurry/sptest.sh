@@ -3,8 +3,9 @@
 for f in tests/scanparse/*.uc
 do
     echo "Testing $f"
-    dune exec ucurry -- -a < $f > $f.out
-    # diff $f.out $f.expected
+    dune exec ucurry -- -a < $f > $f.trimmed
+    dune exec ucurry -- -a < $f.trimmed > $f.out
+    diff $f.trimmed $f.out
     
     # Get the PID of the last background command
     ecode=$?
