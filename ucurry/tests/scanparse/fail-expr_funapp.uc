@@ -1,0 +1,2 @@
+-- without paren
+f x;

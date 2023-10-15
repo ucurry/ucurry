@@ -32,6 +32,7 @@ type literal =
   | STRING of string
   | BOOL of bool
   | LIST of literal list
+  | INF_LIST of int 
   | UNIT
 (* | Tuple of literal * literal *)
 
@@ -94,6 +95,7 @@ let rec string_of_literal = function
   | BOOL l -> string_of_bool l
   | LIST l -> "[" ^ String.concat ", " (List.map string_of_literal l) ^ "]"
   | UNIT -> "()"
+  | INF_LIST n -> "[" ^ string_of_int n ^ "..]"
 (* | Tuple(l) -> string_of_tupleLiteral l *)
 
 let rec string_of_pattern = function

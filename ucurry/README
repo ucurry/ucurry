@@ -1,11 +1,21 @@
 *********************************************************
-Command lines:
+#### uCurry - Scanner and Parser
+
+## Contact
+- Alexander Bai (alexander.bai@tufts.edu)
+- Vivian Li (yike.li@tufts.edu)
+- Stephanie Xu (ziqi.xu@tufts.edu)
+- Matt Zhou (chuxuan.zhou@tufts.edu)
+
+## Command lines:
 
     dune build                 # to compile
     dune exec ucurry -- -a     # to open the interpreter
 
-# The µcurry Compiler
+OR:
+    ./sptest.sh                # to run the test script
 
+# The µcurry Compiler
 Coded in OCaml, this compiler takes a minimal functional language and compiles 
 it down to LLVM IR. The compiler now only supports scanning and parsing.
 
@@ -18,11 +28,14 @@ and pretty-prints back to strings.
 
 ## Test Script
 
+To validate our parsing/unparsing roundtrip, we tried to show `(parse o unparse) = id`, 
+the reverse may not be true becuase parsing removes comments and unnecessary whitespace.
+
+To verify this, our script runs `unparse o parse o unparse o parse = id`, 
+the first `unparse o parse` gives us a trimmed concrete syntax of the µcurry language, and
+it should be the same as the output of the second `unparse o parse` pair.
+
 ## Syntax to be added
 
-## Contact
-
-- Alexander Bai (alexander.bai@tufts.edu)
-- Vivian Li (yike.li@tufts.edu)
-- Stephanie Xu (ziqi.xu@tufts.edu)
-- Matt Zhou (chuxuan.zhou@tufts.edu)
+The syntax of infinite list is subject to change because of some uncertainty of 
+the architecture

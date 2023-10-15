@@ -3,7 +3,7 @@
 %}
 
 // delimiters
-%token ARROW DOUBLEARROW SEMI COMMA COLON LBRACE RBRACE LBRACKET RBRACKET BAR 
+%token ARROW DOUBLEARROW SEMI COMMA COLON LBRACE RBRACE LBRACKET RBRACKET BAR DOTS
 // keyword
 %token FUNCTION LAMBDA DATATYPE IF THEN ELSE LET BEGIN IN CASE OF WILDCARD
 // type
@@ -129,6 +129,7 @@ literal:
   | BOOL                           { BOOL $1 }
   | LBRACKET literal_list RBRACKET { LIST (List.rev $2) } 
   | UNIT                           { UNIT }
+  | LBRACKET INTEGER DOTS RBRACKET { INF_LIST $2 }
 
 literal_list:
                                { [] }

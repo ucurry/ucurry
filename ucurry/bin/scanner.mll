@@ -25,6 +25,7 @@ rule token = parse
 | '['        { LBRACKET }
 | ']'        { RBRACKET }
 | '|'        { BAR }
+| ".."       { DOTS }
 
 (* keyword *)
 | "fun"      { FUNCTION }
