@@ -108,7 +108,8 @@ bindings:
 
 
 formals: // functions have to have arguments
-    NAME         { [$1] }
+  | UNIT         { [] }
+  | NAME         { [$1] }
   | formals NAME { $2 :: $1 }
 
 funtype:
@@ -141,7 +142,7 @@ exp_list:
   | exp_list COMMA exp  { $3 :: $1 }
 
 args:
-    exp { [$1] }
+  | exp { [$1] }
   | args exp { $2 :: $1 }
 
 binop:

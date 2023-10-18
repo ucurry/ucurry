@@ -1,0 +1,13 @@
+int list vector = [1, 2, 3, 4];
+bool list booleans = [true, false];
+string list strings = ["h", "e"];
+int list list matrix = [[1, 2], [3, 4]];
+bool list list bomb_grid = [[true, false], [true, false]];
+string list list paragraph = [["h", "e"], ["h", "e"]];
+int list emptyList = [];
+int list list emptyMatrix = [[], [], []];
+string  x = "hello";
+int  x = 1 ;
+Color blue = (Blue); 
+Gradient blue_gradient = (Blue 1);
+Color -> Color -> Color mixColor = \(Color -> Color -> Color) c c -> c + c ; 
