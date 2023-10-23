@@ -9,7 +9,7 @@
 // type
 %token INTTYPE STRTYPE LISTTYPE BOOLTYPE UNITTYPE 
 // binop 
-%token ASN ADD SUB TIMES DIVIDE MOD EQUAL NEQ LESS LEQ GREATER GEQ AND OR CONS
+%token ASN ADD SUB TIMES DIVIDE MOD EQUAL NEQ LESS LEQ GREATER GEQ AND OR CONS 
 // unop 
 %token HD TL NEG NOT
 
@@ -21,6 +21,7 @@
 %token <bool> BOOL 
 %token UNIT
 %token EOF 
+
 
 %nonassoc IN ELSE 
 %right ASN 
@@ -93,14 +94,14 @@ case_exp_list:
   | case_exp_list BAR pattern DOUBLEARROW exp { ($3, $5) :: $1 }
 
 pattern:
-    NAME             { VAR_PAT $1 }
-  | literal          { LIT_PAT $1 }
-  | CAPNAME           { CON_PAT ($1, None) }
-  | CAPNAME pattern   { CON_PAT ($1, Some $2) } // currently our parser doesn't support tuple type, thus a value constructor can at most take in one arg
-  | WILDCARD         { WILDCARD }
+    NAME                { VAR_PAT $1 }
+  | literal             { LIT_PAT $1 }
+  | CAPNAME             { CON_PAT ($1, None) }
+  | CAPNAME pattern     { CON_PAT ($1, Some $2) } // currently our parser doesn't support tuple type, thus a value constructor can at most take in one arg
+  | WILDCARD            { WILDCARD }
 
 lambda:
-  LAMBDA LBRACE funtype RBRACE formals ARROW exp { Lambda($3, $5, $7) }
+  LAMBDA LBRACE funtype RBRACE formals ARROW exp { Lambda($3, List.rev $5, $7) }
 
 bindings:
     typ NAME ASN exp          { [($1, $2, $4)] }
@@ -115,20 +116,29 @@ formals: // functions have to have arguments
 funtype:
     typ ARROW typ { FUNCTION_TY ($1, $3) } 
 
+tupletype:
+    LBRACE typelist RBRACE      { TUPLE_TY (List.rev $2) }
+
+typelist:
+     typ TIMES typ      { [$3 ; $1] }
+   | typelist TIMES typ { $3 :: $1 }
+
 typ:
-    INTTYPE  { INT_TY }  
-  | STRTYPE  { STRING_TY }  
-  | BOOLTYPE { BOOL_TY }  
-  | UNITTYPE { UNIT_TY }
-  | CAPNAME  { CONSTRUCTOR_TY $1}
-  | typ LISTTYPE { LIST_TY $1 }  
-  | funtype  { $1 }
+    INTTYPE             { INT_TY }  
+  | STRTYPE             { STRING_TY }  
+  | BOOLTYPE            { BOOL_TY }  
+  | UNITTYPE            { UNIT_TY }
+  | CAPNAME             { CONSTRUCTOR_TY $1}
+  | typ LISTTYPE        { LIST_TY $1 }  
+  | funtype             { $1 }
+  | tupletype           { $1 }
 
 literal:
     STRINGLIT                      { STRING $1 } 
   | INTEGER                        { INT $1 }
   | BOOL                           { BOOL $1 }
   | LBRACKET literal_list RBRACKET { LIST (List.rev $2) } 
+  | LBRACE literal_list RBRACE     {TUPLE (List.rev $2)}
   | UNIT                           { UNIT }
   | LBRACKET INTEGER DOTS RBRACKET { INF_LIST $2 }
 

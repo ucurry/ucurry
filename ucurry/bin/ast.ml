@@ -26,12 +26,14 @@ type typ =
   | UNIT_TY
   | FUNCTION_TY of typ * typ
   | CONSTRUCTOR_TY of string
+  | TUPLE_TY of typ list 
 
 type literal =
   | INT of int
   | STRING of string
   | BOOL of bool
   | LIST of literal list
+  | TUPLE of literal list 
   | INF_LIST of int 
   | UNIT
 (* | Tuple of literal * literal *)
@@ -94,8 +96,10 @@ let rec string_of_literal = function
   | STRING l -> "\"" ^ l ^ "\""
   | BOOL l -> string_of_bool l
   | LIST l -> "[" ^ String.concat ", " (List.map string_of_literal l) ^ "]"
+  | TUPLE l -> "(" ^ String.concat ", " (List.map string_of_literal l) ^ ")"
   | UNIT -> "()"
   | INF_LIST n -> "[" ^ string_of_int n ^ "..]"
+
 (* | Tuple(l) -> string_of_tupleLiteral l *)
 
 let rec string_of_pattern = function
@@ -113,6 +117,7 @@ let rec string_of_typ = function
   | UNIT_TY -> "unit"
   | FUNCTION_TY (t1, t2) -> string_of_typ t1 ^ " -> " ^ string_of_typ t2  
   | CONSTRUCTOR_TY s -> s
+  | TUPLE_TY typs -> "(" ^ String.concat " * " (List.map string_of_typ typs) ^ ")"
 
 let string_of_variable (t, s) = string_of_typ t ^ " " ^ s
 
