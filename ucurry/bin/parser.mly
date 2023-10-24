@@ -115,6 +115,7 @@ formals: // functions have to have arguments
 
 funtype:
     typ ARROW typ { FUNCTION_TY ($1, $3) } 
+   |LBRACE funtype RBRACE { $2 } 
 
 tupletype:
     LBRACE typelist RBRACE      { TUPLE_TY (List.rev $2) }
@@ -138,7 +139,7 @@ literal:
   | INTEGER                        { INT $1 }
   | BOOL                           { BOOL $1 }
   | LBRACKET literal_list RBRACKET { LIST (List.rev $2) } 
-  | LBRACE literal_list RBRACE     {TUPLE (List.rev $2)}
+  | LBRACE literal_list RBRACE     { TUPLE (List.rev $2)}
   | UNIT                           { UNIT }
   | LBRACKET INTEGER DOTS RBRACKET { INF_LIST $2 }
 
@@ -156,6 +157,7 @@ args:
   | args exp { $2 :: $1 }
 
 binop:
+    LBRACE binop RBRACE   { $2 }
   | exp ADD   exp       { Binop ($1, Add,   $3) }
   | exp SUB    exp      { Binop ($1, Sub,   $3) }
   | exp TIMES  exp      { Binop ($1, Mult,  $3) }
@@ -172,6 +174,7 @@ binop:
   | exp CONS   exp      { Binop ($1, Cons,  $3) }
 
 unop:
+    LBRACE unop RBRACE  { $2 }
   | HD exp              { Unop (Hd, $2) }
   | TL exp              { Unop (Tl, $2) }
   | NEG  exp            { Unop(Neg, $2)}

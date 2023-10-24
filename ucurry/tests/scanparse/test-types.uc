@@ -36,3 +36,7 @@ Test test3 = (Function \(int -> int) a -> a);
 -- function types
 Color -> Color -> Color mixColor = \(Color -> Color -> Color) b c -> b + c ; 
 (int * int) -> int add = \((int * int) -> int) a b -> a + b;
+
+-- function type with braces ; 
+(int -> int) -> int list -> int list x = map;
+
