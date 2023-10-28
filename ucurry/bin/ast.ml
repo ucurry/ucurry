@@ -148,7 +148,9 @@ let rec string_of_expr exp =
       "let " ^ String.concat ", " (List.map (fun (t, v, e) -> string_of_typ t ^ " " ^ v ^ " = " ^ string_of_expr e) vl) ^ " in " ^ string_of_expr e
   | Noexpr -> ""
   in 
-    "(" ^ flat_string_of_exp exp ^ ")"
+    match exp with
+    | Noexpr ->  ""
+    | _ -> "(" ^ flat_string_of_exp exp ^ ")"
 
 
 let string_of_constructor = function
