@@ -41,7 +41,7 @@ type literal =
 type pattern =
   | VAR_PAT of string
   | LIT_PAT of literal
-  | CON_PAT of string * pattern option
+  | CON_PAT of string * pattern list option
   | WILDCARD
 
 type expr =
@@ -105,7 +105,10 @@ let rec string_of_literal = function
 let rec string_of_pattern = function
   | VAR_PAT s -> s
   | LIT_PAT l -> string_of_literal l
-  | CON_PAT (c, Some pl) -> c ^ " " ^ string_of_pattern pl
+  | CON_PAT (c, Some [p]) ->
+      c ^ " " ^ string_of_pattern p 
+  | CON_PAT (c, Some pl) -> 
+      c ^ " (" ^ String.concat ", " (List.map string_of_pattern pl) ^ ")"
   | CON_PAT (c, None) -> c
   | WILDCARD -> "_"
 
@@ -148,7 +151,9 @@ let rec string_of_expr exp =
       "let " ^ String.concat ", " (List.map (fun (t, v, e) -> string_of_typ t ^ " " ^ v ^ " = " ^ string_of_expr e) vl) ^ " in " ^ string_of_expr e
   | Noexpr -> ""
   in 
-    "(" ^ flat_string_of_exp exp ^ ")"
+    match exp with
+        Noexpr -> ""
+      | _ -> "(" ^ flat_string_of_exp exp ^ ")"
 
 
 let string_of_constructor = function

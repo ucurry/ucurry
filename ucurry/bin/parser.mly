@@ -96,10 +96,14 @@ case_exp_list:
 
 pattern:
     NAME                { VAR_PAT $1 }
-  | literal             { LIT_PAT $1 }
   | CAPNAME             { CON_PAT ($1, None) }
-  | CAPNAME pattern     { CON_PAT ($1, Some $2) } // currently our parser doesn't support tuple type, thus a value constructor can at most take in one arg
+  | CAPNAME pattern     { CON_PAT ($1, Some [$2])}
+  | CAPNAME LBRACE pattern_tuple RBRACE { CON_PAT ($1, Some (List.rev $3)) } // currently our parser doesn't support tuple type, thus a value constructor can at most take in one arg
   | WILDCARD            { WILDCARD }
+
+pattern_tuple:
+    pattern COMMA pattern       { [$3; $1] }
+  | pattern_tuple COMMA pattern { $3 :: $1 }
 
 lambda:
   LAMBDA LBRACE funtype RBRACE formals ARROW exp { Lambda($3, List.rev $5, $7) }

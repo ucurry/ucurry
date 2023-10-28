@@ -1,5 +1,5 @@
 -- def -> expr -> case
-(case color of 1 => 1);
+(case color of a => 1);
 (case color of Green => 1);
 (case color of Green x => 1);
 
