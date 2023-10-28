@@ -26,12 +26,14 @@ type typ =
   | UNIT_TY
   | FUNCTION_TY of typ * typ
   | CONSTRUCTOR_TY of string
+  | TUPLE_TY of typ list 
 
 type literal =
   | INT of int
   | STRING of string
   | BOOL of bool
   | LIST of literal list
+  | TUPLE of literal list 
   | INF_LIST of int 
   | UNIT
 (* | Tuple of literal * literal *)
@@ -39,7 +41,7 @@ type literal =
 type pattern =
   | VAR_PAT of string
   | LIT_PAT of literal
-  | CON_PAT of string * pattern option
+  | CON_PAT of string * pattern list option
   | WILDCARD
 
 type expr =
@@ -94,14 +96,19 @@ let rec string_of_literal = function
   | STRING l -> "\"" ^ l ^ "\""
   | BOOL l -> string_of_bool l
   | LIST l -> "[" ^ String.concat ", " (List.map string_of_literal l) ^ "]"
+  | TUPLE l -> "(" ^ String.concat ", " (List.map string_of_literal l) ^ ")"
   | UNIT -> "()"
   | INF_LIST n -> "[" ^ string_of_int n ^ "..]"
+
 (* | Tuple(l) -> string_of_tupleLiteral l *)
 
 let rec string_of_pattern = function
   | VAR_PAT s -> s
   | LIT_PAT l -> string_of_literal l
-  | CON_PAT (c, Some pl) -> c ^ " " ^ string_of_pattern pl
+  | CON_PAT (c, Some [p]) ->
+      c ^ " " ^ string_of_pattern p 
+  | CON_PAT (c, Some pl) -> 
+      c ^ " (" ^ String.concat ", " (List.map string_of_pattern pl) ^ ")"
   | CON_PAT (c, None) -> c
   | WILDCARD -> "_"
 
@@ -113,10 +120,12 @@ let rec string_of_typ = function
   | UNIT_TY -> "unit"
   | FUNCTION_TY (t1, t2) -> string_of_typ t1 ^ " -> " ^ string_of_typ t2  
   | CONSTRUCTOR_TY s -> s
+  | TUPLE_TY typs -> "(" ^ String.concat " * " (List.map string_of_typ typs) ^ ")"
 
 let string_of_variable (t, s) = string_of_typ t ^ " " ^ s
 
-let rec string_of_expr = function
+let rec string_of_expr exp = 
+  let flat_string_of_exp = function
   | Literal l -> string_of_literal l
   | Var s -> s
   | Assign (v, e) -> v ^ " = " ^ string_of_expr e
@@ -141,6 +150,11 @@ let rec string_of_expr = function
   | Let (vl, e) ->
       "let " ^ String.concat ", " (List.map (fun (t, v, e) -> string_of_typ t ^ " " ^ v ^ " = " ^ string_of_expr e) vl) ^ " in " ^ string_of_expr e
   | Noexpr -> ""
+  in 
+    match exp with
+        Noexpr -> ""
+      | _ -> "(" ^ flat_string_of_exp exp ^ ")"
+
 
 let string_of_constructor = function
   | ValCon (c, None) -> c
