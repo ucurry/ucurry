@@ -1,0 +1,29 @@
+
+** Conflict (reduce/reduce) in state 127.
+** Token involved: RBRACE
+** This state is reached from program after reading:
+
+defs LBRACE literal
+
+** The derivations that appear below have the following common factor:
+** (The question mark symbol (?) represents the spot where the derivations begin to differ.)
+
+program 
+defs EOF 
+defs exp SEMI 
+     (?)
+
+** In state 127, looking ahead at RBRACE, reducing production
+** exp -> literal
+** is permitted because of the following sub-derivation:
+
+LBRACE exp RBRACE // lookahead token appears
+       literal . 
+
+** In state 127, looking ahead at RBRACE, reducing production
+** literal_list -> literal
+** is permitted because of the following sub-derivation:
+
+literal 
+LBRACE literal_list RBRACE // lookahead token appears
+       literal . 

@@ -70,7 +70,8 @@ constructor:
   | CAPNAME OF typ { ValCon ($1, Some $3) }
 
 exp:
-    literal                   { Literal $1 }
+    LBRACE exp RBRACE         { $2 }
+  | literal                   { Literal $1 }
   | NAME                      { Var $1 }
   | NAME ASN exp              { Assign ($1, $3) }
   | LBRACE exp args RBRACE    { Apply ($2, List.rev $3) }
@@ -139,7 +140,7 @@ literal:
   | INTEGER                        { INT $1 }
   | BOOL                           { BOOL $1 }
   | LBRACKET literal_list RBRACKET { LIST (List.rev $2) } 
-  | LBRACE literal_list RBRACE     { TUPLE (List.rev $2)}
+  | LBRACE literal_tuple RBRACE     { TUPLE (List.rev $2)}
   | UNIT                           { UNIT }
   | LBRACKET INTEGER DOTS RBRACKET { INF_LIST $2 }
 
@@ -147,6 +148,10 @@ literal_list:
                                { [] }
   | literal                    { [$1] }
   | literal_list COMMA literal { $3 :: $1}
+
+literal_tuple:
+    literal  COMMA literal     { [$3; $1] }
+  | literal_tuple COMMA literal { $3 :: $1 }
 
 exp_list: 
     exp { [$1] }
@@ -157,7 +162,6 @@ args:
   | args exp { $2 :: $1 }
 
 binop:
-    LBRACE binop RBRACE   { $2 }
   | exp ADD   exp       { Binop ($1, Add,   $3) }
   | exp SUB    exp      { Binop ($1, Sub,   $3) }
   | exp TIMES  exp      { Binop ($1, Mult,  $3) }
@@ -174,7 +178,6 @@ binop:
   | exp CONS   exp      { Binop ($1, Cons,  $3) }
 
 unop:
-    LBRACE unop RBRACE  { $2 }
   | HD exp              { Unop (Hd, $2) }
   | TL exp              { Unop (Tl, $2) }
   | NEG  exp            { Unop(Neg, $2)}

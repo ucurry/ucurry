@@ -9,4 +9,4 @@ map f xs =  (case xs of
 fun: int list -> int list:
 map f xs =  (case xs of 
                   Nil => []
-                | Cons y => (f y) :: (map f tl xs));
+                | Cons y => (f y) :: (map f (tl xs)));

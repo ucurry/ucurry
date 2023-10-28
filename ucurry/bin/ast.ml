@@ -121,7 +121,8 @@ let rec string_of_typ = function
 
 let string_of_variable (t, s) = string_of_typ t ^ " " ^ s
 
-let rec string_of_expr = function
+let rec string_of_expr exp = 
+  let flat_string_of_exp = function
   | Literal l -> string_of_literal l
   | Var s -> s
   | Assign (v, e) -> v ^ " = " ^ string_of_expr e
@@ -146,6 +147,9 @@ let rec string_of_expr = function
   | Let (vl, e) ->
       "let " ^ String.concat ", " (List.map (fun (t, v, e) -> string_of_typ t ^ " " ^ v ^ " = " ^ string_of_expr e) vl) ^ " in " ^ string_of_expr e
   | Noexpr -> ""
+  in 
+    "(" ^ flat_string_of_exp exp ^ ")"
+
 
 let string_of_constructor = function
   | ValCon (c, None) -> c
