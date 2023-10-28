@@ -9,6 +9,7 @@
 *.cmxs
 *.cmxa
 *.out
+*.trimmed
 # ocamlbuild working directory
 _build/
 
