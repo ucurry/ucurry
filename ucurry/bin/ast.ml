@@ -40,7 +40,6 @@ type literal =
 
 type pattern =
   | VAR_PAT of string
-  | LIT_PAT of literal
   | CON_PAT of string * pattern list option
   | WILDCARD
 
@@ -50,7 +49,7 @@ type expr =
   | Assign of string * expr
   | Apply of expr * expr list
   | If of expr * expr * expr
-  | Let of (typ * string * expr) list * expr
+  | Let of ((typ * string) * expr) list * expr
   | Begin of expr list
   | Binop of expr * binop * expr
   | Unop of uop * expr
@@ -67,7 +66,7 @@ type def =
   | Variable of typ * string * expr
   | Exp of expr
 
-and constructor = ValCon of string * typ option
+and constructor = string * typ option
  
 type program = def list
 
@@ -104,7 +103,6 @@ let rec string_of_literal = function
 
 let rec string_of_pattern = function
   | VAR_PAT s -> s
-  | LIT_PAT l -> string_of_literal l
   | CON_PAT (c, Some [p]) ->
       c ^ " " ^ string_of_pattern p 
   | CON_PAT (c, Some pl) -> 
@@ -148,7 +146,7 @@ let rec string_of_expr exp =
       ^ "  " ^ String.concat " \n\t| " (List.map (fun (pat, exp) -> string_of_pattern pat ^ " => " ^ string_of_expr exp) cel)
       ^ ")"
   | Let (vl, e) ->
-      "let " ^ String.concat ", " (List.map (fun (t, v, e) -> string_of_typ t ^ " " ^ v ^ " = " ^ string_of_expr e) vl) ^ " in " ^ string_of_expr e
+      "let " ^ String.concat ", " (List.map (fun ((t, v), e) -> string_of_typ t ^ " " ^ v ^ " = " ^ string_of_expr e) vl) ^ " in " ^ string_of_expr e
   | Noexpr -> ""
   in 
     match exp with
@@ -157,8 +155,8 @@ let rec string_of_expr exp =
 
 
 let string_of_constructor = function
-  | ValCon (c, None) -> c
-  | ValCon (c, Some t) -> c ^ " of " ^ string_of_typ t
+  | (c, None) -> c
+  | (c, Some t) -> c ^ " of " ^ string_of_typ t
 
   let string_of_def = function
    | Function (ty, f, args, e) ->

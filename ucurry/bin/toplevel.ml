@@ -1,4 +1,4 @@
-type action = Ast | Default
+type action = Ast | Default 
 
 let () =
   let action = ref Default in
@@ -10,6 +10,7 @@ let () =
 
   let lexbuf = Lexing.from_channel !channel in
   let ast = Parser.program Scanner.token lexbuf in
+  let _ = Semantic.typecheck ast in 
   match !action with
   | Ast ->
       let _ = print_string (Ast.string_of_program ast) in

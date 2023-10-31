@@ -66,8 +66,8 @@ constructor_list:
   | constructor_list BAR constructor { $3 :: $1 }
 
 constructor:
-    CAPNAME        { ValCon ($1, None) }
-  | CAPNAME OF typ { ValCon ($1, Some $3) }
+    CAPNAME        { ($1, None) }
+  | CAPNAME OF typ { ($1, Some $3) }
 
 exp:
     LBRACE exp RBRACE         { $2 }
@@ -109,8 +109,8 @@ lambda:
   LAMBDA LBRACE funtype RBRACE formals ARROW exp { Lambda($3, List.rev $5, $7) }
 
 bindings:
-    typ NAME ASN exp          { [($1, $2, $4)] }
-  | bindings COMMA typ NAME ASN exp { ($3, $4, $6):: $1 }
+    typ NAME ASN exp          { [(($1, $2), $4)] }
+  | bindings COMMA typ NAME ASN exp { (($3, $4), $6):: $1 }
 
 
 formals: // functions have to have arguments
