@@ -28,15 +28,6 @@ type typ =
   | CONSTRUCTOR_TY of string
   | TUPLE_TY of typ list 
 
-type literal =
-  | INT of int
-  | STRING of string
-  | BOOL of bool
-  | LIST of literal list
-  | TUPLE of literal list 
-  | INF_LIST of int 
-  | UNIT
-(* | Tuple of literal * literal *)
 
 type pattern =
   | VAR_PAT of string
@@ -57,7 +48,15 @@ type expr =
   | Construct of string * expr
   | Case of expr * case_expr list
   | Noexpr
-
+and 
+  literal =
+  | INT of int
+  | STRING of string
+  | BOOL of bool
+  | LIST of literal list
+  | TUPLE of literal list 
+  | INF_LIST of int 
+  | UNIT
 and case_expr = pattern * expr
 
 type def =
@@ -65,6 +64,7 @@ type def =
   | Datatype of string * constructor list
   | Variable of typ * string * expr
   | Exp of expr
+  | CheckTypeError of def  
 
 and constructor = string * typ option
  
@@ -158,7 +158,7 @@ let string_of_constructor = function
   | (c, None) -> c
   | (c, Some t) -> c ^ " of " ^ string_of_typ t
 
-  let string_of_def = function
+  let rec string_of_def = function
    | Function (ty, f, args, e) ->
       "fun : " ^ string_of_typ ty ^ ":\n" ^
       f ^ " " ^ String.concat " " args ^ " = " ^ string_of_expr e ^ ";"
@@ -167,6 +167,6 @@ let string_of_constructor = function
   | Exp e -> string_of_expr e ^ ";"
   | Variable (ty, name, e) ->
       string_of_typ ty ^ " " ^ name ^ " = " ^ string_of_expr e ^ ";"
-
+  | CheckTypeError e -> "check_type_error " ^ string_of_def e 
 let string_of_program defs = 
     (String.concat "\n" (List.map string_of_def defs))

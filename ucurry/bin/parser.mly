@@ -5,7 +5,7 @@
 // delimiters
 %token ARROW DOUBLEARROW SEMI COMMA COLON LBRACE RBRACE LBRACKET RBRACKET BAR DOTS
 // keyword
-%token FUNCTION LAMBDA DATATYPE IF THEN ELSE LET BEGIN IN CASE OF WILDCARD
+%token FUNCTION LAMBDA DATATYPE IF THEN ELSE LET BEGIN IN CASE OF WILDCARD CHECK_TYPE_ERROR
 // type
 %token INTTYPE STRTYPE LISTTYPE BOOLTYPE UNITTYPE 
 // binop 
@@ -43,12 +43,18 @@
 program:
     defs EOF { List.rev $1 }
 
+
+
 defs:   
     /* nothing */            { [] }
-    | defs fundef SEMI       { $2 :: $1 }
-    | defs vardef SEMI       { $2 :: $1 }
-    | defs datatypedef SEMI  { $2 :: $1 }
-    | defs exp SEMI          { (Exp $2) :: $1 }
+    | defs def SEMI       { $2 :: $1 }
+
+def: 
+  | fundef {$1}
+  | vardef {$1}
+  | datatypedef {$1}
+  | exp {(Exp $1)}
+  | CHECK_TYPE_ERROR def { CheckTypeError $2}
 
 fundef:
     FUNCTION COLON funtype COLON NAME formals ASN exp
