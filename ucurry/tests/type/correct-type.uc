@@ -1,6 +1,6 @@
 -- literal 
 int a = 1;
-bool b = true;
+bool bb = true;
 bool c = false;
 string str = "hello";
 int list l1 = [1,2,3];
@@ -58,15 +58,15 @@ int negative = ~1;
 bool bf = not true;
 
 -- let expression 
-int a = let int num1 = 1 in num1; 
-bool b = let bool b = true in b and b; 
+int z = let int num1 = 1 in num1; 
+bool c2 = let bool b = true in b and b; 
 
 
 -- case expression  
 datatype Shape = Circle | Square;
 string shape = (case (Circle) of Circle => "circle" 
                                | Square => "square");
-string shape = (case (Circle) of Circle => "circle" 
+string shape2 = (case (Circle) of Circle => "circle" 
                                | _ => "square");
 
 datatype Nat = Zero | TenTimesPlus of (Nat * int);
@@ -78,8 +78,8 @@ int n = (case (Zero) of Zero => 0
                   | TenTimesPlus (natural, d) => (int_of_nat natural) * 10 + d);
 Nat tens =  (case (Zero) of Zero => (Zero)
                   | TenTimesPlus (natural, d) => natural);
-datatype ColorScale = Red of int |  Blue of int ;
-int scale = (case (Red 1) of Red n => n | Blue n => n);
+datatype ColorScale = Purple of int |  Blue of int ;
+int scale = (case (Purple 1) of Purple n => n | Blue n => n);
 Color color = (case (Pure (Black)) 
                 of Pure c => c 
                 |  Gradient (_ , c) => c);

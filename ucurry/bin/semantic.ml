@@ -10,11 +10,6 @@ type constructor_env = (arg_type * ret_type) StringMap.t
 let curry f a b = f (a, b)
 let pair_with a = function b -> (b, a)
 let o f g x = f (g x)
-let bindAll (keys: string list) (vals: 'a list) (map : 'a StringMap.t)= List.fold_right2 StringMap.add  keys vals map
-let bindAllPairs (map : 'a StringMap.t) (pairs: (string * 'a) list) = 
-    let (names, values) = List.split pairs 
-in bindAll names values map 
-
 let getOp default = function 
                   | Some a -> a 
                   | None -> default
@@ -22,7 +17,23 @@ let findType (name: string) (env : 'a StringMap.t) =
   try StringMap.find name env 
   with Not_found -> raise (TypeError ("name " ^ name ^ "unbound"))
 
+let mustAvailable  (env: 'a StringMap.t) (name: string) = 
+  (match StringMap.find_opt name env with
+      | Some _ -> raise (TypeError ("name " ^ name ^ " has been defined"))
+      | None -> name)
 
+let bindUnique  (name: string) (value: 'a) (env: 'a StringMap.t)= 
+  StringMap.add (mustAvailable env name) value env
+
+  let bindAll (keys: string list) (vals: 'a list) (map : 'a StringMap.t) = 
+    List.fold_right2 StringMap.add  keys vals map
+
+let bindAllUnique (keys: string list) (vals: 'a list) (map : 'a StringMap.t) = 
+    List.fold_right2 bindUnique keys vals map
+
+let bindAllPairs (map : 'a StringMap.t) (pairs: (string * 'a) list) = 
+    let (names, values) = List.split pairs in bindAll names values map 
+      
 let rec eqType = function 
                     (INT_TY, INT_TY) -> true
                   | (STRING_TY, STRING_TY) -> true
@@ -42,7 +53,7 @@ let rec legalPattern (con_env : constructor_env) (tau : typ)  (pat : pattern) =
   | WILDCARD -> []
   | CON_PAT (name, None) -> 
     let (exp_tau, ret_tau) = findType name con_env 
-    in if (eqType (tau, ret_tau) && eqType (exp_tau, UNIT_TY)) then [] else raise (TypeError " invalid pattern matching")
+    in if (eqType (tau, ret_tau) && eqType (exp_tau, UNIT_TY)) then [] else raise (TypeError ("invalid pattern matching for pattern " ^ string_of_pattern pat ^ " expected " ^ string_of_typ tau ^ " get " ^ string_of_typ ret_tau ))
   | CON_PAT (name, Some pats) -> 
     let (exp_tau, ret_tau) = findType name con_env 
     in if (eqType (tau, ret_tau)) then 
@@ -127,7 +138,14 @@ let rec typ_of (con_env: constructor_env) (ty_env : type_env) (exp : Ast.expr) =
                       | (Hd, LIST_TY tau1) -> tau1
                       | (Tl, LIST_TY tau1) -> LIST_TY tau1  
                       | _ -> raise (TypeError "type error in unoary operaion"))
-                | Lambda (ty, formals, body) -> ty (* TODO: checking for lambda's type *) 
+                | Lambda (ty, formals, body) ->
+                    let rec check_lambda tau formals env = (match 
+                      (tau, formals) with
+                    | (_, []) -> if eqType (tau, typ_of con_env env body) 
+                                 then ty else raise (TypeError "lambda type unmatch")
+                    | (FUNCTION_TY (tau1, tau2), hd :: tl) -> check_lambda tau2 tl (StringMap.add hd tau1 env)
+                    | _ -> raise(TypeError "lambda type unmatch"))
+                    in  check_lambda ty formals ty_env 
                 | Case (exp, cases) ->
                   let scrutinee = ty exp in 
                   let (patterns, es) =  List.split cases  in 
@@ -147,20 +165,20 @@ let rec type_def (def : def) (ty_env: type_env) (con_env: constructor_env) =
   let ty = 
   function Function (tau, funname, args, body) ->
         let tau' = typ_of con_env 
-                          (StringMap.add funname tau ty_env) 
+                          (bindUnique funname tau ty_env) 
                           (Lambda (tau, args, body)) 
         in if eqType(tau',tau) 
-          then (StringMap.add funname tau ty_env, con_env)
+          then (bindUnique funname tau ty_env, con_env)
           else raise (TypeError "invalid type in function definition")
       | Datatype (name, val_cons) ->
         let cons_taus = CONSTRUCTOR_TY name 
         in let (names, tausop) = List.split val_cons 
         in let taus = List.map (o (pair_with cons_taus) (getOp UNIT_TY)) tausop 
         in   
-        (ty_env, bindAll names taus con_env)
+        (ty_env, bindAllUnique names taus con_env)
       | Variable (tau, name, e) ->  
         if eqType (tau, typ_of con_env ty_env e)
-        then (StringMap.add name tau ty_env, con_env) 
+        then (bindUnique name tau ty_env, con_env) 
         else raise (TypeError ("type mismatch in variable definition " ^ name))
       | Exp e ->  
         let _= typ_of con_env ty_env e in (ty_env, con_env)

@@ -124,8 +124,8 @@ formals: // functions have to have arguments
   | formals NAME { $2 :: $1 }
 
 funtype:
-    typ ARROW typ { FUNCTION_TY ($1, $3) } 
-   |LBRACE funtype RBRACE { $2 } 
+   | LBRACE funtype RBRACE { $2 } 
+   | typ ARROW typ { FUNCTION_TY ($1, $3) } 
 
 tupletype:
     LBRACE typelist RBRACE      { TUPLE_TY (List.rev $2) }

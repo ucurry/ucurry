@@ -1,6 +1,6 @@
 -- datatype
 datatype List = Empty | IntList of int list | StringList of string list;
-datatype Color = Red | Blue;
+datatype Color = Yellow | Green;
 check_type_error List i = (IntList ["c", "d"]);
 check_type_error List i = (Empty ["c", "d"]);
 check_type_error Color i = (Empty);

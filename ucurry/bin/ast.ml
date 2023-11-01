@@ -107,7 +107,7 @@ let rec string_of_typ = function
   | BOOL_TY -> "bool"
   | LIST_TY typ -> (string_of_typ typ) ^ " list"
   | UNIT_TY -> "unit"
-  | FUNCTION_TY (t1, t2) -> string_of_typ t1 ^ " -> " ^ string_of_typ t2  
+  | FUNCTION_TY (t1, t2) -> "(" ^ string_of_typ t1 ^ " -> " ^ string_of_typ t2 ^ ")"
   | CONSTRUCTOR_TY s -> s
   | TUPLE_TY typs -> "(" ^ String.concat " * " (List.map string_of_typ typs) ^ ")"
 

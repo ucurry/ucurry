@@ -1,6 +1,6 @@
 -- atoms
 string x = "hello";
-int x = 1 ;
+int z = 1 ;
 
 -- lists 
 int list vector = [1, 2, 3, 4];
