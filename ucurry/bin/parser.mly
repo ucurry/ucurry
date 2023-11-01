@@ -13,7 +13,7 @@
 // unop 
 %token HD TL NEG NOT
 
-// primitive literal 
+// primitive value 
 %token <string> CAPNAME
 %token <string> NAME 
 %token <string> STRINGLIT
@@ -24,6 +24,7 @@
 
 
 %nonassoc IN ELSE 
+%right ARROW
 %right ASN 
 %left OR 
 %left AND 
@@ -32,7 +33,6 @@
 %left ADD SUB  
 %left TIMES DIVIDE MOD 
 %right HD TL NEG NOT 
-%right ARROW
 %left LISTTYPE
 
 
@@ -77,7 +77,7 @@ constructor:
 
 exp:
     LBRACE exp RBRACE         { $2 }
-  | literal                   { Literal $1 }
+  | value                   { Literal $1 }
   | NAME                      { Var $1 }
   | NAME ASN exp              { Assign ($1, $3) }
   | LBRACE exp args RBRACE    { Apply ($2, List.rev $3) }
@@ -88,7 +88,6 @@ exp:
   | unop                      { $1 }
   | lambda                    { $1 }
   // fix: adding brackets to value constructors avoids shift/reduce conflict
-  | LBRACE CAPNAME  exp_opt RBRACE        { Construct ($2, $3) }
   | LBRACE CASE exp OF case_exp_list RBRACE { Case ($3, List.rev $5) }
 
 
@@ -145,7 +144,7 @@ typ:
   | funtype             { $1 }
   | tupletype           { $1 }
 
-literal:
+value:
     STRINGLIT                      { STRING $1 } 
   | INTEGER                        { INT $1 }
   | BOOL                           { BOOL $1 }
@@ -153,15 +152,16 @@ literal:
   | LBRACE literal_tuple RBRACE     { TUPLE (List.rev $2)}
   | UNIT                           { UNIT }
   | LBRACKET INTEGER DOTS RBRACKET { INF_LIST $2 }
+  | LBRACE CAPNAME  exp_opt RBRACE { Construct ($2, $3) }
 
 literal_list:
                                { [] }
-  | literal                    { [$1] }
-  | literal_list COMMA literal { $3 :: $1}
+  | value                    { [$1] }
+  | literal_list COMMA value { $3 :: $1}
 
 literal_tuple:
-    literal  COMMA literal     { [$3; $1] }
-  | literal_tuple COMMA literal { $3 :: $1 }
+    value  COMMA value     { [$3; $1] }
+  | literal_tuple COMMA value { $3 :: $1 }
 
 exp_list: 
     exp { [$1] }

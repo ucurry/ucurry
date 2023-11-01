@@ -16,3 +16,4 @@ datatype Shape = Circle | Square;
 check_type_error (case (Circle) of Circle => 1 | Square => "square");
 check_type_error (case (Circle) of Zero => 0);
 check_type_error int n = (case (ZERO) of Red => 1);
+check_type_error Nat n = (case (Zero) of Zero => 0 | TenTimesPlus (natural, d) =>  d);

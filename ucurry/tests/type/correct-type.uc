@@ -12,7 +12,7 @@ unit u = ();
 datatype Color = Green of int | Red of int | Black | White;
 datatype Background = Gradient of (int * Color) | Pure of Color; 
 Background allBlack = (Pure (Black));
--- Background grey = (Gradient (50, (Black))); TODO: this is failing
+Background grey = (Gradient (50, (Black))); 
 Color green = (Green 100);
 Color black = (Black);
 datatype List = Empty | IntList of int list | StringList of string list;
@@ -70,16 +70,14 @@ string shape = (case (Circle) of Circle => "circle"
                                | _ => "square");
 
 datatype Nat = Zero | TenTimesPlus of (Nat * int);
+
 fun: Nat -> int:
-last_digit n = (case n of Zero => 0 
-                | TenTimesPlus (natural, d) =>  d);
+int_of_nat n = (case n of Zero => 0 
+                  | TenTimesPlus (natural, d) => (int_of_nat natural) * 10 + d);
 int n = (case (Zero) of Zero => 0 
-                     | TenTimesPlus (natural, d) =>  d);
-
--- fun: Nat -> int:
--- int_of_nat n = (case n of Zero => 0 
---                      | TenTimesPlus (natural, d) => (int_of_nat natural) * 10 + d)
-
+                  | TenTimesPlus (natural, d) => (int_of_nat natural) * 10 + d);
+Nat tens =  (case (Zero) of Zero => (Zero)
+                  | TenTimesPlus (natural, d) => natural);
 datatype ColorScale = Red of int |  Blue of int ;
 int scale = (case (Red 1) of Red n => n | Blue n => n);
 Color color = (case (Pure (Black)) 

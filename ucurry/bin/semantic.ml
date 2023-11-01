@@ -72,8 +72,13 @@ let rec typ_of (con_env: constructor_env) (ty_env : type_env) (exp : Ast.expr) =
                   | _ -> raise (TypeError "cons called on non-list"))
                   | TUPLE lits -> TUPLE_TY (List.map lit_ty lits)
                   | INF_LIST _ -> LIST_TY INT_TY
-                  in  
-                    lit_ty l 
+                  | Construct (name, exp) -> 
+                    let (exp_tau, ret_tau) = findType name con_env
+                    in  if eqType(exp_tau, ty exp) 
+                        then ret_tau 
+                        else raise (TypeError "type error in construct")
+                    in  
+                      lit_ty l 
                 | Var x -> findType x ty_env 
                 | Assign (x, e) -> 
                   let var_ty = findType x ty_env 
@@ -95,25 +100,25 @@ let rec typ_of (con_env: constructor_env) (ty_env : type_env) (exp : Ast.expr) =
                   | (BOOL_TY, tau1, tau2) -> if eqType(tau1, tau2) then tau1 else raise (TypeError "if branches contain different types")
                   | _ -> raise (TypeError "if condition contains non-boolean types"))
                 | Let (bindings, e) ->
-                  let (vars, es) = List.split bindings
-                  in  let (types, names) = List.split vars 
-                  in  let newEnv =  bindAll names types ty_env 
-                  in  let sameTypes = eqTypes types (List.map ty es)
-                  in  if sameTypes then typ_of con_env newEnv e else raise (TypeError "binding types are not annotated correctly")
+                  let (vars, es) = List.split bindings in
+                  let (types, names) = List.split vars in
+                  let newEnv =  bindAll names types ty_env in
+                  let sameTypes = eqTypes types (List.map ty es) in
+                  if sameTypes then typ_of con_env newEnv e else raise (TypeError "binding types are not annotated correctly")
                 | Begin([]) -> UNIT_TY
                 | Begin(es) -> 
                   let types = List.map ty es in o List.hd List.rev types
-                | Binop(e1, b, e2) ->
-                  let tau1 = ty e1 
-                  in let tau2 = ty e2 
-                  in let same = eqType (tau1, tau2)
-                  in (match b with
+                | Binop(e1, b, e2) as exp ->
+                  let tau1 = ty e1 in
+                  let tau2 = ty e2 in
+                  let same = eqType (tau1, tau2) in 
+                     (match b with
                       | Add | Sub| Mult| Div| Mod when same && eqType (tau1, INT_TY)-> INT_TY
                       | Geq | Less| Leq | Greater when same && eqType (tau1, INT_TY)-> BOOL_TY
                       | And | Or when same && eqType (tau1, BOOL_TY) -> BOOL_TY
                       | Equal | Neq when same -> BOOL_TY
-                      | Cons when eqType(LIST_TY tau1, tau2) -> LIST_TY tau1 
-                      | _ -> raise (TypeError "type error in binary operation")) 
+                      | Cons when eqType (LIST_TY tau1, tau2) -> LIST_TY tau1 
+                      | _ -> raise (TypeError ("type error in expression " ^ (string_of_expr exp)))) 
                 | Unop(u, e2) -> 
                   let tau1 = ty e2 
                   in (match (u, tau1) with 
@@ -123,11 +128,6 @@ let rec typ_of (con_env: constructor_env) (ty_env : type_env) (exp : Ast.expr) =
                       | (Tl, LIST_TY tau1) -> LIST_TY tau1  
                       | _ -> raise (TypeError "type error in unoary operaion"))
                 | Lambda (ty, formals, body) -> ty (* TODO: checking for lambda's type *) 
-                | Construct (name, exp) -> 
-                  let (exp_tau, ret_tau) = findType name con_env
-                  in  if eqType(exp_tau, ty exp) 
-                      then ret_tau 
-                      else raise (TypeError "type error in construct")
                 | Case (exp, cases) ->
                   let scrutinee = ty exp in 
                   let (patterns, es) =  List.split cases  in 
@@ -161,7 +161,7 @@ let rec type_def (def : def) (ty_env: type_env) (con_env: constructor_env) =
       | Variable (tau, name, e) ->  
         if eqType (tau, typ_of con_env ty_env e)
         then (StringMap.add name tau ty_env, con_env) 
-        else raise (TypeError "type mismatch in variable definition")
+        else raise (TypeError ("type mismatch in variable definition " ^ name))
       | Exp e ->  
         let _= typ_of con_env ty_env e in (ty_env, con_env)
       | CheckTypeError e -> 
@@ -179,7 +179,9 @@ let typecheck (defs : Ast.program) =
 
 
   (* TODO:
-  1. redefinition policy 
+  1. variable redefinition policy --> does not allow 
   2. function type - do we support partial application?
-  3. should constructed datatype be the same level as string , int , ... and all the other literals? 
+  3. should value construct only takes in value or expression 
+  4. revisit list pattern matching and how list value is represented in ast 
+  5. decide on the type for empty list, or whether we allow for type variable 
   *)

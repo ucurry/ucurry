@@ -35,7 +35,7 @@ type pattern =
   | WILDCARD
 
 type expr =
-  | Literal of literal
+  | Literal of value
   | Var of string
   | Assign of string * expr
   | Apply of expr * expr list
@@ -45,16 +45,16 @@ type expr =
   | Binop of expr * binop * expr
   | Unop of uop * expr
   | Lambda of typ * string list * expr
-  | Construct of string * expr
   | Case of expr * case_expr list
   | Noexpr
-and 
-  literal =
+  and 
+  value =
+  | Construct of string * expr 
   | INT of int
   | STRING of string
   | BOOL of bool
-  | LIST of literal list
-  | TUPLE of literal list 
+  | LIST of value list
+  | TUPLE of value list 
   | INF_LIST of int 
   | UNIT
 and case_expr = pattern * expr
@@ -90,15 +90,6 @@ let string_of_binop = function
 
 let string_of_uop = function Neg -> "~" | Not -> "not" | Hd -> "hd" | Tl -> "tl"
 
-let rec string_of_literal = function
-  | INT l -> string_of_int l
-  | STRING l -> "\"" ^ l ^ "\""
-  | BOOL l -> string_of_bool l
-  | LIST l -> "[" ^ String.concat ", " (List.map string_of_literal l) ^ "]"
-  | TUPLE l -> "(" ^ String.concat ", " (List.map string_of_literal l) ^ ")"
-  | UNIT -> "()"
-  | INF_LIST n -> "[" ^ string_of_int n ^ "..]"
-
 (* | Tuple(l) -> string_of_tupleLiteral l *)
 
 let rec string_of_pattern = function
@@ -124,7 +115,18 @@ let string_of_variable (t, s) = string_of_typ t ^ " " ^ s
 
 let rec string_of_expr exp = 
   let flat_string_of_exp = function
-  | Literal l -> string_of_literal l
+  | Literal l -> 
+  let rec string_of_literal = function
+    | INT l -> string_of_int l
+    | STRING l -> "\"" ^ l ^ "\""
+    | BOOL l -> string_of_bool l
+    | LIST l -> "[" ^ String.concat ", " (List.map string_of_literal l) ^ "]"
+    | TUPLE l -> "(" ^ String.concat ", " (List.map string_of_literal l) ^ ")"
+    | UNIT -> "()"
+    | INF_LIST n -> "[" ^ string_of_int n ^ "..]"
+    | Construct (c, e) -> "(" ^ c ^ " " ^ string_of_expr e ^ ")"
+    in
+      string_of_literal l
   | Var s -> s
   | Assign (v, e) -> v ^ " = " ^ string_of_expr e
   | Apply (e, el) ->
@@ -140,7 +142,6 @@ let rec string_of_expr exp =
   | Unop (o, e) -> string_of_uop o ^ string_of_expr e
   | Lambda (t, vl, e) ->
       "\\(" ^ string_of_typ t ^ ")" ^ String.concat " " vl ^ " -> " ^ string_of_expr e
-  | Construct (c, e) -> "(" ^ c ^ " " ^ string_of_expr e ^ ")"
   | Case (e, cel) ->
       "(case " ^ string_of_expr e ^ " of\n\t"
       ^ "  " ^ String.concat " \n\t| " (List.map (fun (pat, exp) -> string_of_pattern pat ^ " => " ^ string_of_expr exp) cel)

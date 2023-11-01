@@ -1,2 +1,2 @@
 -- def -> expr -> lambda
-\(int -> int) x -> x + 1;
+\(int -> int) x -> 1 + 1;
