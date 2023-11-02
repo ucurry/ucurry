@@ -33,6 +33,8 @@ type pattern =
   | VAR_PAT of string
   | CON_PAT of string * pattern list option
   | WILDCARD
+  | CONCELL of string * string
+  | NIL  
 
 type expr =
   | Literal of value
@@ -100,6 +102,9 @@ let rec string_of_pattern = function
       c ^ " (" ^ String.concat ", " (List.map string_of_pattern pl) ^ ")"
   | CON_PAT (c, None) -> c
   | WILDCARD -> "_"
+  (* TODO: HACK a temporary way to get away with pattern matching for list *)
+  | NIL -> "[]"
+  | CONCELL (hd, tl) -> hd ^ "::" ^ tl
 
 let rec string_of_typ = function
   | INT_TY -> "int"

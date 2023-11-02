@@ -84,4 +84,11 @@ Color color = (case (Pure (Black))
                 of Pure c => c 
                 |  Gradient (_ , c) => c);
 
+int list xs = (case [1, 2, 3] 
+                of [] => []
+                | x :: xs => xs);
 
+int  single = (case [1, 2, 3] 
+                of [] => 1
+                | x :: xs => x);
+                 

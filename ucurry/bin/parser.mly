@@ -5,7 +5,7 @@
 // delimiters
 %token ARROW DOUBLEARROW SEMI COMMA COLON LBRACE RBRACE LBRACKET RBRACKET BAR DOTS
 // keyword
-%token FUNCTION LAMBDA DATATYPE IF THEN ELSE LET BEGIN IN CASE OF WILDCARD CHECK_TYPE_ERROR
+%token FUNCTION LAMBDA DATATYPE IF THEN ELSE LET BEGIN IN CASE OF WILDCARD CHECK_TYPE_ERROR 
 // type
 %token INTTYPE STRTYPE LISTTYPE BOOLTYPE UNITTYPE 
 // binop 
@@ -105,6 +105,8 @@ pattern:
   | CAPNAME pattern     { CON_PAT ($1, Some [$2])}
   | CAPNAME LBRACE pattern_tuple RBRACE { CON_PAT ($1, Some (List.rev $3)) } // currently our parser doesn't support tuple type, thus a value constructor can at most take in one arg
   | WILDCARD            { WILDCARD }
+  | LBRACKET RBRACKET   { NIL }
+  | NAME CONS NAME      { CONCELL ($1, $3) }
 
 pattern_tuple:
     pattern COMMA pattern       { [$3; $1] }

@@ -36,7 +36,11 @@ let bindAllUnique (keys: string list) (vals: 'a list) (map : 'a StringMap.t) =
 
 let bindAllPairs (map : 'a StringMap.t) (pairs: (string * 'a) list) = 
     let (names, values) = List.split pairs in bindAll names values map 
-      
+
+let subtypeOfList tau = match tau with 
+| LIST_TY tau1  -> tau1
+| _ -> raise (TypeError ("expected list type but got " ^ string_of_typ tau))
+
 let rec eqType = function 
                     (INT_TY, INT_TY) -> true
                   | (STRING_TY, STRING_TY) -> true
@@ -65,6 +69,8 @@ let rec legalPattern (ty_env : type_env) (tau : typ)  (pat : pattern) =
       | (tau, [pat]) ->  legalPattern ty_env tau pat 
       | _ -> raise (TypeError "illy formed type constructor"))
       else raise (TypeError "ill formed type ")
+  | NIL -> let _ = subtypeOfList tau in []
+  | CONCELL (s1, s2) -> let subty = subtypeOfList tau in [(s1, subty) ; (s2, LIST_TY subty)]
   
 let eqTypes = List.for_all2 (curry eqType)       
 
