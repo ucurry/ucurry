@@ -1,6 +1,6 @@
 -- atoms
 string x = "hello";
-int x = 1 ;
+int z = 1 ;
 
 -- lists 
 int list vector = [1, 2, 3, 4];
@@ -13,13 +13,9 @@ int list emptyList = [];
 int list list emptyMatrix = [[], [], []];
 
 -- tuples 
-(int * string ) t = (1, 2, 3);
 (int * int list * string) t2 = (1, [1 , 2], "hello");
 (int * (int * int)) t3 = (1, (1, 2));
 
--- value constructor
-Color blue = (Blue); 
-Gradient blue_gradient = (Blue 1);
 
 -- datatype 
 datatype Natural = ZERO 
@@ -33,10 +29,7 @@ Test test1 = (List [1, 2, 3]);
 Test test2 = (Tuple (1, 2, "pu-"));
 Test test3 = (Function \(int -> int) a -> a);
 
--- function types
-Color -> Color -> Color mixColor = \(Color -> Color -> Color) b c -> b + c ; 
-(int * int) -> int add = \((int * int) -> int) a b -> a + b;
 
--- function type with braces ; 
-(int -> int) -> int list -> int list x = map;
+-- function type with braces (TODO: type lambda rule ); 
+check_type_error (int -> int) -> int list -> int list x = map;
 

@@ -2,7 +2,7 @@
 1;
 "c";
 [1, 2]; 
-[1, "c"];
+check_type_error [1, "c"];
 true;
 false;
 ();

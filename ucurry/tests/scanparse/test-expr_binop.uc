@@ -6,10 +6,11 @@
 12839 / 234;
 398 % 32;
 3 == 3;
-4 != a;
-"da" < "sad";
-ru > wf;
-(fef >= efe);
+check_type_error "da" < "sad";
+check_type_error ru > wf;
+check_type_error (fef >= efe);
+bool a = true;
+bool b = false;
 a and b;
 a or b;
-3 :: nums;
+1 :: [1, 2, 3];

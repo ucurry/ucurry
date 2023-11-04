@@ -28,6 +28,7 @@ rule token = parse
 | ".."       { DOTS }
 
 (* keyword *)
+| "check_type_error" { CHECK_TYPE_ERROR } 
 | "fun"      { FUNCTION }
 | "\\"       { LAMBDA }
 | "datatype" { DATATYPE }

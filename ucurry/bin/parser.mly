@@ -5,7 +5,7 @@
 // delimiters
 %token ARROW DOUBLEARROW SEMI COMMA COLON LBRACE RBRACE LBRACKET RBRACKET BAR DOTS
 // keyword
-%token FUNCTION LAMBDA DATATYPE IF THEN ELSE LET BEGIN IN CASE OF WILDCARD
+%token FUNCTION LAMBDA DATATYPE IF THEN ELSE LET BEGIN IN CASE OF WILDCARD CHECK_TYPE_ERROR 
 // type
 %token INTTYPE STRTYPE LISTTYPE BOOLTYPE UNITTYPE 
 // binop 
@@ -13,7 +13,7 @@
 // unop 
 %token HD TL NEG NOT
 
-// primitive literal 
+// primitive value 
 %token <string> CAPNAME
 %token <string> NAME 
 %token <string> STRINGLIT
@@ -24,6 +24,7 @@
 
 
 %nonassoc IN ELSE 
+%right ARROW
 %right ASN 
 %left OR 
 %left AND 
@@ -32,7 +33,6 @@
 %left ADD SUB  
 %left TIMES DIVIDE MOD 
 %right HD TL NEG NOT 
-%right ARROW
 %left LISTTYPE
 
 
@@ -43,12 +43,18 @@
 program:
     defs EOF { List.rev $1 }
 
+
+
 defs:   
     /* nothing */            { [] }
-    | defs fundef SEMI       { $2 :: $1 }
-    | defs vardef SEMI       { $2 :: $1 }
-    | defs datatypedef SEMI  { $2 :: $1 }
-    | defs exp SEMI          { (Exp $2) :: $1 }
+    | defs def SEMI       { $2 :: $1 }
+
+def: 
+  | fundef {$1}
+  | vardef {$1}
+  | datatypedef {$1}
+  | exp {(Exp $1)}
+  | CHECK_TYPE_ERROR def { CheckTypeError $2}
 
 fundef:
     FUNCTION COLON funtype COLON NAME formals ASN exp
@@ -66,12 +72,12 @@ constructor_list:
   | constructor_list BAR constructor { $3 :: $1 }
 
 constructor:
-    CAPNAME        { ValCon ($1, None) }
-  | CAPNAME OF typ { ValCon ($1, Some $3) }
+    CAPNAME        { ($1, None) }
+  | CAPNAME OF typ { ($1, Some $3) }
 
 exp:
     LBRACE exp RBRACE         { $2 }
-  | literal                   { Literal $1 }
+  | value                   { Literal $1 }
   | NAME                      { Var $1 }
   | NAME ASN exp              { Assign ($1, $3) }
   | LBRACE exp args RBRACE    { Apply ($2, List.rev $3) }
@@ -82,7 +88,6 @@ exp:
   | unop                      { $1 }
   | lambda                    { $1 }
   // fix: adding brackets to value constructors avoids shift/reduce conflict
-  | LBRACE CAPNAME  exp_opt RBRACE        { Construct ($2, $3) }
   | LBRACE CASE exp OF case_exp_list RBRACE { Case ($3, List.rev $5) }
 
 
@@ -100,6 +105,8 @@ pattern:
   | CAPNAME pattern     { CON_PAT ($1, Some [$2])}
   | CAPNAME LBRACE pattern_tuple RBRACE { CON_PAT ($1, Some (List.rev $3)) } // currently our parser doesn't support tuple type, thus a value constructor can at most take in one arg
   | WILDCARD            { WILDCARD }
+  | LBRACKET RBRACKET   { NIL }
+  | NAME CONS NAME      { CONCELL ($1, $3) }
 
 pattern_tuple:
     pattern COMMA pattern       { [$3; $1] }
@@ -109,8 +116,8 @@ lambda:
   LAMBDA LBRACE funtype RBRACE formals ARROW exp { Lambda($3, List.rev $5, $7) }
 
 bindings:
-    typ NAME ASN exp          { [($1, $2, $4)] }
-  | bindings COMMA typ NAME ASN exp { ($3, $4, $6):: $1 }
+    typ NAME ASN exp          { [(($1, $2), $4)] }
+  | bindings COMMA typ NAME ASN exp { (($3, $4), $6):: $1 }
 
 
 formals: // functions have to have arguments
@@ -119,8 +126,8 @@ formals: // functions have to have arguments
   | formals NAME { $2 :: $1 }
 
 funtype:
-    typ ARROW typ { FUNCTION_TY ($1, $3) } 
-   |LBRACE funtype RBRACE { $2 } 
+   | LBRACE funtype RBRACE { $2 } 
+   | typ ARROW typ { FUNCTION_TY ($1, $3) } 
 
 tupletype:
     LBRACE typelist RBRACE      { TUPLE_TY (List.rev $2) }
@@ -139,7 +146,7 @@ typ:
   | funtype             { $1 }
   | tupletype           { $1 }
 
-literal:
+value:
     STRINGLIT                      { STRING $1 } 
   | INTEGER                        { INT $1 }
   | BOOL                           { BOOL $1 }
@@ -147,15 +154,16 @@ literal:
   | LBRACE literal_tuple RBRACE     { TUPLE (List.rev $2)}
   | UNIT                           { UNIT }
   | LBRACKET INTEGER DOTS RBRACKET { INF_LIST $2 }
+  | LBRACE CAPNAME  exp_opt RBRACE { Construct ($2, $3) }
 
 literal_list:
                                { [] }
-  | literal                    { [$1] }
-  | literal_list COMMA literal { $3 :: $1}
+  | value                    { [$1] }
+  | literal_list COMMA value { $3 :: $1}
 
 literal_tuple:
-    literal  COMMA literal     { [$3; $1] }
-  | literal_tuple COMMA literal { $3 :: $1 }
+    value  COMMA value     { [$3; $1] }
+  | literal_tuple COMMA value { $3 :: $1 }
 
 exp_list: 
     exp { [$1] }
