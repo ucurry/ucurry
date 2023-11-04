@@ -16,7 +16,7 @@ type binop =
   | Or
   | Cons
 
-type uop = Neg | Not | Hd | Tl
+type uop = Neg | Not | Hd | Tl | Print | Println 
 
 type typ =
   | INT_TY
@@ -49,9 +49,8 @@ type expr =
   | Lambda of typ * string list * expr
   | Case of expr * case_expr list
   | Noexpr
-  and 
-  value =
-  | Construct of string * expr 
+  and value =
+  | Construct of string * value  
   | INT of int
   | STRING of string
   | BOOL of bool
@@ -91,6 +90,7 @@ let string_of_binop = function
   | Cons -> "::"
 
 let string_of_uop = function Neg -> "~" | Not -> "not" | Hd -> "hd" | Tl -> "tl"
+                          | Print -> "print" | Println -> "println"
 
 (* | Tuple(l) -> string_of_tupleLiteral l *)
 
@@ -116,22 +116,12 @@ let rec string_of_typ = function
   | CONSTRUCTOR_TY s -> s
   | TUPLE_TY typs -> "(" ^ String.concat " * " (List.map string_of_typ typs) ^ ")"
 
-let string_of_variable (t, s) = string_of_typ t ^ " " ^ s
 
+
+let string_of_variable (t, s) = string_of_typ t ^ " " ^ s
 let rec string_of_expr exp = 
   let flat_string_of_exp = function
-  | Literal l -> 
-  let rec string_of_literal = function
-    | INT l -> string_of_int l
-    | STRING l -> "\"" ^ l ^ "\""
-    | BOOL l -> string_of_bool l
-    | LIST l -> "[" ^ String.concat ", " (List.map string_of_literal l) ^ "]"
-    | TUPLE l -> "(" ^ String.concat ", " (List.map string_of_literal l) ^ ")"
-    | UNIT -> "()"
-    | INF_LIST n -> "[" ^ string_of_int n ^ "..]"
-    | Construct (c, e) -> "(" ^ c ^ " " ^ string_of_expr e ^ ")"
-    in
-      string_of_literal l
+  | Literal l -> string_of_literal l
   | Var s -> s
   | Assign (v, e) -> v ^ " = " ^ string_of_expr e
   | Apply (e, el) ->
@@ -158,7 +148,15 @@ let rec string_of_expr exp =
     match exp with
         Noexpr -> ""
       | _ -> "(" ^ flat_string_of_exp exp ^ ")"
-
+and string_of_literal = function
+| INT l -> string_of_int l
+| STRING l -> "\"" ^ l ^ "\""
+| BOOL l -> string_of_bool l
+| LIST l -> "[" ^ String.concat ", " (List.map string_of_literal l) ^ "]"
+| TUPLE l -> "(" ^ String.concat ", " (List.map string_of_literal l) ^ ")"
+| UNIT -> "()"
+| INF_LIST n -> "[" ^ string_of_int n ^ "..]"
+| Construct (c, e) -> "(" ^ c ^ " " ^ string_of_literal e ^ ")"
 
 let string_of_constructor = function
   | (c, None) -> c

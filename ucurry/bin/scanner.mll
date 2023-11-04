@@ -71,6 +71,8 @@ rule token = parse
 | "tl"       { TL }
 | "not"      { NOT }
 | "~"        { NEG }
+| "print"    { PRINT }
+| "println"  { PRINTLN }
 
 
 (* literal   *)

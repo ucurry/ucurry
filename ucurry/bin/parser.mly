@@ -11,7 +11,7 @@
 // binop 
 %token ASN ADD SUB TIMES DIVIDE MOD EQUAL NEQ LESS LEQ GREATER GEQ AND OR CONS 
 // unop 
-%token HD TL NEG NOT
+%token HD TL NEG NOT PRINT PRINTLN
 
 // primitive value 
 %token <string> CAPNAME
@@ -91,9 +91,6 @@ exp:
   | LBRACE CASE exp OF case_exp_list RBRACE { Case ($3, List.rev $5) }
 
 
-exp_opt:
-    /* nothing */ { Noexpr }
-  | exp           { $1 }
 
 case_exp_list:
     pattern DOUBLEARROW exp { [($1, $3)] }
@@ -154,7 +151,8 @@ value:
   | LBRACE literal_tuple RBRACE     { TUPLE (List.rev $2)}
   | UNIT                           { UNIT }
   | LBRACKET INTEGER DOTS RBRACKET { INF_LIST $2 }
-  | LBRACE CAPNAME  exp_opt RBRACE { Construct ($2, $3) }
+  | LBRACE CAPNAME value RBRACE    { Construct ($2, $3) }
+  | LBRACE CAPNAME  RBRACE         { Construct ($2, UNIT) }
 
 literal_list:
                                { [] }
@@ -192,5 +190,8 @@ binop:
 unop:
   | HD exp              { Unop (Hd, $2) }
   | TL exp              { Unop (Tl, $2) }
-  | NEG  exp            { Unop(Neg, $2)}
+  | NEG  exp            { Unop (Neg, $2) }
   | NOT  exp            { Unop (Not, $2) }
+  | PRINT exp           { Unop (Print, $2) }
+  | PRINTLN exp         { Unop (Println, $2) }
+

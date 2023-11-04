@@ -92,9 +92,9 @@ let rec typ_of (ty_env : type_env) (exp : Ast.expr)  =
                     | _ -> raise (TypeError "cons called on non-list"))
           | TUPLE lits -> TUPLE_TY (List.map lit_ty lits)
           | INF_LIST _ -> LIST_TY INT_TY
-          | Construct (name, exp) -> 
+          | Construct (name, value) -> 
               let (exp_tau, ret_tau) = findFunctionType name ty_env
-              in  if eqType(exp_tau, ty exp) 
+              in  if eqType(exp_tau, ty (Literal value)) 
                   then ret_tau 
                   else raise (TypeError "type error in construct")
         in lit_ty l 
@@ -145,6 +145,8 @@ let rec typ_of (ty_env : type_env) (exp : Ast.expr)  =
             | (Not, BOOL_TY) -> BOOL_TY
             | (Hd, LIST_TY tau1) -> tau1
             | (Tl, LIST_TY tau1) -> LIST_TY tau1  
+            | (Print, _) -> UNIT_TY
+            | (Println, _) -> UNIT_TY
             | _ -> raise (TypeError "type error in unoary operaion"))
     | Lambda (ty, formals, body) ->
         let rec check_lambda tau formals env = (match 
