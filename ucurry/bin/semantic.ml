@@ -28,7 +28,7 @@ let mustAvailable  (env: 'a StringMap.t) (name: string) =
 let bindUnique  (name: string) (value: 'a) (env: 'a StringMap.t)= 
   StringMap.add (mustAvailable env name) value env
 
-  let bindAll (keys: string list) (vals: 'a list) (map : 'a StringMap.t) = 
+let bindAll (keys: string list) (vals: 'a list) (map : 'a StringMap.t) = 
     List.fold_right2 StringMap.add  keys vals map
 
 let bindAllUnique (keys: string list) (vals: 'a list) (map : 'a StringMap.t) = 
@@ -171,7 +171,6 @@ let rec typ_of (ty_env : type_env) (exp : Ast.expr)  =
 
 (* type_def : def -> type_env -> type_env *)
 let rec type_def (def : Ast.def) (ty_env: type_env)  = 
-
   let ty = function 
       Function (tau, funname, args, body) ->
         let tau' = typ_of (bindUnique funname tau ty_env) (Lambda (tau, args, body)) 
@@ -198,15 +197,10 @@ let rec type_def (def : Ast.def) (ty_env: type_env)  =
   in ty def 
 
 let typecheck (defs : Ast.program) = 
-  List.fold_left (fun ty_env def -> type_def def ty_env) 
-                 StringMap.empty 
-                 defs 
+  List.fold_left (fun ty_env def -> type_def def ty_env) StringMap.empty defs 
 
 
   (* TODO:
-  1. variable redefinition policy --> does not allow 
-  2. function type - do we support partial application?
-  3. should value construct only takes in value or expression 
-  4. revisit list pattern matching and how list value is represented in ast 
-  5. decide on the type for empty list, or whether we allow for type variable 
+  1. function type - do we support partial application?
+  2. should value construct only takes in value or expression 
   *)
