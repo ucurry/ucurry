@@ -5,8 +5,8 @@ let () =
   let set_action a () = action := a in
   let speclist = [ 
     ("-a", Arg.Unit (set_action Ast), "Print the AST");
-    ("-c", Arg.Unit (set_action CAST), "Print the CAST");
     ("-l", Arg.Unit (set_action LAST), "Print the LAST");
+    ("-c", Arg.Unit (set_action CAST), "Print the CAST");
     ("-s", Arg.Unit (set_action LLVMIR), "Print the LLVM");
   ] in
   let usage_msg = "usage: ./ucurry [-a|-s|-l|-c] [file.uc]\n" in
@@ -30,12 +30,10 @@ let () =
       let _ = print_string (Cast.string_of_program renamed_cast) in
       print_newline ()
   | LLVMIR -> 
-      let _ = print_string "Running LLVMIR" in
       let last = List.map Lazyconvert.lazyDef ast in
       let cast = Clconvert.closeProgram last in
       let renamed_cast = Rename.rename cast in
       let llvmir = Codegen.build_main_body renamed_cast in
       let _ = print_string (Llvm.string_of_llmodule llvmir) in
       print_newline ()
-    
   | _ -> print_string usage_msg
