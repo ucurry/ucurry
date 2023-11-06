@@ -1,2 +1,3 @@
 (library
- (name ucurry))
+ (name ucurry)
+ (libraries llvm llvm.analysis))
