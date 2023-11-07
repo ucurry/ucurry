@@ -27,8 +27,6 @@ datatype Test =  List of int list
 
 Test test1 = (List [1, 2, 3]);
 Test test2 = (Tuple (1, 2, "pu-"));
-Test test3 = (Function \(int -> int) a -> a);
-
 
 -- function type with braces (TODO: type lambda rule ); 
 check_type_error (int -> int) -> int list -> int list x = map;

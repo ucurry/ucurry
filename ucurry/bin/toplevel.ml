@@ -22,7 +22,7 @@ let () =
       print_newline ()
   | LAST ->
       let last = List.map Lazyconvert.lazyDef ast in
-    print_newline ()
+      print_newline ()
   | CAST ->
       let last = List.map Lazyconvert.lazyDef ast in
       let cast = Clconvert.closeProgram last in
