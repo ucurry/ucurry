@@ -10,10 +10,20 @@
 ## Command lines:
 
     dune build                 # to compile
-    dune exec ucurry -- -a     # to open the interpreter
 
-OR:
-    ./sptest.sh                # to run the test script
+    dune exec ucurry -- -a     # to open the interpreter for scanning and parsing 
+    dune exec ucurry -- -l     # to further include the lazy evaluation pass 
+    dune exec ucurry -- -c     # to further include the closure conversion and rename passes 
+    dune exec ucurry -- -s     # to further include the code generation
+
+    ./sptest.sh                # to run the tests script for scanner and parser 
+    ./typetest.sh              # to run the tests for typechecking
+    ./codegen.sh               # to run the tests for codegen
+
+    ./testafile.sh <filename>  # generates the executable for the given file 
+                                 name and any intermediate representations
+    
+    make clean                 # to clean up all the executable or output files
 
 # The µcurry Compiler
 Coded in OCaml, this compiler takes a minimal functional language and compiles 
@@ -25,8 +35,15 @@ In the toplevel directory, run `dune build` to build the compiler.
 Run `dune exec ucurry -- -a` to run the compiler that prints the scanner and
 parser roundtrip, which scans and parse input text (program) to structured AST
 and pretty-prints back to strings.
+Run `dune exec ucurry -- -s` to run the compiler that would produce the 
+Llvm code.
 
-## Test Script
+## Integration Test Suite
+
+There is only one source program in our integration test suite, which is 
+`tests/codgen/print-hello.uc`. 
+
+## Test Script for scanning and parsing
 
 To validate our parsing/unparsing roundtrip, we tried to show `(parse o unparse) = id`, 
 the reverse may not be true becuase parsing removes comments and unnecessary whitespace.
@@ -34,6 +51,12 @@ the reverse may not be true becuase parsing removes comments and unnecessary whi
 To verify this, our script runs `unparse o parse o unparse o parse = id`, 
 the first `unparse o parse` gives us a trimmed concrete syntax of the µcurry language, and
 it should be the same as the output of the second `unparse o parse` pair.
+
+## Test Script for codegen 
+
+To validate our codegen, we created the gold standard of the output when 
+executing a program, and compare the gold standard to running the LLVM code 
+produced by our compilation.
 
 ## Syntax to be added
 
