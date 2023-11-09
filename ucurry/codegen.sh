@@ -7,7 +7,9 @@ for f in tests/codegen/*.uc
 do 
     echo "Testing $f"
     dune exec ucurry -- -s < $f > $f.ll 
-    lli $f.ll > $f.out
+    llc -relocation-model=pic $f.ll > $f.s
+    cc -o $f.exe $f.s
+    ./$f.exe > $f.out
     diff $f.out $f.gold 
 
     ecode=$? 
