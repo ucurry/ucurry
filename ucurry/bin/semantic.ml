@@ -60,7 +60,7 @@ let rec eqType = function
 
 let rec legalPattern (ty_env : type_env) (tau : typ) (pat : pattern) =
   match pat with
-  | VAR_PAT x -> [ (x, tau) ]
+  | VAR_PAT x -> [ (x, tau) ] (*Did we test this case?*)
   | WILDCARD -> []
   | CON_PAT (name, None) ->
       let exp_tau, ret_tau = findFunctionType name ty_env in
@@ -69,7 +69,7 @@ let rec legalPattern (ty_env : type_env) (tau : typ) (pat : pattern) =
         raise
           (TypeError
              ("invalid pattern matching for pattern " ^ string_of_pattern pat
-            ^ " expected " ^ string_of_typ tau ^ " get " ^ string_of_typ ret_tau
+            ^ " expected " ^ string_of_typ tau ^ ", got " ^ string_of_typ ret_tau
              ))
   | CON_PAT (name, Some pats) ->
       let exp_tau, ret_tau = findFunctionType name ty_env in
@@ -188,18 +188,21 @@ let rec typ_of (ty_env : type_env) (exp : Ast.expr) =
         in
         check_lambda ty formals ty_env
     | Case (exp, cases) ->
+        let _ = print_string (string_of_expr exp ^ "\n") in 
         let scrutinee = ty exp in
+        let _ = print_string (string_of_typ scrutinee ^ "\n") in
+        let x = Literal (INT 5) in
         let patterns, es = List.split cases in
         let bindings = List.map (legalPattern ty_env scrutinee) patterns in
         let newEnvs = List.map (bindAllPairs ty_env) bindings in
         let taus = List.map2 typ_of newEnvs es in
-        let allSame, tau =
+        let allSame, exptau =
           List.fold_left
             (fun (same, tau) tau' -> (same && eqType (tau, tau'), tau))
             (true, List.hd taus)
             (List.tl taus)
         in
-        if allSame then tau else raise (TypeError "ill typed case expression ")
+        if allSame then exptau else raise (TypeError "ill typed case expression ")
     | Noexpr -> UNIT_TY
   in
   ty exp
