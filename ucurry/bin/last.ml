@@ -23,7 +23,7 @@ and thunk = lambda
 
 and def =
   | Function of string * lambda
-  | Datatype of string * A.constructor list
+  | Datatype of A.typ * A.constructor list
   | Variable of A.typ * string * thunk (* typ will need to be THUNK_TY *)
   | Exp of expr
   | CheckTypeError of def

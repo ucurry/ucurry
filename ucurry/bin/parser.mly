@@ -64,7 +64,7 @@ vardef:
     typ NAME ASN exp { Variable ($1, $2, $4) }
 
 datatypedef:
-    DATATYPE CAPNAME ASN constructor_list { Datatype ($2, List.rev $4) }
+    DATATYPE CAPNAME ASN constructor_list { Datatype (CONSTRUCTOR_TY $2, List.rev $4) }
 
 constructor_list:
                  { [] }

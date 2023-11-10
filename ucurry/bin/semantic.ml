@@ -205,26 +205,21 @@ let rec typ_of (ty_env : type_env) (exp : Ast.expr) =
   ty exp
 
 (* type_def : def -> type_env -> type_env *)
-let rec type_def (def : Ast.def) (ty_env : type_env) =
-  let ty = function
-    | Function (tau, funname, args, body) ->
-        let tau' =
-          typ_of (bindUnique funname tau ty_env) (Lambda (tau, args, body))
-        in
-        if eqType (tau', tau) then bindUnique funname tau ty_env
-        else raise (TypeError "invalid type in function definition")
-    | Datatype (name, val_cons) ->
-        let new_tau = CONSTRUCTOR_TY name in
-        let vcons, argtaus_op = List.split val_cons in
-        (* treat each vcon as a function name *)
-        let function_taus =
-          List.map
-            (fun argtau_op -> FUNCTION_TY ((getOp UNIT_TY) argtau_op, new_tau))
-            argtaus_op
-        in
-        bindAllUnique vcons function_taus ty_env
-    | Variable (tau, name, e) ->
-        if eqType (tau, typ_of ty_env e) then bindUnique name tau ty_env
+let rec type_def (def : Ast.def) (ty_env: type_env)  = 
+  let ty = function 
+      Function (tau, funname, args, body) ->
+        let tau' = typ_of (bindUnique funname tau ty_env) (Lambda (tau, args, body)) 
+        in if eqType(tau',tau) 
+           then bindUnique funname tau ty_env
+           else raise (TypeError "invalid type in function definition")
+    | Datatype (tau, val_cons) ->
+        let (vcons, argtaus_op) = List.split val_cons in (* treat each vcon as a function name *)
+        let function_taus = List.map (fun argtau_op -> FUNCTION_TY ((getOp UNIT_TY) argtau_op, tau)) argtaus_op 
+        in   
+          bindAllUnique vcons function_taus ty_env
+    | Variable (tau, name, e) ->  
+        if eqType (tau, typ_of ty_env e)
+        then bindUnique name tau ty_env
         else raise (TypeError ("type mismatch in variable definition " ^ name))
     | Exp e ->
         let _ = typ_of ty_env e in
