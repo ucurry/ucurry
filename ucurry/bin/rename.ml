@@ -6,7 +6,7 @@ module C = Cast
    but we cannot do
    x = 1;
    let y = (let x = 2 in 2) in x + y
-   
+
    cannot be directory translated to
 
    x = 1;
@@ -15,6 +15,4 @@ module C = Cast
 *)
 
 (* now it's just identity *)
-let rename: C.program -> C.program = function 
-  p -> p
-
+let rename : C.program -> C.program = function p -> p
