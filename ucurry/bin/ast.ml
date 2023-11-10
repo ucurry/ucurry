@@ -16,7 +16,7 @@ type binop =
   | Or
   | Cons
 
-type uop = Neg | Not | Hd | Tl | Print | Println 
+type uop = Neg | Not | Hd | Tl | Print | Println
 
 type typ =
   | INT_TY
@@ -26,15 +26,14 @@ type typ =
   | UNIT_TY
   | FUNCTION_TY of typ * typ
   | CONSTRUCTOR_TY of string
-  | TUPLE_TY of typ list 
-
+  | TUPLE_TY of typ list
 
 type pattern =
   | VAR_PAT of string
   | CON_PAT of string * pattern list option
   | WILDCARD
   | CONCELL of string * string
-  | NIL  
+  | NIL
 
 type expr =
   | Literal of value
@@ -49,15 +48,17 @@ type expr =
   | Lambda of typ * string list * expr
   | Case of expr * case_expr list
   | Noexpr
-  and value =
-  | Construct of string * value  
+
+and value =
+  | Construct of string * value
   | INT of int
   | STRING of string
   | BOOL of bool
   | LIST of value list
-  | TUPLE of value list 
-  | INF_LIST of int 
+  | TUPLE of value list
+  | INF_LIST of int
   | UNIT
+
 and case_expr = pattern * expr
 
 type def =
@@ -65,10 +66,10 @@ type def =
   | Datatype of typ * constructor list
   | Variable of typ * string * expr
   | Exp of expr
-  | CheckTypeError of def  
+  | CheckTypeError of def
 
 and constructor = string * typ option
- 
+
 type program = def list
 
 (* Pretty-printing functions *)
@@ -89,16 +90,20 @@ let string_of_binop = function
   | Or -> "or"
   | Cons -> "::"
 
-let string_of_uop = function Neg -> "~" | Not -> "not" | Hd -> "hd" | Tl -> "tl"
-                          | Print -> "print" | Println -> "println"
+let string_of_uop = function
+  | Neg -> "~"
+  | Not -> "not"
+  | Hd -> "hd"
+  | Tl -> "tl"
+  | Print -> "print"
+  | Println -> "println"
 
 (* | Tuple(l) -> string_of_tupleLiteral l *)
 
 let rec string_of_pattern = function
   | VAR_PAT s -> s
-  | CON_PAT (c, Some [p]) ->
-      c ^ " " ^ string_of_pattern p 
-  | CON_PAT (c, Some pl) -> 
+  | CON_PAT (c, Some [ p ]) -> c ^ " " ^ string_of_pattern p
+  | CON_PAT (c, Some pl) ->
       c ^ " (" ^ String.concat ", " (List.map string_of_pattern pl) ^ ")"
   | CON_PAT (c, None) -> c
   | WILDCARD -> "_"
@@ -110,53 +115,65 @@ let rec string_of_typ = function
   | INT_TY -> "int"
   | STRING_TY -> "string"
   | BOOL_TY -> "bool"
-  | LIST_TY typ -> (string_of_typ typ) ^ " list"
+  | LIST_TY typ -> string_of_typ typ ^ " list"
   | UNIT_TY -> "unit"
-  | FUNCTION_TY (t1, t2) -> "(" ^ string_of_typ t1 ^ " -> " ^ string_of_typ t2 ^ ")"
+  | FUNCTION_TY (t1, t2) ->
+      "(" ^ string_of_typ t1 ^ " -> " ^ string_of_typ t2 ^ ")"
   | CONSTRUCTOR_TY s -> s
-  | TUPLE_TY typs -> "(" ^ String.concat " * " (List.map string_of_typ typs) ^ ")"
-
-
+  | TUPLE_TY typs ->
+      "(" ^ String.concat " * " (List.map string_of_typ typs) ^ ")"
 
 let string_of_variable (t, s) = string_of_typ t ^ " " ^ s
-let rec string_of_expr exp = 
+
+let rec string_of_expr exp =
   let flat_string_of_exp = function
-  | Literal l -> string_of_literal l
-  | Var s -> s
-  | Assign (v, e) -> v ^ " = " ^ string_of_expr e
-  | Apply (e, el) ->
-      "(" ^ string_of_expr e ^ " "
-      ^ String.concat " " (List.map string_of_expr el)
-      ^ ")"
-  | If (e1, e2, e3) ->
-      "if " ^ string_of_expr e1 ^ " then " ^ string_of_expr e2 ^ " else "
-      ^ string_of_expr e3
-  | Begin el -> "(begin " ^ String.concat ", " (List.map string_of_expr el) ^ ")"
-  | Binop (e1, o, e2) ->
-      string_of_expr e1 ^ " " ^ string_of_binop o ^ " " ^ string_of_expr e2
-  | Unop (o, e) -> string_of_uop o ^ string_of_expr e
-  | Lambda (t, vl, e) ->
-      "\\(" ^ string_of_typ t ^ ")" ^ String.concat " " vl ^ " -> " ^ string_of_expr e
-  | Case (e, cel) ->
-      "(case " ^ string_of_expr e ^ " of\n\t"
-      ^ "  " ^ String.concat " \n\t| " (List.map (fun (pat, exp) -> string_of_pattern pat ^ " => " ^ string_of_expr exp) cel)
-      ^ ")"
-  | Let (vl, e) ->
-      "let " ^ String.concat ", " (List.map (fun ((t, v), e) -> string_of_typ t ^ " " ^ v ^ " = " ^ string_of_expr e) vl) ^ " in " ^ string_of_expr e
-  | Noexpr -> ""
-  in 
-    match exp with
-        Noexpr -> ""
-      | _ -> "(" ^ flat_string_of_exp exp ^ ")"
+    | Literal l -> string_of_literal l
+    | Var s -> s
+    | Assign (v, e) -> v ^ " = " ^ string_of_expr e
+    | Apply (e, el) ->
+        "(" ^ string_of_expr e ^ " "
+        ^ String.concat " " (List.map string_of_expr el)
+        ^ ")"
+    | If (e1, e2, e3) ->
+        "if " ^ string_of_expr e1 ^ " then " ^ string_of_expr e2 ^ " else "
+        ^ string_of_expr e3
+    | Begin el ->
+        "(begin " ^ String.concat ", " (List.map string_of_expr el) ^ ")"
+    | Binop (e1, o, e2) ->
+        string_of_expr e1 ^ " " ^ string_of_binop o ^ " " ^ string_of_expr e2
+    | Unop (o, e) -> string_of_uop o ^ string_of_expr e
+    | Lambda (t, vl, e) ->
+        "\\(" ^ string_of_typ t ^ ")" ^ String.concat " " vl ^ " -> "
+        ^ string_of_expr e
+    | Case (e, cel) ->
+        "(case " ^ string_of_expr e ^ " of\n\t" ^ "  "
+        ^ String.concat " \n\t| "
+            (List.map
+               (fun (pat, exp) ->
+                 string_of_pattern pat ^ " => " ^ string_of_expr exp)
+               cel)
+        ^ ")"
+    | Let (vl, e) ->
+        "let "
+        ^ String.concat ", "
+            (List.map
+               (fun ((t, v), e) ->
+                 string_of_typ t ^ " " ^ v ^ " = " ^ string_of_expr e)
+               vl)
+        ^ " in " ^ string_of_expr e
+    | Noexpr -> ""
+  in
+  match exp with Noexpr -> "" | _ -> "(" ^ flat_string_of_exp exp ^ ")"
+
 and string_of_literal = function
-| INT l -> string_of_int l
-| STRING l -> "\"" ^ l ^ "\""
-| BOOL l -> string_of_bool l
-| LIST l -> "[" ^ String.concat ", " (List.map string_of_literal l) ^ "]"
-| TUPLE l -> "(" ^ String.concat ", " (List.map string_of_literal l) ^ ")"
-| UNIT -> "()"
-| INF_LIST n -> "[" ^ string_of_int n ^ "..]"
-| Construct (c, e) -> "(" ^ c ^ " " ^ string_of_literal e ^ ")"
+  | INT l -> string_of_int l
+  | STRING l -> "\"" ^ l ^ "\""
+  | BOOL l -> string_of_bool l
+  | LIST l -> "[" ^ String.concat ", " (List.map string_of_literal l) ^ "]"
+  | TUPLE l -> "(" ^ String.concat ", " (List.map string_of_literal l) ^ ")"
+  | UNIT -> "()"
+  | INF_LIST n -> "[" ^ string_of_int n ^ "..]"
+  | Construct (c, e) -> "(" ^ c ^ " " ^ string_of_literal e ^ ")"
 
 let string_of_constructor = function
   | (c, None) -> c
@@ -171,6 +188,6 @@ let string_of_constructor = function
   | Exp e -> string_of_expr e ^ ";"
   | Variable (ty, name, e) ->
       string_of_typ ty ^ " " ^ name ^ " = " ^ string_of_expr e ^ ";"
-  | CheckTypeError e -> "check_type_error " ^ string_of_def e 
-let string_of_program defs = 
-    (String.concat "\n" (List.map string_of_def defs))
+  | CheckTypeError e -> "check_type_error " ^ string_of_def e
+
+let string_of_program defs = String.concat "\n" (List.map string_of_def defs)
