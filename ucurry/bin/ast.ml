@@ -62,7 +62,7 @@ and case_expr = pattern * expr
 
 type def =
   | Function of typ * string * string list * expr
-  | Datatype of string * constructor list
+  | Datatype of typ * constructor list
   | Variable of typ * string * expr
   | Exp of expr
   | CheckTypeError of def  
@@ -166,8 +166,8 @@ let string_of_constructor = function
    | Function (ty, f, args, e) ->
       "fun : " ^ string_of_typ ty ^ ":\n" ^
       f ^ " " ^ String.concat " " args ^ " = " ^ string_of_expr e ^ ";"
-  | Datatype (typename, cls) -> 
-      "datatype " ^ typename ^ " = " ^ String.concat " | " (List.map string_of_constructor cls) ^ ";"
+  | Datatype (ty, cls) -> 
+      "datatype " ^ string_of_typ ty ^ " = " ^ String.concat " | " (List.map string_of_constructor cls) ^ ";"
   | Exp e -> string_of_expr e ^ ";"
   | Variable (ty, name, e) ->
       string_of_typ ty ^ " " ^ name ^ " = " ^ string_of_expr e ^ ";"
