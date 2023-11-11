@@ -176,15 +176,17 @@ and string_of_literal = function
   | Construct (c, e) -> "(" ^ c ^ " " ^ string_of_literal e ^ ")"
 
 let string_of_constructor = function
-  | (c, None) -> c
-  | (c, Some t) -> c ^ " of " ^ string_of_typ t
+  | c, None -> c
+  | c, Some t -> c ^ " of " ^ string_of_typ t
 
-  let rec string_of_def = function
-   | Function (ty, f, args, e) ->
-      "fun : " ^ string_of_typ ty ^ ":\n" ^
-      f ^ " " ^ String.concat " " args ^ " = " ^ string_of_expr e ^ ";"
-  | Datatype (ty, cls) -> 
-      "datatype " ^ string_of_typ ty ^ " = " ^ String.concat " | " (List.map string_of_constructor cls) ^ ";"
+let rec string_of_def = function
+  | Function (ty, f, args, e) ->
+      "fun : " ^ string_of_typ ty ^ ":\n" ^ f ^ " " ^ String.concat " " args
+      ^ " = " ^ string_of_expr e ^ ";"
+  | Datatype (ty, cls) ->
+      "datatype " ^ string_of_typ ty ^ " = "
+      ^ String.concat " | " (List.map string_of_constructor cls)
+      ^ ";"
   | Exp e -> string_of_expr e ^ ";"
   | Variable (ty, name, e) ->
       string_of_typ ty ^ " " ^ name ^ " = " ^ string_of_expr e ^ ";"

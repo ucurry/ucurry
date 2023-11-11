@@ -148,11 +148,11 @@ value:
   | INTEGER                        { INT $1 }
   | BOOL                           { BOOL $1 }
   | LBRACKET literal_list RBRACKET { LIST (List.rev $2) } 
-  | LBRACE literal_tuple RBRACE     { TUPLE (List.rev $2)}
+  | LBRACE literal_tuple RBRACE    { TUPLE (List.rev $2)}
   | UNIT                           { UNIT }
   | LBRACKET INTEGER DOTS RBRACKET { INF_LIST $2 }
   | LBRACE CAPNAME value RBRACE    { Construct ($2, $3) }
-  | LBRACE CAPNAME  RBRACE         { Construct ($2, UNIT) }
+  | LBRACE CAPNAME  RBRACE         { Construct ($2, UNIT) } // HACK: since Construct does not take in expression 
 
 literal_list:
                                { [] }

@@ -27,7 +27,7 @@ and thunk = closure
 and def =
   | Function of closure
   | Datatype of A.typ * A.constructor list
-  | Variable of A.typ * string * thunk 
+  | Variable of A.typ * string * thunk
   | Exp of expr
   | CheckTypeError of def
 
