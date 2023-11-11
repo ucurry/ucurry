@@ -3,15 +3,15 @@ open Ast
 type sexpr =
   | SLiteral of typ * value
   | SVar of typ * string
-  | SAssign of string * sexpr
-  | SApply of sexpr * sexpr list
-  | SIf of sexpr * sexpr * sexpr
-  | SLet of ((typ * string) * sexpr) list * sexpr
-  | SBegin of sexpr list
+  | SAssign of typ * string * sexpr
+  | SApply of typ * sexpr * sexpr list
+  | SIf of  typ * sexpr * sexpr * sexpr
+  | SLet of typ * ((typ * string) * sexpr) list * sexpr
+  | SBegin of typ * sexpr list
   | SBinop of typ * sexpr * binop * sexpr
   | SUnop of typ * uop * sexpr
   | SLambda of typ * string list * sexpr
-  | SCase of sexpr * scase_expr list
+  | SCase of typ *sexpr * scase_expr list
   | SNoexpr
 
 and scase_expr = pattern * sexpr

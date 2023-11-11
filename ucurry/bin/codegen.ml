@@ -14,13 +14,12 @@ let build_main_body defs =
   let void_t = L.void_type context in
   let main_ftype = L.function_type void_t [| i32_t |] in
   let the_module = L.create_module context "uCurry" in
-
   let main_function = L.define_function "main" main_ftype the_module in
   let builder = L.builder_at_end context (L.entry_block main_function) in
-
   let int_format_str = L.build_global_stringptr "%d\n" "fmt" builder
   and string_format_str = L.build_global_stringptr "%s\n" "fmt" builder
   and float_format_str = L.build_global_stringptr "%g\n" "fmt" builder in
+
   let rec expr builder = function
     | C.Literal (INT i) -> L.const_int i32_t i (* TODO: integers only for now *)
     | C.Literal (STRING s) -> L.build_global_stringptr s "str" builder
