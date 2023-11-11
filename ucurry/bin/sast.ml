@@ -1,9 +1,11 @@
 open Ast
-type sexpr =  typ * sx 
-and  sx =
+
+type sexpr = typ * sx
+
+and sx =
   | SLiteral of value
   | SVar of string
-  | SAssign of  string * sexpr
+  | SAssign of string * sexpr
   | SApply of sexpr * sexpr list
   | SIf of sexpr * sexpr * sexpr
   | SLet of ((typ * string) * sexpr) list * sexpr
@@ -13,6 +15,7 @@ and  sx =
   | SLambda of string list * sexpr
   | SCase of sexpr * scase_expr list
   | SNoexpr
+
 and scase_expr = pattern * sexpr
 
 type sdef =

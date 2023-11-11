@@ -119,12 +119,12 @@ let rec typ_of (ty_env : type_env) (exp : Ast.expr) : S.sexpr * typ =
         let literal_type = lit_ty l in
         ((literal_type, S.SLiteral l), literal_type)
     | Var x ->
-        let var_type = findType x ty_env in 
-        (var_type, S.SVar x), var_type
+        let var_type = findType x ty_env in
+        ((var_type, S.SVar x), var_type)
     | Assign (x, e) ->
         let var_type = findType x ty_env in
         let sexpr, expr_type = ty e in
-        if eqType (var_type, expr_type) then 
+        if eqType (var_type, expr_type) then
           ((var_type, S.SAssign (x, sexpr)), var_type)
         else raise (TypeError "assigned unmatched type")
     | Apply (e, es) ->
@@ -138,7 +138,7 @@ let rec typ_of (ty_env : type_env) (exp : Ast.expr) : S.sexpr * typ =
           | _ -> raise (TypeError "apply non-function")
         in
         let ret_ty = matchfun (expr_type, formal_types) in
-          ((ret_ty,  S.SApply (sexpr, formals)), ret_ty)
+        ((ret_ty, S.SApply (sexpr, formals)), ret_ty)
     | If (e1, e2, e3) -> (
         match (ty e1, ty e2, ty e3) with
         | (se1, BOOL_TY), (se2, tau1), (se3, tau2) ->
@@ -153,14 +153,13 @@ let rec typ_of (ty_env : type_env) (exp : Ast.expr) : S.sexpr * typ =
         let sameTypes = eqTypes types e_types in
         if sameTypes then
           let sexpr, e_type = typ_of newEnv e in
-          ((e_type,  S.SLet (List.combine vars sexprs, sexpr)), e_type)
+          ((e_type, S.SLet (List.combine vars sexprs, sexpr)), e_type)
         else raise (TypeError "binding types are not annotated correctly")
-    | Begin [] -> ((UNIT_TY, S.SBegin ([])), UNIT_TY)
+    | Begin [] -> ((UNIT_TY, S.SBegin []), UNIT_TY)
     | Begin es ->
         let es, types = List.split (List.map ty es) in
         let final_ty = o List.hd List.rev types in
         ((final_ty, SBegin es), final_ty)
-        
     | Binop (e1, b, e2) as exp -> (
         let se1, tau1 = ty e1 in
         let se2, tau2 = ty e2 in
@@ -172,11 +171,11 @@ let rec typ_of (ty_env : type_env) (exp : Ast.expr) : S.sexpr * typ =
             ((BOOL_TY, S.SBinop (se1, b, se2)), BOOL_TY)
         | (And | Or) when same && eqType (tau1, BOOL_TY) ->
             ((BOOL_TY, S.SBinop (se1, b, se2)), BOOL_TY)
-        | (Equal | Neq) when same -> 
-            ((BOOL_TY, S.SBinop (se1, b, se2)), BOOL_TY)
+        | (Equal | Neq) when same -> ((BOOL_TY, S.SBinop (se1, b, se2)), BOOL_TY)
         | Cons when eqType (LIST_TY tau1, tau2) ->
             ((tau2, S.SBinop (se1, b, se2)), tau2)
-        | _ -> raise (TypeError ("type error in expression " ^ string_of_expr exp))
+        | _ ->
+            raise (TypeError ("type error in expression " ^ string_of_expr exp))
         )
     | Unop (u, e) -> (
         let se, tau = ty e in
