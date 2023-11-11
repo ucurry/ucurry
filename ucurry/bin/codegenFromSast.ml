@@ -39,24 +39,23 @@ let build_main_body defs =
   let lookup n varmap = StringMap.find n varmap in
   
   let rec exprWithVarmap builder varmap = (* TODO: delete *) 
-  let rec expr builder = function 
-  (* (ty, exp) = match exp with bracket *)
-    | S.SLiteral (_, Construct (name, value)) -> raise (CODEGEN_NOT_YET_IMPLEMENTED "constructor literal")
-    | S.SLiteral (_, INT i) -> L.const_int i32_t i 
-    | S.SLiteral (_, STRING s) -> L.build_global_stringptr s "str" builder
-    | S.SLiteral (_, BOOL b) -> raise (CODEGEN_NOT_YET_IMPLEMENTED "boolean literal")
-    | S.SLiteral (_, LIST values)  -> raise (CODEGEN_NOT_YET_IMPLEMENTED "list literal")
-    | S.SLiteral (_, TUPLE values) -> raise (CODEGEN_NOT_YET_IMPLEMENTED "tuple literal")
-    | S.SLiteral (_, INF_LIST i) -> raise (CODEGEN_NOT_YET_IMPLEMENTED "inf list")
-    | S.SLiteral (_, UNIT) -> L.const_null void_t (* TOOD: double check unit value *) 
-    | S.SVar     (_, name) ->
+  let rec expr builder (ty, top_exp) = (match top_exp with
+    | S.SLiteral (Construct (name, value)) -> raise (CODEGEN_NOT_YET_IMPLEMENTED "constructor literal")
+    | S.SLiteral (INT i) -> L.const_int i32_t i 
+    | S.SLiteral (STRING s) -> L.build_global_stringptr s "str" builder
+    | S.SLiteral (BOOL b) -> raise (CODEGEN_NOT_YET_IMPLEMENTED "boolean literal")
+    | S.SLiteral (LIST values)  -> raise (CODEGEN_NOT_YET_IMPLEMENTED "list literal")
+    | S.SLiteral (TUPLE values) -> raise (CODEGEN_NOT_YET_IMPLEMENTED "tuple literal")
+    | S.SLiteral (INF_LIST i) -> raise (CODEGEN_NOT_YET_IMPLEMENTED "inf list")
+    | S.SLiteral (UNIT) -> L.const_null void_t (* TOOD: double check unit value *) 
+    | S.SVar     (name) ->
         L.build_load (lookup name varmap) name builder
-    | S.SAssign  (_, name, e) -> 
+    | S.SAssign  (name, e) -> 
         let e' = expr builder e in
         let _ = L.build_store e' (lookup name varmap) builder in e'
     | S.SApply _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "APPLY")
-    | S.SIf (_, pred, then_expr, else_expr) ->raise (CODEGEN_NOT_YET_IMPLEMENTED "APPLY") 
-    | S.SLet (_, bindings, exp) ->
+    | S.SIf (pred, then_expr, else_expr) ->raise (CODEGEN_NOT_YET_IMPLEMENTED "APPLY") 
+    | S.SLet (bindings, exp) ->
       let newvarsWithNames = List.map (fun ((tau, name), e) -> 
                                         let e' = expr builder e in 
                                         let newvar = L.build_alloca (ltype_of_type tau) name builder in 
@@ -69,56 +68,49 @@ let build_main_body defs =
                                       newvarsWithNames
       in exprWithVarmap builder newvarmap exp 
     | S.SBegin _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "Begin")
-    | S.SBinop (_, e1, binop, e2) -> 
+    | S.SBinop (e1, binop, e2) -> 
       let e1'= expr builder e1 
       and e2' = expr builder e2 
     in (match binop with
-    | A.Add     -> L.build_add e1' e2' "temp" builder 
-    | A.Sub     -> L.build_sub e1' e2' "temp" builder 
-    | A.Mult    -> L.build_mul e1' e2' "temp" builder 
-    | A.Div     -> L.build_sdiv e1' e2' "temp" builder 
-    | A.Mod     -> L.build_srem e1' e2' "temp" builder 
-    | A.And     -> L.build_and e1' e2' "temp" builder 
-    | A.Or      -> L.build_or e1' e2' "temp" builder 
-    | A.Equal   -> L.build_icmp L.Icmp.Eq e1' e2' "temp" builder 
-    | A.Neq     -> L.build_icmp L.Icmp.Ne e1' e2' "temp" builder 
-    | A.Less    -> L.build_icmp L.Icmp.Slt e1' e2' "temp" builder 
-    | A.Leq     -> L.build_icmp L.Icmp.Sle e1' e2' "temp" builder 
-    | A.Greater -> L.build_icmp L.Icmp.Sgt e1' e2' "temp" builder 
-    | A.Geq     -> L.build_icmp L.Icmp.Sge e1' e2' "temp" builder 
-    | A.Cons    -> raise (CODEGEN_NOT_YET_IMPLEMENTED "cons") 
-    )
-    | S.SUnop (_, unop, e) -> (
+                | A.Add     -> L.build_add e1' e2' "temp" builder 
+                | A.Sub     -> L.build_sub e1' e2' "temp" builder 
+                | A.Mult    -> L.build_mul e1' e2' "temp" builder 
+                | A.Div     -> L.build_sdiv e1' e2' "temp" builder 
+                | A.Mod     -> L.build_srem e1' e2' "temp" builder 
+                | A.And     -> L.build_and e1' e2' "temp" builder 
+                | A.Or      -> L.build_or e1' e2' "temp" builder 
+                | A.Equal   -> L.build_icmp L.Icmp.Eq e1' e2' "temp" builder 
+                | A.Neq     -> L.build_icmp L.Icmp.Ne e1' e2' "temp" builder 
+                | A.Less    -> L.build_icmp L.Icmp.Slt e1' e2' "temp" builder 
+                | A.Leq     -> L.build_icmp L.Icmp.Sle e1' e2' "temp" builder 
+                | A.Greater -> L.build_icmp L.Icmp.Sgt e1' e2' "temp" builder 
+                | A.Geq     -> L.build_icmp L.Icmp.Sge e1' e2' "temp" builder 
+                | A.Cons    -> raise (CODEGEN_NOT_YET_IMPLEMENTED "cons"))
+    | S.SUnop (unop, inner_e) -> (
         let printf_t : L.lltype =
-          L.var_arg_function_type i32_t [| L.pointer_type i8_t |]
-        in
+          L.var_arg_function_type i32_t [| L.pointer_type i8_t |] in 
         let printf_func : L.llvalue =
-          L.declare_function "printf" printf_t the_module
-        in
-        let e' = expr builder e in
-        match (unop, e) with
-        | A.Print, S.SLiteral (_, INT _) ->
-
+          L.declare_function "printf" printf_t the_module in 
+        let e' = expr builder inner_e in
+        let tau, _ = inner_e in 
+        match (unop, tau) with
+        | A.Print, A.INT_TY ->
             L.build_call printf_func [| int_format_str; e' |] "printf" builder
-        | A.Print, S.SLiteral (_, STRING _) ->
-            L.build_call printf_func
-              [| string_format_str; e' |]
-              "printf" builder
-        (* | A.Print, S.SBinop  (Ast.INT_TY, e1, binop, e2)
-        | A.Print, S.SBinop  (Ast.BOOL_TY, e1, binop, e2)) *)
-        
+        | A.Print, A.STRING_TY ->
+            L.build_call printf_func [| string_format_str; e' |] "printf" builder
+        | A.Print, A.BOOL_TY -> raise (CODEGEN_NOT_YET_IMPLEMENTED "A")
         | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "A"))
     | S.SLambda _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "Lambda")
     | S.SCase _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "Case")
     | S.SNoexpr -> L.const_null void_t (* TOOD: double check noexpr value *) 
-    | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "catchall")
+    | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "catchall"))
   in
   expr builder
   in
 
   (* varmap is the variable environment *)
   let rec stmt builder varmap = function
-    | S.SVariable (tau, name, e) -> (* Handle string -> create a global string pointer and assign the global name to the name *)
+    | S.SVal (tau, name, e) -> (* Handle string -> create a global string pointer and assign the global name to the name *)
         let e' = exprWithVarmap builder varmap e in
         let newvar = L.build_alloca (ltype_of_type tau) name builder in 
         let varmap' = StringMap.add name newvar varmap in 

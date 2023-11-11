@@ -9,6 +9,8 @@
 *.cmxs
 *.cmxa
 *.out
+*.exe
+*.ll 
 # ocamlbuild working directory
 _build/
 
