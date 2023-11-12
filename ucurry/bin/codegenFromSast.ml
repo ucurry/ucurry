@@ -4,6 +4,8 @@ module S = Sast
 module StringMap = Map.Make (String)
 
 exception CODEGEN_NOT_YET_IMPLEMENTED of string
+exception SHOULDNT_RAISED of string
+exception REACHED
 (* TODO: consider adding an SAST to add type to each expression *)
 
 let build_main_body defs =
@@ -37,10 +39,23 @@ let build_main_body defs =
   and string_nl_format_str = L.build_global_stringptr "%s\n" "fmt" builder
   in 
   (* let string_pool = StringMap.empty in TODO *)
-  let lookup n varmap = StringMap.find n varmap in
 
-  let rec exprWithVarmap builder varmap =
-    (* TODO: delete *)
+  let lookup n varmap = StringMap.find n varmap in 
+  let getFunctiontype funty = 
+    match funty with 
+      | A.FUNCTION_TY (formalty, retty) -> (formalty, retty)
+      | _ -> raise (SHOULDNT_RAISED "not a function type")
+  in
+  let getRetty funty = let (_, retty) = getFunctiontype funty in retty in 
+  let getFormalty funty = let (formalty, _) = getFunctiontype funty in formalty in 
+
+  let add_terminal builder instr =
+    match L.block_terminator (L.insertion_block builder) with
+    | Some _ -> ()
+    | None -> ignore (instr builder)
+  in
+  
+  let rec exprWithVarmap builder varmap = 
     let rec expr builder (ty, top_exp) =
       match top_exp with
       | S.SLiteral (Construct (name, value)) ->
@@ -63,7 +78,18 @@ let build_main_body defs =
           let e' = expr builder e in
           let _ = L.build_store e' (lookup name varmap) builder in
           e'
-      | S.SApply _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "APPLY")
+      | S.SApply ((ft, f), args) -> (* TODO: can only call named function *)
+          let fretty = getRetty ft in 
+          (match f with
+            | S.SVar fname -> 
+                let fdef = StringMap.find fname varmap in 
+                let llargs = List.rev (List.map (expr builder) (List.rev args)) in 
+                let result = (match fretty with 
+                                A.UNIT_TY -> ""
+                                | _ -> fname ^ "_result") in 
+                L.build_call fdef (Array.of_list llargs) result builder 
+            | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "anonymous fun")
+          )
       | S.SIf (pred, then_expr, else_expr) ->
           raise (CODEGEN_NOT_YET_IMPLEMENTED "APPLY")
       | S.SLet (bindings, exp) ->
@@ -123,7 +149,25 @@ let build_main_body defs =
           | A.Hd, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "A")
           | A.Tl, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "A")
           )
-      | S.SLambda _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "Lambda")
+      | S.SLambda (formals, body) -> raise (CODEGEN_NOT_YET_IMPLEMENTED "lambda")
+          (* let (formalty, retty) = getFunctiontype ty in 
+          let formaltypes = [ltype_of_type formalty] in 
+          let formalsandtypes = List.combine formaltypes formals in 
+          let ftype = L.function_type (ltype_of_type retty) (Array.of_list formaltypes) in 
+          let name = "temp" in (* TODO: find a real fresh name *)
+          let the_function = L.define_function name ftype the_module in
+          let varmap' = StringMap.add name the_function varmap in 
+          let builder = L.builder_at_end context (L.entry_block the_function) in 
+          let add_formal m (t, n) p = 
+            let _ = L.set_value_name n p in 
+            let local = L.build_alloca t n builder in 
+            let _ = L.build_store p local builder in 
+            StringMap.add n p m (* return a new local varmap *)
+          in
+          let localvarmap = List.fold_left2 add_formal varmap formalsandtypes (Array.to_list (L.params the_function)) in 
+          let e' = exprWithVarmap builder localvarmap body in 
+          let _ = add_terminal builder (fun b -> L.build_ret e' b) in 
+          e' *)
       | S.SCase _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "Case")
       | S.SNoexpr -> L.const_null void_t (* TOOD: double check noexpr value *)
       | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "catchall")
@@ -131,13 +175,28 @@ let build_main_body defs =
     expr builder
   in 
 
-  (* varmap is the variable environment that maps variable name to its runtime location *)
+
+  (* varmap is the variable environment that maps (variable : string |---> to reg : llvale) *)
   let rec stmt builder varmap = function
-    (* | S.SFunction (funty, name, formals, body) -> raise (NOT-CODEGEN_NOT_YET_IMPLEMENTED "function") TODO: partial application?? does LLVM support that?? *)
-        (* let (formalty, retty) = funty in 
-        let formaltypes = Array.of_list [ltype_of_type formalty]
-        let ftype = L.function_type (ltype_of_type retty) formaltypes in 
-        let varmap' = StringMap.add name (L.define_function name ftype the_module) varmap in  *)
+    | S.SFunction (name, slambda) -> (* TODO: partial application?? does LLVM support that?? *)
+    raise (CODEGEN_NOT_YET_IMPLEMENTED "sfun") 
+        (* let formaltypes = [ltype_of_type formalty] in (* TODO: for now it takes in a single argument *)
+        let formalsandtypes = List.combine formaltypes formals in 
+        let ftype = L.function_type (ltype_of_type retty) (Array.of_list formaltypes) in 
+        let the_function = L.define_function name ftype the_module in
+        let varmap' = StringMap.add name the_function varmap in 
+        let builder = L.builder_at_end context (L.entry_block the_function) in 
+        let add_formal m (t, n) p = 
+          let _ = L.set_value_name n p in 
+          let local = L.build_alloca t n builder in 
+          let _ = L.build_store p local builder in 
+          StringMap.add n p m (* return a new local varmap *)
+        in
+        let localvarmap = List.fold_left2 add_formal varmap formalsandtypes (Array.to_list (L.params the_function)) in 
+        let e' = exprWithVarmap builder localvarmap body in 
+        let _ = add_terminal builder (fun b -> L.build_ret e' b) in 
+      (builder, varmap') *)
+
     | S.SVal (tau, name, e) ->
         (* Handle string -> create a global string pointer and assign the global name to the name *)
         let e' = exprWithVarmap builder varmap e in
@@ -149,12 +208,6 @@ let build_main_body defs =
         let _ = exprWithVarmap builder varmap e in
         (builder, varmap)
     | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "catchall")
-  in
-
-  let add_terminal builder instr =
-    match L.block_terminator (L.insertion_block builder) with
-    | Some _ -> ()
-    | None -> ignore (instr builder)
   in
 
   (* Build the main function body *)

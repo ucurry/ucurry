@@ -19,7 +19,7 @@ and sx =
 and scase_expr = pattern * sexpr
 
 type sdef =
-  | SFunction of typ * string * string list * sexpr
+  | SFunction of string * sexpr (* This sexpr will be a Lambda expression *)
   | SDatatype of typ * constructor list
   | SVal of typ * string * sexpr
   | SExp of sexpr

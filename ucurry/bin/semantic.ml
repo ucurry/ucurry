@@ -225,7 +225,7 @@ let rec type_def (def : Ast.def) (ty_env : type_env) : S.sdef * type_env =
         let new_env = bindUnique funname tau ty_env in
         let se, tau' = typ_of new_env (Lambda (tau, args, body)) in
         if eqType (tau', tau) then
-          (S.SFunction (tau, funname, args, se), new_env)
+          (S.SFunction (funname, se), new_env)
         else raise (TypeError "invalid type in function definition")
     | Datatype (tau, val_cons) ->
         let vcons, argtaus_op = List.split val_cons in
