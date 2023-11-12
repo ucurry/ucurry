@@ -1,15 +1,19 @@
+--./binop.uc
 println 1 + 1;
 println 1 * 1; 
 println 20 - 30;
 println 10 / 2;
 
+--./empty.uc
 
 
+--./fun1.uc
 fun: int -> int:
 f x = x + 1;
 println (f 2);
 
 
+--./let.uc
 let int x = 1 in println x;
 let int y = 5, bool v = false in println y;
 let int a = 3 in 
@@ -17,10 +21,12 @@ let int a = 3 in
         println a;
 
 
+--./print-hello.uc
 println "hello";
 println "world";
 
 
+--./valvar.uc
 int a = 1;
 bool b = true;
 string str = "hello";

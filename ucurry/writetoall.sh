@@ -1,5 +1,10 @@
-for f in tests/codegen/*.uc
+src=$1
+target="all.uc"
+cd $src;
+rm $target;
+for f in ./*.uc
 do 
-	cat $f >> tests/codegen/all.uc
-	echo -e "\n" >> tests/codegen/all.uc
+	echo "--$f" >> $target
+	cat $f >> $target
+	echo -e "\n" >> $target
 done
