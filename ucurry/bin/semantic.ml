@@ -188,8 +188,8 @@ let rec typ_of (ty_env : type_env) (exp : Ast.expr) : S.sexpr * typ =
         | Println, _ -> ((UNIT_TY, S.SUnop (u, se)), UNIT_TY)
         | _ -> raise (TypeError "type error in unoary operaion"))
     | Lambda (ty, formals, body) ->
-        let rec check_lambda tau formals env =
-          match (tau, formals) with
+        let rec check_lambda tau fs env =
+          match (tau, fs) with
           | _, [] ->
               let se, tau' = typ_of env body in
               if eqType (tau, tau') then ((ty, S.SLambda (formals, se)), ty)
