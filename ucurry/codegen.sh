@@ -3,6 +3,7 @@ make clean
 echo "Running codegen tests"
 
 anyfailed=0
+rm tests/codegen/all.uc
 for f in tests/codegen/*.uc 
 do 
     echo "Testing $f"
