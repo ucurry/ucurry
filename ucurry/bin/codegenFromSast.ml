@@ -35,8 +35,12 @@ let build_main_body defs =
 
   let int_format_str = L.build_global_stringptr "%d" "fmt" builder
   and string_format_str = L.build_global_stringptr "%s" "fmt" builder
+  and true_str = L.build_global_stringptr "true" "true_s"  builder
+  and false_str = L.build_global_stringptr "false" "false_s"  builder
   and int_nl_format_str = L.build_global_stringptr "%d\n" "fmt" builder
   and string_nl_format_str = L.build_global_stringptr "%s\n" "fmt" builder
+  and true_nl_str = L.build_global_stringptr "true\n" "true_s"  builder
+  and false_nl_str = L.build_global_stringptr "false\n" "false_s"  builder
   in 
   (* let string_pool = StringMap.empty in TODO *)
 
@@ -93,8 +97,42 @@ let build_main_body defs =
                 L.build_call fdef (Array.of_list llargs) result builder 
             | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "anonymous fun")
           )
-      | S.SIf (pred, then_expr, else_expr) ->
-          raise (CODEGEN_NOT_YET_IMPLEMENTED "APPLY")
+      | S.SIf (pred, then_expr, else_expr) -> 
+        (* 90% code referenced from https://releases.llvm.org/12.0.1/docs/tutorial/OCamlLangImpl5.html#llvm-ir-for-if-then-else *)
+        (* emit expression for condition code *)
+        let pred_res = expr builder pred in 
+        (* start a block *)
+        let start_bb = L.insertion_block  builder in 
+        (* [the_if_fun] will own the [start_bb] *)
+        let the_if_fun = L.block_parent start_bb in 
+        (* start building [then_bb] *)
+        let then_bb = L.append_block context "then " the_if_fun in 
+        L.position_at_end then_bb builder;
+        (* start build code for then branch *)
+        let then_val = expr builder then_expr in 
+        (* make sure getting an updated builder position for later use in phi function *)
+        let new_then_bb = L.insertion_block builder in 
+        (* repeat the same above for else branch *)
+        let else_bb = L.append_block context "else" the_if_fun in 
+        L.position_at_end else_bb builder; 
+        let else_val = expr builder else_expr in 
+        let new_else_bb = L.insertion_block builder in 
+        (* emit the merge block *)
+        let merge_bb = L.append_block context "ifcon" the_if_fun in 
+        L.position_at_end merge_bb builder;
+        (* create the phi node and set up the block/value pair for the phi *)
+        let incoming = [(then_val, new_then_bb); (else_val, new_else_bb) ] in 
+        let phi = L.build_phi incoming "iftmp" builder in 
+        (* return to the start block to add conditional branch *)
+        L.position_at_end start_bb builder;
+        ignore (L.build_cond_br pred_res then_bb else_bb builder);
+        (* set up branch for then and else block to go to merge block at the end *)
+        L.position_at_end new_then_bb builder;
+        ignore (L.build_br merge_bb builder);
+        L.position_at_end new_else_bb builder;
+        ignore (L.build_br merge_bb builder);
+        L.position_at_end merge_bb builder;
+        phi 
       | S.SLet (bindings, exp) ->
           let varmap' =
             List.fold_left
@@ -109,7 +147,9 @@ let build_main_body defs =
           exprWithVarmap builder varmap' exp
       | S.SBegin _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "Begin")
       | S.SBinop (e1, binop, e2) -> (
-          let e1' = expr builder e1 and e2' = expr builder e2 in
+          let e1' = expr builder e1 
+          and e2' = expr builder e2 
+          and (tau_e, _ ) = e1 in
           match binop with
           | A.Add -> L.build_add e1' e2' "temp" builder
           | A.Sub -> L.build_sub e1' e2' "temp" builder
@@ -118,7 +158,10 @@ let build_main_body defs =
           | A.Mod -> L.build_srem e1' e2' "temp" builder
           | A.And -> L.build_and e1' e2' "temp" builder
           | A.Or -> L.build_or e1' e2' "temp" builder
-          | A.Equal -> L.build_icmp L.Icmp.Eq e1' e2' "temp" builder
+          | A.Equal -> 
+            (match tau_e with
+            | INT_TY | BOOL_TY -> L.build_icmp L.Icmp.Eq e1' e2' "temp" builder
+            |  _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "other equality type not implemented"))
           | A.Neq -> L.build_icmp L.Icmp.Ne e1' e2' "temp" builder
           | A.Less -> L.build_icmp L.Icmp.Slt e1' e2' "temp" builder
           | A.Leq -> L.build_icmp L.Icmp.Sle e1' e2' "temp" builder
@@ -143,8 +186,10 @@ let build_main_body defs =
               L.build_call printf_func [| int_nl_format_str; e' |] "printf" builder
           | A.Println, A.STRING_TY ->
               L.build_call printf_func [| string_nl_format_str; e' |] "printf" builder
-          | A.Println, A.BOOL_TY ->
-              L.build_call printf_func [| int_nl_format_str; e' |] "printf" builder (* TODO: print "true" or "false" for bool? *)
+          | A.Println, A.BOOL_TY -> 
+              L.build_call printf_func [| int_nl_format_str; e' |] "printf" builder
+          | A.Print, A.BOOL_TY -> 
+              L.build_call printf_func [| int_format_str; e' |] "printf" builder
           | A.Print, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "A")
           | A.Println, _ ->raise (CODEGEN_NOT_YET_IMPLEMENTED "A")
           | A.Neg, _ -> L.build_neg e' "temp" builder
