@@ -71,7 +71,7 @@ let build_main_body defs =
       | S.SLiteral (INT i) -> L.const_int i32_t i
       | S.SLiteral (STRING s) -> L.build_global_stringptr s "str" builder
       | S.SLiteral (BOOL b) -> L.const_int i1_t (if b then 1 else 0)
-      | S.SLiteral (LIST values) ->
+      | S.SLiteral (LIST (x, xs)) ->
           raise (CODEGEN_NOT_YET_IMPLEMENTED "list literal")
       | S.SLiteral (TUPLE values) ->
           raise (CODEGEN_NOT_YET_IMPLEMENTED "tuple literal")

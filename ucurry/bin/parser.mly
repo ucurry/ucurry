@@ -147,7 +147,7 @@ value:
     STRINGLIT                      { STRING $1 } 
   | INTEGER                        { INT $1 }
   | BOOL                           { BOOL $1 }
-  | LBRACKET literal_list RBRACKET { LIST (List.rev $2) } 
+  | LBRACKET literal_list RBRACKET {  $2 } 
   | LBRACE literal_tuple RBRACE    { TUPLE (List.rev $2)}
   | UNIT                           { UNIT }
   | LBRACKET INTEGER DOTS RBRACKET { INF_LIST $2 }
@@ -155,9 +155,9 @@ value:
   | LBRACE CAPNAME  RBRACE         { Construct ($2, UNIT) } // HACK: since Construct does not take in expression 
 
 literal_list:
-                               { [] }
-  | value                    { [$1] }
-  | literal_list COMMA value { $3 :: $1}
+                                { EMPTYLIST }
+  | value  COMMA literal_list   { LIST ($1, $3)}
+  | value                       { LIST ($1, EMPTYLIST) }
 
 literal_tuple:
     value  COMMA value     { [$3; $1] }
