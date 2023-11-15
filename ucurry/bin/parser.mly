@@ -23,6 +23,7 @@
 %token EOF 
 
 
+%nonassoc PRINT PRINTLN
 %nonassoc IN ELSE 
 %right ARROW
 %right ASN 
