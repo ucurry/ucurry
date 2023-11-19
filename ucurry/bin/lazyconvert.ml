@@ -9,7 +9,7 @@ let rec lazyExpWith ((ty, tope) : S.sexpr) : L.sexpr =
     match exp with
     | S.SLiteral l -> L.Literal l
     (* | A.Var v -> L.Lambda  *)
-    | S.SUnop (unop, (t, e)) -> L.Unop (unop, lazyExp e)
+    | S.SUnop (unop, e) -> L.Unop (unop, lazyExpWith e)
     | _ -> raise (LAZY_NOT_YET_IMPLEMENTED "Exp not implemented")
   in 
 (ty, lazyExp tope)

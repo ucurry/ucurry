@@ -8,21 +8,21 @@ type sexpr = A.typ * expr
 and expr =
   | Literal of A.value
   | Assign of string * thunk
-  | Apply of expr * thunk list
-  | If of expr * expr * expr
-  | Let of ((A.typ * string) * thunk) list * expr
-  | Begin of expr list
-  | Binop of expr * A.binop * expr
-  | Unop of A.uop * expr
+  | Apply of sexpr * thunk list
+  | If of sexpr * sexpr * sexpr
+  | Let of ((A.typ * string) * thunk) list * sexpr
+  | Begin of sexpr list
+  | Binop of sexpr * A.binop * sexpr
+  | Unop of A.uop * sexpr
   | Captured of int
   | Closure of closure
-  | Case of expr * case_expr list
+  | Case of sexpr * case_expr list
   | Noexpr
 
-and case_expr = A.pattern * expr
+and case_expr = A.pattern * sexpr
 
 and closure =
-  (A.typ * string list * expr) * expr list (* (lambda, captured list) *)
+  (A.typ * string list * sexpr) * sexpr list (* (lambda, captured list) *)
 
 and thunk = closure
 
@@ -47,11 +47,11 @@ let rec string_of_expr (exp : expr) =
         "(" ^ string_of_expr e ^ " "
         ^ String.concat " " (List.map string_of_expr el)
         ^ ")" *)
-    | Begin el ->
-        "(begin " ^ String.concat ", " (List.map string_of_expr el) ^ ")"
+    (* | Begin el ->j
+        "(begin " ^ String.concat ", " (List.map string_of_expr el) ^ ")" *)
     (* | Binop (e1, o, e2) ->
         string_of_expr e1 ^ " " ^ string_of_binop o ^ " " ^ string_of_expr e2 *)
-    | Unop (o, e) -> A.string_of_uop o ^ string_of_expr e
+    (* | Unop (o, e) -> A.string_of_uop o ^ string_of_expr e *)
     (* | Lambda (t, vl, e) ->
         "\\(" ^ string_of_typ t ^ ")" ^ String.concat " " vl ^ " -> " ^ string_of_expr e *)
     (* | Case (e, cel) ->
@@ -66,7 +66,7 @@ let rec string_of_expr (exp : expr) =
   match exp with Noexpr -> "" | _ -> "(" ^ flat_string_of_exp exp ^ ")"
 
 let string_of_def = function
-  | Exp (t, e) -> string_of_expr e
+  | Exp (_, e) -> string_of_expr e
   | _ -> raise (Failure "String_of_def Not implemented For Most Cases")
 
 let string_of_program defs = String.concat "\n" (List.map string_of_def defs)

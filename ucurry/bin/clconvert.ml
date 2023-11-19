@@ -12,11 +12,11 @@ let rec free (exp : L.expr) : S.t = match exp with
 
 (* close expression *)
 (* closeExp ... *)
-let closeExpWith ((ty, tope) : L.sexpr) : C.sexpr = 
+let rec closeExpWith ((ty, tope) : L.sexpr) : C.sexpr = 
   let rec closeExp (exp : L.expr) : C.expr =
     match exp with
     | Literal l -> Literal l
-    | Unop (op, e) -> Unop (op, closeExp e)
+    | Unop (op, e) -> Unop (op, closeExpWith e)
     | _ -> raise (Failure "CloseExp Not implemented For Most Cases")
   in 
 (ty, closeExp tope)

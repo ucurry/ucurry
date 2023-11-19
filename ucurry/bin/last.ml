@@ -5,21 +5,21 @@ type sexpr = A.typ * expr
 and expr =
   | Literal of value
   | Assign of string * thunk
-  | Apply of expr * thunk list
-  | If of expr * expr * expr
-  | Let of ((A.typ * string) * thunk) list * expr
-  | Begin of expr list
-  | Binop of expr * A.binop * expr
-  | Unop of A.uop * expr
-  | Case of expr * case_expr list
+  | Apply of sexpr * thunk list
+  | If of sexpr * sexpr * sexpr
+  | Let of ((A.typ * string) * thunk) list * sexpr
+  | Begin of sexpr list
+  | Binop of sexpr * A.binop * sexpr
+  | Unop of A.uop * sexpr
+  | Case of sexpr * case_expr list
   | Lambda of lambda
   | Noexpr
 
 and value = A.value
-and case_expr = A.pattern * expr
+and case_expr = A.pattern * sexpr
 
 and lambda =
-  A.typ * string list * expr (* TODO: need to change lambda argument type  *)
+  A.typ * string list * sexpr (* TODO: need to change lambda argument type  *)
 
 and thunk = lambda
 
