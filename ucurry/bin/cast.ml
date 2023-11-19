@@ -3,7 +3,9 @@
 (* Copied from ast.ml: A.typ, A.unop, A.binop,  *)
 module A = Ast
 
-type expr =
+type sexpr = A.typ * expr
+
+and expr =
   | Literal of A.value
   | Assign of string * thunk
   | Apply of expr * thunk list
@@ -28,7 +30,7 @@ and def =
   | Function of closure
   | Datatype of A.typ * A.constructor list
   | Variable of A.typ * string * thunk
-  | Exp of expr
+  | Exp of sexpr
   | CheckTypeError of def
 
 and constructor = string * A.typ option
@@ -63,8 +65,8 @@ let rec string_of_expr (exp : expr) =
   in
   match exp with Noexpr -> "" | _ -> "(" ^ flat_string_of_exp exp ^ ")"
 
-let rec string_of_def = function
-  | Exp e -> string_of_expr e
+let string_of_def = function
+  | Exp (t, e) -> string_of_expr e
   | _ -> raise (Failure "String_of_def Not implemented For Most Cases")
 
 let string_of_program defs = String.concat "\n" (List.map string_of_def defs)

@@ -1,17 +1,21 @@
+module S = Sast
 module A = Ast
 module L = Last
 
 exception LAZY_NOT_YET_IMPLEMENTED of string
 
-let rec lazyExp (exp : A.expr) : L.expr =
-  match exp with
-  | A.Literal l -> L.Literal l
-  (* | A.Var v -> L.Lambda  *)
-  | A.Unop (unop, e) -> L.Unop (unop, lazyExp e)
-  | _ -> raise (LAZY_NOT_YET_IMPLEMENTED "Exp not implemented")
+let rec lazyExpWith ((ty, tope) : S.sexpr) : L.sexpr =
+  let rec lazyExp (exp : S.sx) : L.expr =
+    match exp with
+    | S.SLiteral l -> L.Literal l
+    (* | A.Var v -> L.Lambda  *)
+    | S.SUnop (unop, (t, e)) -> L.Unop (unop, lazyExp e)
+    | _ -> raise (LAZY_NOT_YET_IMPLEMENTED "Exp not implemented")
+  in 
+(ty, lazyExp tope)
 
-let rec lazyDef (def : A.def) : L.def =
+let lazyDef (def : S.sdef) : L.def =
   match def with
-  | Exp e -> L.Exp (lazyExp e)
+  | S.SExp e -> L.Exp (lazyExpWith e)
   (* | Function (tau, name, names, e) -> raise (Failure "Lazy Function not implemented") *)
   | _ -> raise (LAZY_NOT_YET_IMPLEMENTED "Def not implemented")

@@ -27,7 +27,7 @@
 
 # The µcurry Compiler
 Coded in OCaml, this compiler takes a minimal functional language and compiles 
-it down to LLVM IR. The compiler now only supports scanning and parsing.
+it down to LLVM IR. 
 
 ## How to compile and execute
 

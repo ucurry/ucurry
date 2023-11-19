@@ -1,4 +1,4 @@
-module L = Llvm
+(* module L = Llvm
 module A = Ast
 module C = Cast
 open Last
@@ -65,4 +65,4 @@ let build_main_body defs =
   (* Add a void return to main *)
   let _ = add_terminal main_builder L.build_ret_void in
 
-  the_module
+  the_module *)

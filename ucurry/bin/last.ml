@@ -1,6 +1,8 @@
 module A = Ast
 
-type expr =
+type sexpr = A.typ * expr
+
+and expr =
   | Literal of value
   | Assign of string * thunk
   | Apply of expr * thunk list
@@ -25,7 +27,7 @@ and def =
   | Function of string * lambda
   | Datatype of A.typ * A.constructor list
   | Variable of A.typ * string * thunk (* typ will need to be THUNK_TY *)
-  | Exp of expr
+  | Exp of sexpr
   | CheckTypeError of def
 
 and constructor = string * A.typ option
