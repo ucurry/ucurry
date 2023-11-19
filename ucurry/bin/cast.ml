@@ -7,6 +7,7 @@ type sexpr = A.typ * expr
 
 and expr =
   | Literal of A.value
+  | Var of string
   | Assign of string * thunk
   | Apply of sexpr * thunk list
   | If of sexpr * sexpr * sexpr
@@ -22,14 +23,13 @@ and expr =
 and case_expr = A.pattern * sexpr
 
 and closure =
-  (A.typ * string list * sexpr) * sexpr list (* (lambda, captured list) *)
+  (string list * sexpr) * sexpr list (* (lambda, captured list) *)
 
 and thunk = closure
 
 and def =
   | Function of closure
   | Datatype of A.typ * A.constructor list
-  | Variable of A.typ * string * thunk
   | Exp of sexpr
   | CheckTypeError of def
 
@@ -47,11 +47,11 @@ let rec string_of_expr (exp : expr) =
         "(" ^ string_of_expr e ^ " "
         ^ String.concat " " (List.map string_of_expr el)
         ^ ")" *)
-    (* | Begin el ->j
-        "(begin " ^ String.concat ", " (List.map string_of_expr el) ^ ")" *)
+    | Begin el ->
+        "(begin " ^ String.concat ", " (List.map string_of_expr el) ^ ")"
     (* | Binop (e1, o, e2) ->
         string_of_expr e1 ^ " " ^ string_of_binop o ^ " " ^ string_of_expr e2 *)
-    (* | Unop (o, e) -> A.string_of_uop o ^ string_of_expr e *)
+    | Unop (o, e) -> A.string_of_uop o ^ string_of_expr e
     (* | Lambda (t, vl, e) ->
         "\\(" ^ string_of_typ t ^ ")" ^ String.concat " " vl ^ " -> " ^ string_of_expr e *)
     (* | Case (e, cel) ->
@@ -66,7 +66,7 @@ let rec string_of_expr (exp : expr) =
   match exp with Noexpr -> "" | _ -> "(" ^ flat_string_of_exp exp ^ ")"
 
 let string_of_def = function
-  | Exp (_, e) -> string_of_expr e
+  | Exp (t, e) -> string_of_expr e
   | _ -> raise (Failure "String_of_def Not implemented For Most Cases")
 
 let string_of_program defs = String.concat "\n" (List.map string_of_def defs)

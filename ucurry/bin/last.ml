@@ -4,6 +4,7 @@ type sexpr = A.typ * expr
 
 and expr =
   | Literal of value
+  | Var of string
   | Assign of string * thunk
   | Apply of sexpr * thunk list
   | If of sexpr * sexpr * sexpr
@@ -19,14 +20,13 @@ and value = A.value
 and case_expr = A.pattern * sexpr
 
 and lambda =
-  A.typ * string list * sexpr (* TODO: need to change lambda argument type  *)
+  string list * sexpr (* TODO: need to change lambda argument type  *)
 
 and thunk = lambda
 
 and def =
-  | Function of string * lambda
+  | Function of string * sexpr
   | Datatype of A.typ * A.constructor list
-  | Variable of A.typ * string * thunk (* typ will need to be THUNK_TY *)
   | Exp of sexpr
   | CheckTypeError of def
 
