@@ -42,7 +42,64 @@ let build_main_body defs =
   and true_nl_str = L.build_global_stringptr "true\n" "true_s" builder
   and false_nl_str = L.build_global_stringptr "false\n" "false_s" builder in
 
-  (* let string_pool = StringMap.empty in TODO *)
+  let string_pool =
+    let rec mk_expr_string_pool pool builder (_, sx) =
+      match sx with
+      | S.SLiteral (A.STRING s) -> (
+          match StringMap.find_opt s pool with
+          | Some _ -> pool
+          | None ->
+              StringMap.add s (L.build_global_stringptr s "strlit" builder) pool
+          )
+      | S.SLiteral _ -> pool
+      | S.SVar _ -> pool
+      | S.SAssign (_, sexpr) -> mk_expr_string_pool pool builder sexpr
+      | S.SApply (func, args) ->
+          let pool' = mk_expr_string_pool pool builder func in
+          List.fold_left
+            (fun poolacc sexpr -> mk_expr_string_pool poolacc builder sexpr)
+            pool' args
+      | S.SIf (condition, texpr, eexpr) ->
+          let pool' = mk_expr_string_pool pool builder condition in
+          let pool'' = mk_expr_string_pool pool' builder texpr in
+          mk_expr_string_pool pool'' builder eexpr
+      | S.SLet (bindings, sexpr) ->
+          let pool' =
+            List.fold_left
+              (fun poolacc (_, subsexpr) ->
+                mk_expr_string_pool poolacc builder subsexpr)
+              pool bindings
+          in
+          mk_expr_string_pool pool' builder sexpr
+      | S.SBegin sexprs ->
+          List.fold_left
+            (fun poolacc sexpr -> mk_expr_string_pool poolacc builder sexpr)
+            pool sexprs
+      | S.SBinop (operand1, _, operand2) ->
+          let pool' = mk_expr_string_pool pool builder operand1 in
+          mk_expr_string_pool pool' builder operand2
+      | S.SUnop (_, operand) -> mk_expr_string_pool pool builder operand
+      | S.SLambda (_, sexpr) -> mk_expr_string_pool pool builder sexpr
+      | S.SCase (scrutinee, patterns) ->
+          let pool' = mk_expr_string_pool pool builder scrutinee in
+          List.fold_left
+            (fun poolacc (_, sexpr) ->
+              mk_expr_string_pool poolacc builder sexpr)
+            pool' patterns
+      | S.SNoexpr -> pool
+    in
+    let mk_defs_string_pool pool builder sdef =
+      match sdef with
+      | S.SFunction (_, sexpr) -> mk_expr_string_pool pool builder sexpr
+      | S.SDatatype _ -> pool
+      | S.SVal (_, _, sexpr) -> mk_expr_string_pool pool builder sexpr
+      | S.SExp sexpr -> mk_expr_string_pool pool builder sexpr
+      | S.SCheckTypeError _ -> pool
+    in
+    List.fold_left
+      (fun poolacc sdef -> mk_defs_string_pool poolacc builder sdef)
+      StringMap.empty defs
+  in
   let lookup n varmap = StringMap.find n varmap in
   let getFunctiontype funty =
     match funty with
@@ -72,7 +129,7 @@ let build_main_body defs =
       | S.SLiteral (Construct (name, value)) ->
           raise (CODEGEN_NOT_YET_IMPLEMENTED "constructor literal")
       | S.SLiteral (INT i) -> L.const_int i32_t i
-      | S.SLiteral (STRING s) -> L.build_global_stringptr s "str" builder
+      | S.SLiteral (STRING s) -> StringMap.find s string_pool
       | S.SLiteral (BOOL b) -> L.const_int i1_t (if b then 1 else 0)
       | S.SLiteral (LIST values) ->
           raise (CODEGEN_NOT_YET_IMPLEMENTED "list literal")
@@ -110,7 +167,7 @@ let build_main_body defs =
           (* [the_if_fun] will own the [start_bb] *)
           let the_if_fun = L.block_parent start_bb in
           (* start building [then_bb] *)
-          let then_bb = L.append_block context "then " the_if_fun in
+          let then_bb = L.append_block context "then" the_if_fun in
           L.position_at_end then_bb builder;
           (* start build code for then branch *)
           let then_val = expr builder then_expr in
@@ -149,7 +206,12 @@ let build_main_body defs =
               varmap bindings
           in
           exprWithVarmap builder varmap' exp
-      | S.SBegin _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "Begin")
+      | S.SBegin sexprs ->
+          List.fold_left
+            (fun _ sexpr -> expr builder sexpr)
+            (L.const_int i1_t 0)
+            sexprs (*TODO: Double check with team + Jank as hell*)
+      (* | S.SBegin _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "Begin") *)
       | S.SBinop (e1, binop, e2) -> (
           let e1' = expr builder e1
           and e2' = expr builder e2
@@ -206,19 +268,18 @@ let build_main_body defs =
                 "printf" builder
           | A.Print, A.BOOL_TY ->
               L.build_call printf_func [| int_format_str; e' |] "printf" builder
-          | A.Print, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "A")
-          | A.Println, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "A")
+          | A.Print, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "print")
+          | A.Println, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "println")
           | A.Neg, _ -> L.build_neg e' "temp" builder
           | A.Not, _ -> L.build_not e' "temp" builder
-          | A.Hd, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "A")
-          | A.Tl, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "A"))
+          | A.Hd, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "hd")
+          | A.Tl, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "tl"))
       | S.SLambda _ as l ->
           raise (CODEGEN_NOT_YET_IMPLEMENTED "lambda")
           (* TODO: find a real fresh name *)
           (* TODO: propagate the new varmap ? *)
       | S.SCase _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "Case")
       | S.SNoexpr -> L.const_null void_t (* TOOD: double check noexpr value *)
-      | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "catchall")
     in
     expr builder
   and generateFunction varmap name slambda =

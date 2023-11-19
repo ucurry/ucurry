@@ -42,7 +42,7 @@ let build_main_body defs =
             L.build_call printf_func
               [| string_format_str; e' |]
               "printf" builder
-        | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "A"))
+        | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "unop"))
     | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "catchall")
   in
 
