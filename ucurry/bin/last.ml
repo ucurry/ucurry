@@ -13,11 +13,12 @@ and expr =
   | Binop of sexpr * A.binop * sexpr
   | Unop of A.uop * sexpr
   | Case of sexpr * case_expr list
-  | Lambda of string list * sexpr
+  | Lambda of lambda
   | Noexpr
 
 and value = A.value
 and case_expr = A.pattern * sexpr
+and lambda = string list * sexpr
 and thunk = sexpr (* which will be a Lambda form *)
 
 and def =

@@ -16,11 +16,12 @@ and expr =
   | Binop of sexpr * A.binop * sexpr
   | Unop of A.uop * sexpr
   | Captured of int
-  | Closure of (string list * sexpr) * sexpr list (* (lambda, captured list) *)
+  | Closure of closure
   | Case of sexpr * case_expr list
   | Noexpr
 
 and case_expr = A.pattern * sexpr
+and closure = (string list * sexpr) * sexpr list (* (lambda, captured list) *)
 and thunk = sexpr (* which will be a Closure form *)
 
 and def =
