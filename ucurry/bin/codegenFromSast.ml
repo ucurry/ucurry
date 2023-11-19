@@ -15,7 +15,6 @@ let build_main_body defs =
   let i1_t = L.i1_type context in
   let void_t = L.void_type context in
   let string_t = L.pointer_type i8_t in
-
   let main_ftype = L.function_type void_t [| i32_t |] in
   let the_module = L.create_module context "uCurry" in
   let ltype_of_type = function
