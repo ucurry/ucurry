@@ -5,7 +5,11 @@ module L = Last
 exception LAZY_NOT_YET_IMPLEMENTED of string
 let rec lazyExpWith ((ty, tope) : S.sexpr) : L.sexpr =
   let rec lazyExp (exp : S.sx) : L.expr =
-    let to_thunk (e: S.sexpr) : (string list * L.sexpr) = ([], lazyExpWith e) in 
+
+    let to_thunk ((t, e) as thunk: S.sexpr) : L.sexpr = 
+      (A.FUNCTION_TY (A.UNIT_TY, t), L.Lambda ([], lazyExpWith thunk))
+    in
+
     match exp with
     | S.SLiteral l -> L.Literal l
     | S.SVar v -> L.Apply ((FUNCTION_TY (UNIT_TY, ty), L.Var v), [])
