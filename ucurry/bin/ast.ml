@@ -54,7 +54,8 @@ and value =
   | INT of int
   | STRING of string
   | BOOL of bool
-  | LIST of value list
+  | EMPTYLIST 
+  | LIST of value * value 
   | TUPLE of value list
   | INF_LIST of int
   | UNIT
@@ -169,7 +170,14 @@ and string_of_literal = function
   | INT l -> string_of_int l
   | STRING l -> "\"" ^ l ^ "\""
   | BOOL l -> string_of_bool l
-  | LIST l -> "[" ^ String.concat ", " (List.map string_of_literal l) ^ "]"
+  | EMPTYLIST -> "[]"
+  | LIST (x, xs) -> 
+    let rec listString (x, xs) =  match (x, xs) with
+    | (x, EMPTYLIST) -> string_of_literal x  
+    | (x, LIST (y, ys)) -> string_of_literal x ^ "," ^ listString (y, ys) 
+    | _ -> raise (Invalid_argument "should not be reached")
+  in 
+    "[" ^ listString (x, xs) ^ "]"
   | TUPLE l -> "(" ^ String.concat ", " (List.map string_of_literal l) ^ ")"
   | UNIT -> "()"
   | INF_LIST n -> "[" ^ string_of_int n ^ "..]"
