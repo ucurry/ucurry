@@ -58,7 +58,7 @@ def:
   | CHECK_TYPE_ERROR def { CheckTypeError $2}
 
 fundef:
-    FUNCTION COLON funtype COLON NAME formals ASN exp
+    FUNCTION COLON funtype COLON NAME formals_opt ASN exp
     { Function ($3, $5, List.rev $6, $8) }
     
 vardef: 
@@ -117,9 +117,12 @@ bindings:
     typ NAME ASN exp          { [(($1, $2), $4)] }
   | bindings COMMA typ NAME ASN exp { (($3, $4), $6):: $1 }
 
+formals_opt:
+  | /* nothing */   { [] }
+  | formals         { List.rev $1}
+
 
 formals: // functions have to have arguments
-  | UNIT         { [] }
   | NAME         { [$1] }
   | formals NAME { $2 :: $1 }
 

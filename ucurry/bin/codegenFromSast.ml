@@ -21,6 +21,8 @@ let build_main_body defs =
     | A.INT_TY -> i32_t
     | A.BOOL_TY -> i1_t
     | A.STRING_TY -> string_t
+    | A.FUNCTION_TY (formalty, retty) -> L.pointer_type i8_t 
+    | A.UNIT_TY -> i1_t
     | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "ltype_of_type")
   in
 
@@ -106,9 +108,9 @@ let build_main_body defs =
     | _ -> raise (SHOULDNT_RAISED "not a function type")
   in
   let deconstructSLambda (ty, se) =
-    match (ty, se) with
-    | A.FUNCTION_TY (formalty, retty), S.SLambda (formals, body) ->
-        (formalty, retty, formals, body)
+    match se with
+    | S.SLambda (formals, body) ->
+        (ty, formals, body)
     | _ -> raise (SHOULDNT_RAISED "not an slambda type")
   in
   let getRetty funty =
@@ -136,8 +138,9 @@ let build_main_body defs =
           raise (CODEGEN_NOT_YET_IMPLEMENTED "tuple literal")
       | S.SLiteral (INF_LIST i) ->
           raise (CODEGEN_NOT_YET_IMPLEMENTED "inf list")
-      | S.SLiteral UNIT ->
-          L.const_null void_t (* TOOD: double check unit value *)
+      | S.SLiteral UNIT -> L.const_int i1_t 0
+          (* L.const_null void_t  *)
+          (* TOOD: double check unit value *)
       | S.SVar name ->
           L.build_load (lookup name varmap) name
             builder (* %a1 = load i32, i32* %a, align 4 *)
@@ -281,9 +284,19 @@ let build_main_body defs =
       | S.SNoexpr -> L.const_null void_t (* TOOD: double check noexpr value *)
     in
     expr builder
-  and generateFunction varmap name slambda =
-    let formalty, retty, formals, body = deconstructSLambda slambda in
-    let formaltypes = ltype_of_type formalty :: [] in
+
+  and generateFunction varmap name slambda =(* NOTE: current goal is to write parallel arguments - no automatic curry but can take in more than one arg *)
+    let rec getFormalTypes = function 
+          | (A.FUNCTION_TY (formalty, retty)) -> formalty :: getFormalTypes retty
+          | _ -> []
+    in 
+    let rec getRetType = function 
+          |(A.FUNCTION_TY (_, retty)) -> getRetType retty
+          | retty -> retty
+    in  
+    let (funty, formals, body) = deconstructSLambda slambda in
+    let retty = getRetType funty in 
+    let formaltypes = List.map ltype_of_type (getFormalTypes funty) in
     let formalsandtypes = List.combine formaltypes formals in
     let ftype =
       L.function_type (ltype_of_type retty) (Array.of_list formaltypes)
