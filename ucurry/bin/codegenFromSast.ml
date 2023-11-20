@@ -21,7 +21,6 @@ let build_main_body defs =
     | A.INT_TY -> i32_t
     | A.BOOL_TY -> i1_t
     | A.STRING_TY -> string_t
-    | A.FUNCTION_TY (formalty, retty) -> L.pointer_type i8_t 
     | A.UNIT_TY -> i1_t
     | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "ltype_of_type")
   in
