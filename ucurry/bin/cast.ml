@@ -2,11 +2,12 @@
 
 (* Copied from ast.ml: A.typ, A.unop, A.binop,  *)
 module A = Ast
+module S = Sast
 
 type sexpr = A.typ * expr
 
 and expr =
-  | Literal of A.value
+  | Literal of S.svalue
   | Var of string
   | Assign of string * thunk
   | Apply of sexpr * thunk list
@@ -20,7 +21,7 @@ and expr =
   | Case of sexpr * case_expr list
   | Noexpr
 
-and case_expr = A.pattern * sexpr
+and case_expr = S.pattern * sexpr
 and closure = (string list * sexpr) * sexpr list (* (lambda, captured list) *)
 and thunk = sexpr (* which will be a Closure form *)
 
@@ -51,7 +52,7 @@ let rec string_of_typ = function
 let rec string_of_sexpr ((ty, tope) : sexpr) =
   let rec string_of_expr (exp : expr) =
     let flat_string_of_exp = function
-      | Literal l -> A.string_of_literal l
+      (* | Literal l -> A.string_of_literal l *)
       (* | Var s -> s *)
       (* | Assign (v, e) -> v ^ " = " ^ string_of_expr e *)
       (* | Apply (e, el) ->

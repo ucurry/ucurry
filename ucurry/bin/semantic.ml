@@ -1,15 +1,13 @@
-open Ast
+open Util
+module A = Ast 
 module S = Sast
 module StringMap = Map.Make (String)
 
 exception TypeError of string
 
+type typ = A.typ
 type type_env = typ StringMap.t
-
-let curry f a b = f (a, b)
-let pair_with a b = (b, a)
-let o f g x = f (g x)
-let getOp default = function Some a -> a | None -> default
+type vcon_env = (string * int) StringMap.t 
 
 let findType (name : string) (env : 'a StringMap.t) =
   try StringMap.find name env
@@ -40,39 +38,39 @@ let bindAllPairs (map : 'a StringMap.t) (pairs : (string * 'a) list) =
 
 let subtypeOfList tau =
   match tau with
-  | LIST_TY tau1 -> tau1
-  | _ -> raise (TypeError ("expected list type but got " ^ string_of_typ tau))
+  | A.LIST_TY tau1 -> tau1
+  | _ -> raise (TypeError ("expected list type but got " ^ A.string_of_typ tau))
 
 let rec eqType = function
-  | INT_TY, INT_TY -> true
-  | STRING_TY, STRING_TY -> true
-  | UNIT_TY, UNIT_TY -> true
-  | BOOL_TY, BOOL_TY -> true
-  | LIST_TY UNIT_TY, LIST_TY _ ->
+  | A.INT_TY, A.INT_TY -> true
+  | A.STRING_TY, A.STRING_TY -> true
+  | A.UNIT_TY, A.UNIT_TY -> true
+  | A.BOOL_TY, A.BOOL_TY -> true
+  | A.LIST_TY A.UNIT_TY, A.LIST_TY _ ->
       true
       (* TODO: HACK all empty list is of type LIST UNIT, which can be matched to any LIST TYPE  *)
-  | LIST_TY _, LIST_TY UNIT_TY -> true
-  | LIST_TY tau1, LIST_TY tau2 -> eqType (tau1, tau2)
-  | FUNCTION_TY (tau1, tau2), FUNCTION_TY (tau1', tau2') ->
+  | A.LIST_TY _, A.LIST_TY A.UNIT_TY -> true
+  | A.LIST_TY tau1, A.LIST_TY tau2 -> eqType (tau1, tau2)
+  | A.FUNCTION_TY (tau1, tau2), FUNCTION_TY (tau1', tau2') ->
       eqType (tau1, tau1') && eqType (tau2, tau2')
-  | CONSTRUCTOR_TY n1, CONSTRUCTOR_TY n2 -> String.equal n1 n2
-  | TUPLE_TY tys1, TUPLE_TY tys2 -> List.for_all2 (curry eqType) tys1 tys2
+  | A.CONSTRUCTOR_TY n1, A.CONSTRUCTOR_TY n2 -> String.equal n1 n2
+  | A.TUPLE_TY tys1, A.TUPLE_TY tys2 -> List.for_all2 (curry eqType) tys1 tys2
   | _ -> false
 
-let rec legalPattern (ty_env : type_env) (tau : typ) (pat : pattern) =
+let rec legalPattern (ty_env : type_env) (tau : typ) (pat : A.pattern) =
   match pat with
-  | VAR_PAT x -> [ (x, tau) ] (*Did we test this case?*)
-  | WILDCARD -> []
-  | CON_PAT (name, None) ->
+  | A.VAR_PAT x -> [ (x, tau) ] (*Did we test this case?*)
+  | A.WILDCARD -> []
+  | A.CON_PAT (name, []) ->
       let exp_tau, ret_tau = findFunctionType name ty_env in
       if eqType (tau, ret_tau) && eqType (exp_tau, UNIT_TY) then []
       else
         raise
           (TypeError
-             ("invalid pattern matching for pattern " ^ string_of_pattern pat
-            ^ " expected " ^ string_of_typ tau ^ ", got "
-            ^ string_of_typ ret_tau))
-  | CON_PAT (name, Some pats) ->
+             ("invalid pattern matching for pattern " ^ A.string_of_pattern pat
+            ^ " expected " ^ A.string_of_typ tau ^ ", got "
+            ^  A.string_of_typ ret_tau))
+  | A.CON_PAT (name,  pats) ->
       let exp_tau, ret_tau = findFunctionType name ty_env in
       if eqType (tau, ret_tau) then
         match (exp_tau, pats) with
@@ -90,37 +88,61 @@ let rec legalPattern (ty_env : type_env) (tau : typ) (pat : pattern) =
 
 let eqTypes = List.for_all2 (curry eqType)
 
-let rec typ_of (ty_env : type_env) (exp : Ast.expr) : S.sexpr * typ =
+let rec to_svalue (vcon_map : vcon_env)  (v: A.value) : S.svalue = 
+    let valof = to_svalue vcon_map in
+    match v with
+      | (A.INT i) -> S.INT i 
+      | (A.EMPTYLIST) -> S.EMPTYLIST
+      | (A.LIST (hd, tl)) -> S.LIST  (valof hd, valof tl)
+      | (A.TUPLE xs) -> S.TUPLE (List.map valof xs)
+      | (A.STRING s) -> S.STRING s 
+      | (A.BOOL b) -> S.BOOL b 
+      | (A.Construct (s, v)) -> S.Construct (StringMap.find s vcon_map, valof v )
+      | (A.UNIT) -> S.UNIT
+      | (A.INF_LIST i) -> S.INF_LIST i 
+                  
+let rec to_spattern (vcon_map: vcon_env) (c: A.pattern) = 
+    let pattern_of = to_spattern vcon_map in 
+    match  c  with
+    | (A.VAR_PAT s ) -> S.VAR_PAT s
+    | (A.CON_PAT (name,  ps)) -> S.CON_PAT ( snd @@ StringMap.find name vcon_map, List.map pattern_of ps)
+    | (A.WILDCARD ) -> S.WILDCARD
+    | (A.CONCELL (x, xs)) -> S.CONCELL (x, xs)
+    | (A.NIL) -> S.NIL
+
+let rec typ_of (vcon_map: vcon_env) (ty_env : type_env) (exp : Ast.expr) : S.sexpr * typ =
   let rec ty = function
-    | Literal l ->
+    | A.Literal l ->
         let rec lit_ty = function
-          | INT _ -> INT_TY
-          | STRING _ -> STRING_TY
-          | BOOL _ -> BOOL_TY
-          | UNIT -> UNIT_TY
-          | LIST (x, EMPTYLIST) ->
-              LIST_TY (lit_ty x)
+          | A.INT _ -> A.INT_TY
+          | A.STRING _ -> A.STRING_TY
+          | A.BOOL _ -> A.BOOL_TY
+          | A.UNIT -> A.UNIT_TY
+          | A.EMPTYLIST ->
+              A.LIST_TY A.UNIT_TY
               (* TODO: decide on the type for empty list, or whether we allow for type variable *)
-          | LIST (x, xs) -> (
-              match (lit_ty x, lit_ty xs) with
-              | tau, LIST_TY tau2 ->
-                  if eqType (tau, tau2) then LIST_TY tau2
-                  else raise (TypeError "list contain different types")
-              | tau1, tau2 ->
-                  raise
-                    (TypeError
-                       ("wrong list type " ^ string_of_typ tau1 ^ " "
-                      ^ string_of_typ tau2)))
-          | EMPTYLIST -> LIST_TY UNIT_TY
-          | TUPLE lits -> TUPLE_TY (List.map lit_ty lits)
-          | INF_LIST _ -> LIST_TY INT_TY
-          | Construct (name, value) ->
+          | A.LIST (x, A.EMPTYLIST) ->
+                LIST_TY (lit_ty x)
+                (* TODO: decide on the type for empty list, or whether we allow for type variable *)
+          | A.LIST (x, xs) -> (
+                match (lit_ty x, lit_ty xs) with
+                | tau, LIST_TY tau2 ->
+                    if eqType (tau, tau2) then LIST_TY tau2
+                    else raise (TypeError "list contain different types")
+                | tau1, tau2 ->
+                    raise
+                      (TypeError
+                         ("wrong list type " ^ A.string_of_typ tau1 ^ " "
+                        ^ A.string_of_typ tau2)))
+          | A.TUPLE lits -> A.TUPLE_TY (List.map lit_ty lits)
+          | A.INF_LIST _ -> A.LIST_TY INT_TY
+          | A.Construct (name, value) ->
               let exp_tau, ret_tau = findFunctionType name ty_env in
               if eqType (exp_tau, lit_ty value) then ret_tau
               else raise (TypeError "type error in construct")
         in
         let literal_type = lit_ty l in
-        ((literal_type, S.SLiteral l), literal_type)
+        ((literal_type, S.SLiteral (to_svalue vcon_map l)), literal_type)
     | Var x ->
         let var_type = findType x ty_env in
         ((var_type, S.SVar x), var_type)
@@ -135,7 +157,7 @@ let rec typ_of (ty_env : type_env) (exp : Ast.expr) : S.sexpr * typ =
         let formals, formal_types = List.split (List.map ty es) in
         let rec matchfun = function
           | ret_tau, [] -> ret_tau
-          | FUNCTION_TY (tau1, tau2), hd :: tl ->
+          | A.FUNCTION_TY (tau1, tau2), hd :: tl ->
               if eqType (tau1, hd) then matchfun (tau2, tl)
               else raise (TypeError "argument type not matched")
           | _ -> raise (TypeError "apply non-function")
@@ -155,7 +177,7 @@ let rec typ_of (ty_env : type_env) (exp : Ast.expr) : S.sexpr * typ =
         let sexprs, e_types = List.split (List.map ty es) in
         let sameTypes = eqTypes types e_types in
         if sameTypes then
-          let sexpr, e_type = typ_of newEnv e in
+          let sexpr, e_type = typ_of vcon_map newEnv e in
           ((e_type, S.SLet (List.combine vars sexprs, sexpr)), e_type)
         else raise (TypeError "binding types are not annotated correctly")
     | Begin [] -> ((UNIT_TY, S.SBegin []), UNIT_TY)
@@ -178,7 +200,7 @@ let rec typ_of (ty_env : type_env) (exp : Ast.expr) : S.sexpr * typ =
         | Cons when eqType (LIST_TY tau1, tau2) ->
             ((tau2, S.SBinop (se1, b, se2)), tau2)
         | _ ->
-            raise (TypeError ("type error in expression " ^ string_of_expr exp))
+            raise (TypeError ("type error in expression " ^ A.string_of_expr exp))
         )
     | Unop (u, e) -> (
         let se, tau = ty e in
@@ -187,17 +209,21 @@ let rec typ_of (ty_env : type_env) (exp : Ast.expr) : S.sexpr * typ =
         | Not, BOOL_TY -> ((BOOL_TY, S.SUnop (u, se)), BOOL_TY)
         | Hd, LIST_TY tau1 -> ((tau1, S.SUnop (u, se)), tau1)
         | Tl, LIST_TY tau1 -> ((LIST_TY tau1, S.SUnop (u, se)), LIST_TY tau1)
-        | Print, _ -> ((UNIT_TY, S.SUnop (u, se)), UNIT_TY)
-        | Println, _ -> ((UNIT_TY, S.SUnop (u, se)), UNIT_TY)
+        | Print, STRING_TY | Println, STRING_TY 
+        | Print, INT_TY | Println, INT_TY  -> ((UNIT_TY, S.SUnop (u, se)), UNIT_TY)
+        | Print, BOOL_TY | Println, BOOL_TY -> 
+          ty (If (Binop (e, Equal, Literal (BOOL true)), 
+                  Unop (u, Literal (STRING "true")), 
+                  Unop (u, Literal (STRING "false"))))
         | _ -> raise (TypeError "type error in unoary operaion"))
     | Lambda (ty, formals, body) ->
         let rec check_lambda tau fs env =
           match (tau, fs) with
           | _, [] ->
-              let se, tau' = typ_of env body in
+              let se, tau' = typ_of vcon_map env  body in
               if eqType (tau, tau') then ((ty, S.SLambda (formals, se)), ty)
               else raise (TypeError "lambda type unmatch")
-          | FUNCTION_TY (tau1, tau2), hd :: tl ->
+          | A.FUNCTION_TY (tau1, tau2), hd :: tl ->
               check_lambda tau2 tl (StringMap.add hd tau1 env)
           | _ -> raise (TypeError "lambda type unmatch")
         in
@@ -205,10 +231,11 @@ let rec typ_of (ty_env : type_env) (exp : Ast.expr) : S.sexpr * typ =
     | Case (exp, cases) ->
         let se, scrutinee_type = ty exp in
         let patterns, es = List.split cases in
+        let spatterns = List.map (to_spattern vcon_map) patterns in 
         let bindings = List.map (legalPattern ty_env scrutinee_type) patterns in
         let newEnvs = List.map (bindAllPairs ty_env) bindings in
-        let ses, taus = List.split (List.map2 typ_of newEnvs es) in
-        let scases = List.combine patterns ses in
+        let ses, taus = List.split (List.map2 (typ_of vcon_map) newEnvs es) in
+        let scases = List.combine spatterns ses in
         let allSame, exptau =
           List.fold_left
             (fun (same, tau) tau' -> (same && eqType (tau, tau'), tau))
@@ -222,43 +249,49 @@ let rec typ_of (ty_env : type_env) (exp : Ast.expr) : S.sexpr * typ =
   ty exp
 
 (* type_def : def -> type_env -> type_env *)
-let rec type_def (def : Ast.def) (ty_env : type_env) : S.sdef * type_env =
+let rec type_def (def : Ast.def) (ty_env : type_env) (vcon_map: vcon_env): S.sdef * type_env =
   let ty = function
-    | Function (tau, funname, args, body) ->
+    | A.Function (tau, funname, args, body) ->
         let new_env = bindUnique funname tau ty_env in
-        let se, tau' = typ_of new_env (Lambda (tau, args, body)) in
+        let se, tau' = typ_of vcon_map new_env (Lambda (tau, args, body)) in
         if eqType (tau', tau) then (S.SFunction (funname, se), new_env)
         else raise (TypeError "invalid type in function definition")
-    | Datatype (tau, val_cons) ->
-        let vcons, argtaus_op = List.split val_cons in
+    | A.Datatype (tau, val_cons) ->
+        let vcons, argtaus = List.split val_cons in
         (* treat each vcon as a function name *)
         let function_taus =
-          List.map
-            (fun argtau_op -> FUNCTION_TY ((getOp UNIT_TY) argtau_op, tau))
-            argtaus_op
+          List.map (fun argtau -> A.FUNCTION_TY (argtau, tau)) argtaus
         in
         (S.SDatatype (tau, val_cons), bindAllUnique vcons function_taus ty_env)
-    | Variable (tau, name, e) ->
-        let se, tau' = typ_of ty_env e in
+    | A.Variable (tau, name, e) ->
+        let se, tau' = typ_of vcon_map ty_env e in
         if eqType (tau, tau') then
           (S.SVal (tau, name, se), bindUnique name tau ty_env)
         else raise (TypeError ("type mismatch in variable definition " ^ name))
     | Exp e ->
-        let se, _ = typ_of ty_env e in
+        let se, _ = typ_of vcon_map ty_env e in
         (S.SExp se, ty_env)
     | CheckTypeError d -> (
         try
-          let _ = type_def d ty_env in
+          let _ = type_def d ty_env vcon_map in
           raise (TypeError "supposed to raise type error")
-        with TypeError _ -> (S.SCheckTypeError d, ty_env))
+        with TypeError _ -> (S.SExp (UNIT_TY, S.SNoexpr) , ty_env))
   in
   ty def
 
 let typecheck (defs : Ast.program) : S.sprogram * type_env =
+  let add_vcons (vcon_env: vcon_env ) (def: Ast.def)  = 
+    match def with
+    | A.Datatype (CONSTRUCTOR_TY con_name, cons) -> 
+      let names, _ = List.split cons in 
+      let add_vcon name idx map = StringMap.add name (con_name, idx) map in 
+      fold_left_i add_vcon 1 vcon_env names 
+    | _ -> vcon_env in 
+  let vcon_map = List.fold_left add_vcons StringMap.empty defs in 
   let sdefs, global_env =
     List.fold_left
       (fun (sdefs, ty_env) def ->
-        let sdef, ty_env' = type_def def ty_env in
+        let sdef, ty_env' = type_def def ty_env vcon_map in
         (sdef :: sdefs, ty_env'))
       ([], StringMap.empty) defs
   in
@@ -267,3 +300,18 @@ let typecheck (defs : Ast.program) : S.sprogram * type_env =
    1. function type - do we support partial application?
    2. should value construct only takes in value or expression
 *)
+
+let match_fail = (A.UNIT_TY,  S.SUnop (Ast.Println, (A.STRING_TY, S.SLiteral (S.STRING "no pattern being matched"))))
+let caseConvert (ret_tau: typ) (sexp : S.sexpr) 
+                (cases: S.scase_expr list) (default: S.sexpr): S.sexpr = 
+  let scrutinee_type, _ = sexp in 
+  (match cases with
+  | [] -> match_fail 
+  | (pattern, e ):: cs -> 
+    (match pattern with
+      | VAR_PAT name -> (ret_tau, S.SLet ([((scrutinee_type, name), sexp)],e))
+      | WILDCARD -> e
+      | CONCELL (hd, tl) -> raise (Invalid_argument "list pattern not implemented")
+      | NIL -> raise (Invalid_argument "list pattern not implemented")
+      | CON_PAT (i,  p) -> raise (Invalid_argument "pattern match unimplementee")
+  ))

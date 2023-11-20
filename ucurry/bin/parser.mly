@@ -73,8 +73,8 @@ constructor_list:
   | constructor_list BAR constructor { $3 :: $1 }
 
 constructor:
-    CAPNAME        { ($1, None) }
-  | CAPNAME OF typ { ($1, Some $3) }
+    CAPNAME        { ($1, UNIT_TY) }
+  | CAPNAME OF typ { ($1,  $3) }
 
 exp:
     LBRACE exp RBRACE         { $2 }
@@ -99,9 +99,9 @@ case_exp_list:
 
 pattern:
     NAME                { VAR_PAT $1 }
-  | CAPNAME             { CON_PAT ($1, None) }
-  | CAPNAME pattern     { CON_PAT ($1, Some [$2])}
-  | CAPNAME LBRACE pattern_tuple RBRACE { CON_PAT ($1, Some (List.rev $3)) } // currently our parser doesn't support tuple type, thus a value constructor can at most take in one arg
+  | CAPNAME             { CON_PAT ($1, []) }
+  | CAPNAME pattern     { CON_PAT ($1, [$2])}
+  | CAPNAME LBRACE pattern_tuple RBRACE { CON_PAT ($1, List.rev $3) } // currently our parser doesn't support tuple type, thus a value constructor can at most take in one arg
   | WILDCARD            { WILDCARD }
   | LBRACKET RBRACKET   { NIL }
   | NAME CONS NAME      { CONCELL ($1, $3) }

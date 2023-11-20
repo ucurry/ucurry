@@ -16,7 +16,7 @@ type binop =
   | Or
   | Cons
 
-type uop = Neg | Not | Hd | Tl | Print | Println
+type uop = Neg | Not | Hd | Tl | Print | Println | IsNull | NotEmpty | GetField | GetPat
 
 type typ =
   | INT_TY
@@ -30,7 +30,7 @@ type typ =
 
 type pattern =
   | VAR_PAT of string
-  | CON_PAT of string * pattern list option
+  | CON_PAT of string * pattern list 
   | WILDCARD
   | CONCELL of string * string
   | NIL
@@ -69,7 +69,7 @@ type def =
   | Exp of expr
   | CheckTypeError of def
 
-and constructor = string * typ option
+and constructor = string * typ 
 
 type program = def list
 
@@ -103,10 +103,9 @@ let string_of_uop = function
 
 let rec string_of_pattern = function
   | VAR_PAT s -> s
-  | CON_PAT (c, Some [ p ]) -> c ^ " " ^ string_of_pattern p
-  | CON_PAT (c, Some pl) ->
-      c ^ " (" ^ String.concat ", " (List.map string_of_pattern pl) ^ ")"
-  | CON_PAT (c, None) -> c
+  | CON_PAT (c, []) -> c
+  | CON_PAT (c, [p]) -> c ^ " " ^(string_of_pattern p)
+  | CON_PAT (c,  pl) -> c ^ " (" ^ String.concat ", " (List.map string_of_pattern pl) ^ ")"
   | WILDCARD -> "_"
   (* TODO: HACK a temporary way to get away with pattern matching for list *)
   | NIL -> "[]"
@@ -185,8 +184,8 @@ and string_of_literal = function
   | Construct (c, e) -> "(" ^ c ^ " " ^ string_of_literal e ^ ")"
 
 let string_of_constructor = function
-  | c, None -> c
-  | c, Some t -> c ^ " of " ^ string_of_typ t
+  | c, UNIT_TY -> c
+  | c,  t -> c ^ " of " ^ string_of_typ t
 
 let rec string_of_def = function
   | Function (ty, f, args, e) ->

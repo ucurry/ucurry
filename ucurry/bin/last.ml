@@ -1,5 +1,6 @@
 module A = Ast
-
+module  S =  Sast
+  
 type sexpr = A.typ * expr
 
 and expr =
@@ -16,8 +17,8 @@ and expr =
   | Lambda of lambda
   | Noexpr
 
-and value = A.value
-and case_expr = A.pattern * sexpr
+and value = S.svalue
+and case_expr = S.pattern * sexpr
 and lambda = string list * sexpr
 and thunk = sexpr (* which will be a Lambda form *)
 
