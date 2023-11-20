@@ -101,20 +101,19 @@ let build_main_body defs =
       StringMap.empty defs
   in
   let lookup n varmap = StringMap.find n varmap in
-  let getFunctiontype funty =
-    match funty with
-    | A.FUNCTION_TY (formalty, retty) -> (formalty, retty)
-    | _ -> raise (SHOULDNT_RAISED "not a function type")
+ 
+  let rec getFormalTypes = function
+    | A.FUNCTION_TY (formalty, retty) -> formalty :: getFormalTypes retty
+    | _ -> []
+  in
+  let rec getRetType = function
+    | A.FUNCTION_TY (_, retty) -> getRetType retty
+    | retty -> retty
   in
   let deconstructSLambda (ty, se) =
     match se with
-    | S.SLambda (formals, body) ->
-        (ty, formals, body)
+    | S.SLambda (formals, body) -> (getFormalTypes ty, getRetType ty, formals, body)
     | _ -> raise (SHOULDNT_RAISED "not an slambda type")
-  in
-  let getRetty funty =
-    let _, retty = getFunctiontype funty in
-    retty
   in
 
   let add_terminal builder instr =
@@ -137,7 +136,8 @@ let build_main_body defs =
           raise (CODEGEN_NOT_YET_IMPLEMENTED "tuple literal")
       | S.SLiteral (INF_LIST i) ->
           raise (CODEGEN_NOT_YET_IMPLEMENTED "inf list")
-      | S.SLiteral UNIT -> L.const_int i1_t 0
+      | S.SLiteral UNIT ->
+          L.const_int i1_t 0
           (* L.const_null void_t  *)
           (* TOOD: double check unit value *)
       | S.SVar name ->
@@ -149,7 +149,7 @@ let build_main_body defs =
           e'
       | S.SApply ((ft, f), args) -> (
           (* TODO: can only call named function *)
-          let fretty = getRetty ft in
+          let fretty = getRetType ft in
           match f with
           | S.SVar fname ->
               let fdef = StringMap.find fname varmap in
@@ -283,22 +283,14 @@ let build_main_body defs =
       | S.SNoexpr -> L.const_null void_t (* TOOD: double check noexpr value *)
     in
     expr builder
-
-  and generateFunction varmap name slambda =(* NOTE: current goal is to write parallel arguments - no automatic curry but can take in more than one arg *)
-    let rec getFormalTypes = function 
-          | (A.FUNCTION_TY (formalty, retty)) -> formalty :: getFormalTypes retty
-          | _ -> []
-    in 
-    let rec getRetType = function 
-          |(A.FUNCTION_TY (_, retty)) -> getRetType retty
-          | retty -> retty
-    in  
-    let (funty, formals, body) = deconstructSLambda slambda in
-    let retty = getRetType funty in 
-    let formaltypes = List.map ltype_of_type (getFormalTypes funty) in
-    let formalsandtypes = List.combine formaltypes formals in
+  
+  and generateFunction varmap name slambda =
+    (* NOTE: current goal is to write parallel arguments - no automatic curry but can take in more than one arg *)
+    let formaltypes, retty, formals, body = deconstructSLambda slambda in
+    let formal_lltypes = List.map ltype_of_type formaltypes in
+    let formalsandtypes = List.combine formal_lltypes formals in
     let ftype =
-      L.function_type (ltype_of_type retty) (Array.of_list formaltypes)
+      L.function_type (ltype_of_type retty) (Array.of_list formal_lltypes)
     in
     let the_function = L.define_function name ftype the_module in
     let varmap' = StringMap.add name the_function varmap in
