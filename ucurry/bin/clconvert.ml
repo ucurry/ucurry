@@ -46,8 +46,15 @@ match exp with
       S.diff (free sexpr) (S.of_list formalWithTypes)
   | _ -> S.empty
 
+
+let indexOf (x: string) (xs: freevar list) : int option =
+  let rec indexOf' (x: string) (xs: freevar list) (i: int) : int option =
+    match xs with
+    | [] -> None
+    | (_, y)::ys -> if x = y then Some i else indexOf' x ys (i+1)
+  in indexOf' x xs 0
+
 (* close expression *)
-(* closeExp ... *)
 let rec closeExpWith (captured : freevar list) ((ty, tope) : L.sexpr) : C.sexpr = 
 
   let rec closeExp (captured : freevar list) (exp : L.expr) : C.expr =
@@ -61,24 +68,43 @@ let rec closeExpWith (captured : freevar list) ((ty, tope) : L.sexpr) : C.sexpr 
 
     match exp with
     | L.Literal l -> Literal l
-    | L.Var name -> raise (CLOSURE_NOT_YET_IMPLEMENTED "var")
-    | L.Assign _ -> raise (CLOSURE_NOT_YET_IMPLEMENTED "assign")
-    | L.Apply _ ->  raise (CLOSURE_NOT_YET_IMPLEMENTED "placeholder")
-    | L.If _ -> raise (CLOSURE_NOT_YET_IMPLEMENTED "placeholder")
-    | L.Let _-> raise (CLOSURE_NOT_YET_IMPLEMENTED "placeholder")
-    | L.Begin sexprs -> raise (CLOSURE_NOT_YET_IMPLEMENTED "placeholder")
-    | L.Binop _ -> raise (CLOSURE_NOT_YET_IMPLEMENTED "placeholder")
+    | L.Var name -> 
+        (match indexOf name captured with
+        | Some i -> C.Captured i
+        | None -> C.Var name) (* this case, name is a local *)
+    | L.Assign (name, (ty, e)) ->  (* cannot captured local cannot be set, why?d *)
+        (match indexOf name captured with
+        | Some _ -> raise (Failure "Cannot assign to captured variable")
+        | None -> Assign (name, (ty, closeExp captured e)))
+    | L.Apply ((ty, f), ls) -> 
+        let f' = closeExp captured f in 
+        let ls' = List.map (closeExpWith captured) ls in (* be careful with this mutualrecursion*)
+        Apply ((ty, f'), ls')
+    | L.If (i, t, e) -> 
+        let i' = closeExpWith captured i in 
+        let t' = closeExpWith captured t in 
+        let e' = closeExpWith captured e in 
+        If (i', t', e')
+    | L.Let (ls, e) -> 
+        let ls' = List.map (fun (name, (ty, e)) -> (name, (ty, closeExp captured e))) ls in (* need to recheck*)
+        let e' = closeExpWith captured e in 
+        Let (ls', e') 
+    | L.Begin sexprs -> Begin (List.map (closeExpWith captured) sexprs)
+    | L.Binop (l, o, r) -> Binop (closeExpWith captured l, o, closeExpWith captured r)
     | L.Unop (op, se) -> Unop (op, closeExpWith [] se)
     | L.Case _ ->   raise (CLOSURE_NOT_YET_IMPLEMENTED "placeholder")
     | L.Lambda lambda -> C.Closure (asClosure ty lambda)
-    | _ -> raise (Failure "CloseExp Not implemented For Most Cases")
-  in raise (CLOSURE_NOT_YET_IMPLEMENTED "siduhfsd")
-
+    | L.Noexpr -> Noexpr
+  in (ty, closeExp captured tope) (* type is preserved *)
 
 (* close definition *)
 let close (def : L.def) : Cast.def =
   match def with
   | L.Exp e -> C.Exp (closeExpWith [] e)
-  | _ -> raise (Failure "Close Not implemented For Most Cases")
+   (* 106 uses C.Funcode, probably because toplevel function
+      can only capture global veriables*)
+  | L.Function (name, lambda) -> C.Function (name, closeExpWith [] lambda)
+  | L.Datatype _ -> raise (CLOSURE_NOT_YET_IMPLEMENTED "datatype")
+  | L.CheckTypeError _ -> raise (CLOSURE_NOT_YET_IMPLEMENTED "check type error")
 
 let closeProgram (p : L.program) : C.program = List.map close p
