@@ -101,10 +101,16 @@ let rec typ_of (ty_env : type_env) (exp : Ast.expr) : S.sexpr * typ =
           | LIST (x, EMPTYLIST) ->
               LIST_TY (lit_ty x)
               (* TODO: decide on the type for empty list, or whether we allow for type variable *)
-          | LIST (x, xs) -> 
-            (match (lit_ty x, lit_ty xs) 
-            with  tau, LIST_TY tau2 -> if eqType(tau, tau2) then LIST_TY tau2 else raise (TypeError "list contain different types")
-            | (tau1, tau2)  -> raise (TypeError ("wrong list type " ^ string_of_typ tau1 ^ " " ^ string_of_typ tau2)))
+          | LIST (x, xs) -> (
+              match (lit_ty x, lit_ty xs) with
+              | tau, LIST_TY tau2 ->
+                  if eqType (tau, tau2) then LIST_TY tau2
+                  else raise (TypeError "list contain different types")
+              | tau1, tau2 ->
+                  raise
+                    (TypeError
+                       ("wrong list type " ^ string_of_typ tau1 ^ " "
+                      ^ string_of_typ tau2)))
           | EMPTYLIST -> LIST_TY UNIT_TY
           | TUPLE lits -> TUPLE_TY (List.map lit_ty lits)
           | INF_LIST _ -> LIST_TY INT_TY
