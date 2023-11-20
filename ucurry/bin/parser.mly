@@ -59,7 +59,7 @@ def:
 
 fundef:
     FUNCTION COLON funtype COLON NAME formals_opt ASN exp
-    { Function ($3, $5, List.rev $6, $8) }
+    { Function ($3, $5, $6, $8) }
     
 vardef: 
     typ NAME ASN exp { Variable ($1, $2, $4) }
