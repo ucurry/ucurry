@@ -55,9 +55,7 @@ let indexOf (x: string) (xs: freevar list) : int option =
   in indexOf' x xs 0
 
 (* close expression *)
-let rec closeExpWith (captured : freevar list) ((ty, tope) : L.sexpr) : C.sexpr = 
-
-  let rec closeExp (captured : freevar list) (exp : L.expr) : C.expr =
+let rec closeExpWith (captured : freevar list) (le : L.sexpr) : C.sexpr = 
 
     let asClosure (funty: A.typ) (lambda: L.lambda) : C.closure = 
       let (formals, sbody) = lambda in
@@ -66,36 +64,35 @@ let rec closeExpWith (captured : freevar list) ((ty, tope) : L.sexpr) : C.sexpr 
       ((formals, closeExpWith freeVarWithTypes sbody), captured')
     in
 
-    match exp with
-    | L.Literal l -> Literal l
-    | L.Var name -> 
-        (match indexOf name captured with
-        | Some i -> C.Captured i
-        | None -> C.Var name) (* this case, name is a local *)
-    | L.Assign (name, (ty, e)) ->  (* cannot captured local cannot be set, why?d *)
-        (match indexOf name captured with
-        | Some _ -> raise (Failure "Cannot assign to captured variable")
-        | None -> Assign (name, (ty, closeExp captured e)))
-    | L.Apply ((ty, f), ls) -> 
-        let f' = closeExp captured f in 
-        let ls' = List.map (closeExpWith captured) ls in (* be careful with this mutualrecursion*)
-        Apply ((ty, f'), ls')
-    | L.If (i, t, e) -> 
-        let i' = closeExpWith captured i in 
-        let t' = closeExpWith captured t in 
-        let e' = closeExpWith captured e in 
-        If (i', t', e')
-    | L.Let (ls, e) -> 
-        let ls' = List.map (fun (name, (ty, e)) -> (name, (ty, closeExp captured e))) ls in (* need to recheck*)
-        let e' = closeExpWith captured e in 
-        Let (ls', e') 
-    | L.Begin sexprs -> Begin (List.map (closeExpWith captured) sexprs)
-    | L.Binop (l, o, r) -> Binop (closeExpWith captured l, o, closeExpWith captured r)
-    | L.Unop (op, se) -> Unop (op, closeExpWith [] se)
-    | L.Case _ ->   raise (CLOSURE_NOT_YET_IMPLEMENTED "placeholder")
-    | L.Lambda lambda -> C.Closure (asClosure ty lambda)
-    | L.Noexpr -> Noexpr
-  in (ty, closeExp captured tope) (* type is preserved *)
+    let rec exp ((ty, tope): L.sexpr) : C.sexpr = 
+      (ty, 
+      (match tope with
+      | L.Literal l -> C.Literal l
+      | L.Var name -> 
+          (match indexOf name captured with
+          | Some i -> C.Captured i
+          | None -> C.Var name) (* this case, name is a local *)
+      | L.Assign (name, e) ->  (* cannot captured local cannot be set, why?d *)
+          (match indexOf name captured with
+          | Some _ -> raise (Failure "Cannot assign to captured variable")
+          | None -> C.Assign (name, exp e))
+      | L.Apply (f, ls)   -> C.Apply (exp f, List.map exp ls)
+      | L.If (i, t, e)    -> C.If (exp i, exp t, exp e)
+      | L.Begin es        -> C.Begin (List.map exp es)
+      | L.Binop (l, o, r) -> C.Binop (exp l, o, exp r)
+      | L.Unop (op, se)   -> C.Unop (op, exp se)
+      | L.Let (ls, e) -> 
+          let ls' = List.map (fun (name, l) -> (name, exp l)) ls in (* need to recheck*)
+          let e' = exp e in 
+          C.Let (ls', e') 
+      | L.Case (scrutinee, cases) ->
+          let scrutinee' = exp scrutinee in 
+          let cases' = List.map (fun (p, e) -> (p, exp e)) cases in 
+          C.Case (scrutinee', cases')
+      | L.Lambda lambda -> C.Closure (asClosure ty lambda)
+      | L.Noexpr -> Noexpr))
+    in 
+    exp le
 
 (* close definition *)
 let close (def : L.def) : Cast.def =
@@ -104,7 +101,7 @@ let close (def : L.def) : Cast.def =
    (* 106 uses C.Funcode, probably because toplevel function
       can only capture global veriables*)
   | L.Function (name, lambda) -> C.Function (name, closeExpWith [] lambda)
-  | L.Datatype _ -> raise (CLOSURE_NOT_YET_IMPLEMENTED "datatype")
+  | L.Datatype (t, cons) -> C.Datatype (t, cons)
   | L.CheckTypeError _ -> raise (CLOSURE_NOT_YET_IMPLEMENTED "check type error")
 
 let closeProgram (p : L.program) : C.program = List.map close p
