@@ -15,9 +15,9 @@ let build_main_body defs =
   let i8_t = L.i8_type context in
   let i1_t = L.i1_type context in
   let void_t = L.void_type context in
-  let string_t = L.pointer_type i8_t in
   let main_ftype = L.function_type void_t [| i32_t |] in
   let the_module = L.create_module context "uCurry" in
+  (* datatype map stores the map from the datatype name to its lltype  *)
   let datatype_map =
     List.fold_left (U.build_datatype context the_module) StringMap.empty defs
   in

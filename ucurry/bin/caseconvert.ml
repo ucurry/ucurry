@@ -2,6 +2,8 @@ module S = Sast
 module A = Ast
 open Util
 
+(* Unused && Not Tested  *)
+
 let rec case_convert (ret_tau : A.typ) (scrutinee : S.sexpr)
     (cases : S.scase_expr list) (default : S.sexpr) : S.sexpr =
   let scrutinee_type, _ = scrutinee in
