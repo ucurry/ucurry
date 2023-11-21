@@ -83,6 +83,7 @@ let build_main_body defs =
               mk_expr_string_pool poolacc builder sexpr)
             pool' patterns
       | S.SNoexpr -> pool
+      | S.SAt (sexpr, _) -> mk_expr_string_pool pool builder sexpr
     in
     let mk_defs_string_pool pool builder sdef =
       match sdef with
@@ -270,7 +271,9 @@ let build_main_body defs =
           (* TODO: propagate the new varmap ? *)
       | S.SCase _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "Case")
       | S.SNoexpr -> L.const_null void_t (* TOOD: double check noexpr value *)
-      | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "dad")
+      | S.SAt (e, i) -> 
+        let tuple_ptr = expr builder e in 
+        Util.get_data_field i tuple_ptr builder "tuple field"
     in
     expr builder
   and generateFunction varmap name slambda =

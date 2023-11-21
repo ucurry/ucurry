@@ -16,6 +16,7 @@ and sx =
   | SUnop of A.uop * sexpr
   | SLambda of string list * sexpr
   | SCase of sexpr * scase_expr list
+  | SAt of sexpr * int 
   | SNoexpr
 
 and scase_expr = pattern * sexpr

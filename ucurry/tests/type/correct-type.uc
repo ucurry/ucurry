@@ -7,6 +7,8 @@ int list l1 = [1,2,3];
 bool list l2 = [true, false, true, true];
 int list list l3 = [[1,2], [3,4], [5,6]];
 unit u = ();
+int tu  = (1, 2, 3).1;
+bool tb  = (1, true).1;
 
 -- datatype
 datatype Color = Green of int | Red of int | Black | White;

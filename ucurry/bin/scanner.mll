@@ -26,6 +26,7 @@ rule token = parse
 | ']'        { RBRACKET }
 | '|'        { BAR }
 | ".."       { DOTS }
+| "."        { DOT }
 
 (* keyword *)
 | "check_type_error" { CHECK_TYPE_ERROR } 

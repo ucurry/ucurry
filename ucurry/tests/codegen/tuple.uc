@@ -2,4 +2,10 @@
 (int * int list) x_xs = (1, [2]);
 (int * bool) int_bool = (1, true);
 (int * bool * string) triple = (1, true, "hello");
+int x = (1, 2).1;
+println hd x_xs.1;
+println triple.2;
+println x;
+println triple.0;
+println triple.1;
 println "tuple finished";

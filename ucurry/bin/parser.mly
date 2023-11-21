@@ -3,7 +3,7 @@
 %}
 
 // delimiters
-%token ARROW DOUBLEARROW SEMI COMMA COLON LBRACE RBRACE LBRACKET RBRACKET BAR DOTS
+%token ARROW DOUBLEARROW SEMI COMMA COLON LBRACE RBRACE LBRACKET RBRACKET BAR DOTS DOT 
 // keyword
 %token FUNCTION LAMBDA DATATYPE IF THEN ELSE LET BEGIN IN CASE OF WILDCARD CHECK_TYPE_ERROR 
 // type
@@ -90,6 +90,7 @@ exp:
   | lambda                    { $1 }
   // fix: adding brackets to value constructors avoids shift/reduce conflict
   | LBRACE CASE exp OF case_exp_list RBRACE { Case ($3, List.rev $5) }
+  | exp DOT INTEGER           {At ($1, $3)}
 
 
 

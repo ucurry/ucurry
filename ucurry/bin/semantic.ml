@@ -9,6 +9,9 @@ type typ = A.typ
 type type_env = typ StringMap.t
 type vcon_env = (string * int) StringMap.t
 
+let nth (l : 'a list) (n : int) = 
+  try List.nth l n 
+  with Failure _ | Invalid_argument _ -> raise (TypeError "access out of the bound")
 let findType (name : string) (env : 'a StringMap.t) =
   try StringMap.find name env
   with Not_found -> raise (TypeError ("name " ^ name ^ "unbound"))
@@ -97,7 +100,7 @@ let rec to_svalue (vcon_map : vcon_env) (v : A.value) : S.svalue =
   | A.TUPLE xs -> S.TUPLE (List.map valof xs)
   | A.STRING s -> S.STRING s
   | A.BOOL b -> S.BOOL b
-  | A.Construct (s, v) -> S.Construct (StringMap.find s vcon_map, valof v)
+  | A.Construct (s, v) -> S.Construct (findType s vcon_map, valof v)
   | A.UNIT -> S.UNIT
   | A.INF_LIST i -> S.INF_LIST i
 
@@ -106,7 +109,7 @@ let rec to_spattern (vcon_map : vcon_env) (c : A.pattern) =
   match c with
   | A.VAR_PAT s -> S.VAR_PAT s
   | A.CON_PAT (name, ps) ->
-      S.CON_PAT (snd @@ StringMap.find name vcon_map, List.map pattern_of ps)
+      S.CON_PAT (snd @@ findType name vcon_map, List.map pattern_of ps)
   | A.WILDCARD -> S.WILDCARD
   | A.CONCELL (x, xs) -> S.CONCELL (x, xs)
   | A.NIL -> S.NIL
@@ -145,16 +148,16 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
         in
         let literal_type = lit_ty l in
         ((literal_type, S.SLiteral (to_svalue vcon_map l)), literal_type)
-    | Var x ->
+    | A.Var x ->
         let var_type = findType x ty_env in
         ((var_type, S.SVar x), var_type)
-    | Assign (x, e) ->
+    | A.Assign (x, e) ->
         let var_type = findType x ty_env in
         let sexpr, expr_type = ty e in
         if eqType (var_type, expr_type) then
           ((var_type, S.SAssign (x, sexpr)), var_type)
         else raise (TypeError "assigned unmatched type")
-    | Apply (e, es) ->
+    | A.Apply (e, es) ->
         let sexpr, expr_type = ty e in
         let formals, formal_types = List.split (List.map ty es) in
         let rec matchfun = function
@@ -166,13 +169,13 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
         in
         let ret_ty = matchfun (expr_type, formal_types) in
         ((ret_ty, S.SApply (sexpr, formals)), ret_ty)
-    | If (e1, e2, e3) -> (
+    | A.If (e1, e2, e3) -> (
         match (ty e1, ty e2, ty e3) with
         | (se1, BOOL_TY), (se2, tau1), (se3, tau2) ->
             if eqType (tau1, tau2) then ((tau1, S.SIf (se1, se2, se3)), tau1)
             else raise (TypeError "if branches contain different types")
         | _ -> raise (TypeError "if condition contains non-boolean types"))
-    | Let (bindings, e) ->
+    | A.Let (bindings, e) ->
         let vars, es = List.split bindings in
         let types, names = List.split vars in
         let newEnv = bindAll names types ty_env in
@@ -182,12 +185,12 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
           let sexpr, e_type = typ_of vcon_map newEnv e in
           ((e_type, S.SLet (List.combine vars sexprs, sexpr)), e_type)
         else raise (TypeError "binding types are not annotated correctly")
-    | Begin [] -> ((UNIT_TY, S.SBegin []), UNIT_TY)
-    | Begin es ->
+    | A.Begin [] -> ((UNIT_TY, S.SBegin []), UNIT_TY)
+    | A.Begin es ->
         let es, types = List.split (List.map ty es) in
         let final_ty = o List.hd List.rev types in
         ((final_ty, SBegin es), final_ty)
-    | Binop (e1, b, e2) as exp -> (
+    | A.Binop (e1, b, e2) as exp -> (
         let se1, tau1 = ty e1 in
         let se2, tau2 = ty e2 in
         let same = eqType (tau1, tau2) in
@@ -201,10 +204,8 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
         | (Equal | Neq) when same -> ((BOOL_TY, S.SBinop (se1, b, se2)), BOOL_TY)
         | Cons when eqType (LIST_TY tau1, tau2) ->
             ((tau2, S.SBinop (se1, b, se2)), tau2)
-        | _ ->
-            raise
-              (TypeError ("type error in expression " ^ A.string_of_expr exp)))
-    | Unop (u, e) -> (
+        | _ -> raise (TypeError ("type error in expression " ^ A.string_of_expr exp)))
+    | A.Unop (u, e) -> (
         let se, tau = ty e in
         match (u, tau) with
         | Neg, INT_TY -> ((INT_TY, S.SUnop (u, se)), INT_TY)
@@ -223,7 +224,7 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
                    Unop (u, Literal (STRING "true")),
                    Unop (u, Literal (STRING "false")) ))
         | _ -> raise (TypeError "type error in unoary operaion"))
-    | Lambda (ty, formals, body) ->
+    | A.Lambda (ty, formals, body) ->
         let rec check_lambda tau fs env =
           match (tau, fs) with
           | _, [] ->
@@ -235,7 +236,7 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
           | _ -> raise (TypeError "lambda type unmatch")
         in
         check_lambda ty formals ty_env
-    | Case (exp, cases) ->
+    | A.Case (exp, cases) ->
         let se, scrutinee_type = ty exp in
         let patterns, es = List.split cases in
         let spatterns = List.map (to_spattern vcon_map) patterns in
@@ -251,7 +252,11 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
         in
         if allSame then ((exptau, S.SCase (se, scases)), exptau)
         else raise (TypeError "ill typed case expression ")
-    | Noexpr -> ((UNIT_TY, S.SNoexpr), UNIT_TY)
+    | A.At (e, i) ->
+      let se, tau = ty e in (match tau with
+        | TUPLE_TY ts -> (nth ts i, S.SAt (se, i)),nth ts i 
+        | _-> raise (TypeError "access field from non tuple value")) 
+    | A.Noexpr -> ((UNIT_TY, S.SNoexpr), UNIT_TY)
   in
   ty exp
 
@@ -316,17 +321,3 @@ let match_fail =
       ( Ast.Println,
         (A.STRING_TY, S.SLiteral (S.STRING "no pattern being matched")) ) )
 
-let caseConvert (ret_tau : typ) (sexp : S.sexpr) (cases : S.scase_expr list)
-    (default : S.sexpr) : S.sexpr =
-  let scrutinee_type, _ = sexp in
-  match cases with
-  | [] -> match_fail
-  | (pattern, e) :: cs -> (
-      match pattern with
-      | VAR_PAT name -> (ret_tau, S.SLet ([ ((scrutinee_type, name), sexp) ], e))
-      | WILDCARD -> e
-      | CONCELL (hd, tl) ->
-          raise (Invalid_argument "list pattern not implemented")
-      | NIL -> raise (Invalid_argument "list pattern not implemented")
-      | CON_PAT (i, p) -> raise (Invalid_argument "pattern match unimplementee")
-      )
