@@ -1,5 +1,5 @@
 open Util
-module A = Ast 
+module A = Ast
 module S = Sast
 module StringMap = Map.Make (String)
 
@@ -7,7 +7,7 @@ exception TypeError of string
 
 type typ = A.typ
 type type_env = typ StringMap.t
-type vcon_env = (string * int) StringMap.t 
+type vcon_env = (string * int) StringMap.t
 
 let findType (name : string) (env : 'a StringMap.t) =
   try StringMap.find name env
@@ -69,8 +69,8 @@ let rec legalPattern (ty_env : type_env) (tau : typ) (pat : A.pattern) =
           (TypeError
              ("invalid pattern matching for pattern " ^ A.string_of_pattern pat
             ^ " expected " ^ A.string_of_typ tau ^ ", got "
-            ^  A.string_of_typ ret_tau))
-  | A.CON_PAT (name,  pats) ->
+            ^ A.string_of_typ ret_tau))
+  | A.CON_PAT (name, pats) ->
       let exp_tau, ret_tau = findFunctionType name ty_env in
       if eqType (tau, ret_tau) then
         match (exp_tau, pats) with
@@ -88,29 +88,31 @@ let rec legalPattern (ty_env : type_env) (tau : typ) (pat : A.pattern) =
 
 let eqTypes = List.for_all2 (curry eqType)
 
-let rec to_svalue (vcon_map : vcon_env)  (v: A.value) : S.svalue = 
-    let valof = to_svalue vcon_map in
-    match v with
-      | (A.INT i) -> S.INT i 
-      | (A.EMPTYLIST) -> S.EMPTYLIST
-      | (A.LIST (hd, tl)) -> S.LIST  (valof hd, valof tl)
-      | (A.TUPLE xs) -> S.TUPLE (List.map valof xs)
-      | (A.STRING s) -> S.STRING s 
-      | (A.BOOL b) -> S.BOOL b 
-      | (A.Construct (s, v)) -> S.Construct (StringMap.find s vcon_map, valof v )
-      | (A.UNIT) -> S.UNIT
-      | (A.INF_LIST i) -> S.INF_LIST i 
-                  
-let rec to_spattern (vcon_map: vcon_env) (c: A.pattern) = 
-    let pattern_of = to_spattern vcon_map in 
-    match  c  with
-    | (A.VAR_PAT s ) -> S.VAR_PAT s
-    | (A.CON_PAT (name,  ps)) -> S.CON_PAT ( snd @@ StringMap.find name vcon_map, List.map pattern_of ps)
-    | (A.WILDCARD ) -> S.WILDCARD
-    | (A.CONCELL (x, xs)) -> S.CONCELL (x, xs)
-    | (A.NIL) -> S.NIL
+let rec to_svalue (vcon_map : vcon_env) (v : A.value) : S.svalue =
+  let valof = to_svalue vcon_map in
+  match v with
+  | A.INT i -> S.INT i
+  | A.EMPTYLIST -> S.EMPTYLIST
+  | A.LIST (hd, tl) -> S.LIST (valof hd, valof tl)
+  | A.TUPLE xs -> S.TUPLE (List.map valof xs)
+  | A.STRING s -> S.STRING s
+  | A.BOOL b -> S.BOOL b
+  | A.Construct (s, v) -> S.Construct (StringMap.find s vcon_map, valof v)
+  | A.UNIT -> S.UNIT
+  | A.INF_LIST i -> S.INF_LIST i
 
-let rec typ_of (vcon_map: vcon_env) (ty_env : type_env) (exp : Ast.expr) : S.sexpr * typ =
+let rec to_spattern (vcon_map : vcon_env) (c : A.pattern) =
+  let pattern_of = to_spattern vcon_map in
+  match c with
+  | A.VAR_PAT s -> S.VAR_PAT s
+  | A.CON_PAT (name, ps) ->
+      S.CON_PAT (snd @@ StringMap.find name vcon_map, List.map pattern_of ps)
+  | A.WILDCARD -> S.WILDCARD
+  | A.CONCELL (x, xs) -> S.CONCELL (x, xs)
+  | A.NIL -> S.NIL
+
+let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
+    S.sexpr * typ =
   let rec ty = function
     | A.Literal l ->
         let rec lit_ty = function
@@ -122,18 +124,18 @@ let rec typ_of (vcon_map: vcon_env) (ty_env : type_env) (exp : Ast.expr) : S.sex
               A.LIST_TY A.UNIT_TY
               (* TODO: decide on the type for empty list, or whether we allow for type variable *)
           | A.LIST (x, A.EMPTYLIST) ->
-                LIST_TY (lit_ty x)
-                (* TODO: decide on the type for empty list, or whether we allow for type variable *)
+              LIST_TY (lit_ty x)
+              (* TODO: decide on the type for empty list, or whether we allow for type variable *)
           | A.LIST (x, xs) -> (
-                match (lit_ty x, lit_ty xs) with
-                | tau, LIST_TY tau2 ->
-                    if eqType (tau, tau2) then LIST_TY tau2
-                    else raise (TypeError "list contain different types")
-                | tau1, tau2 ->
-                    raise
-                      (TypeError
-                         ("wrong list type " ^ A.string_of_typ tau1 ^ " "
-                        ^ A.string_of_typ tau2)))
+              match (lit_ty x, lit_ty xs) with
+              | tau, LIST_TY tau2 ->
+                  if eqType (tau, tau2) then LIST_TY tau2
+                  else raise (TypeError "list contain different types")
+              | tau1, tau2 ->
+                  raise
+                    (TypeError
+                       ("wrong list type " ^ A.string_of_typ tau1 ^ " "
+                      ^ A.string_of_typ tau2)))
           | A.TUPLE lits -> A.TUPLE_TY (List.map lit_ty lits)
           | A.INF_LIST _ -> A.LIST_TY INT_TY
           | A.Construct (name, value) ->
@@ -200,8 +202,8 @@ let rec typ_of (vcon_map: vcon_env) (ty_env : type_env) (exp : Ast.expr) : S.sex
         | Cons when eqType (LIST_TY tau1, tau2) ->
             ((tau2, S.SBinop (se1, b, se2)), tau2)
         | _ ->
-            raise (TypeError ("type error in expression " ^ A.string_of_expr exp))
-        )
+            raise
+              (TypeError ("type error in expression " ^ A.string_of_expr exp)))
     | Unop (u, e) -> (
         let se, tau = ty e in
         match (u, tau) with
@@ -209,18 +211,23 @@ let rec typ_of (vcon_map: vcon_env) (ty_env : type_env) (exp : Ast.expr) : S.sex
         | Not, BOOL_TY -> ((BOOL_TY, S.SUnop (u, se)), BOOL_TY)
         | Hd, LIST_TY tau1 -> ((tau1, S.SUnop (u, se)), tau1)
         | Tl, LIST_TY tau1 -> ((LIST_TY tau1, S.SUnop (u, se)), LIST_TY tau1)
-        | Print, STRING_TY | Println, STRING_TY 
-        | Print, INT_TY | Println, INT_TY  -> ((UNIT_TY, S.SUnop (u, se)), UNIT_TY)
-        | Print, BOOL_TY | Println, BOOL_TY -> 
-          ty (If (Binop (e, Equal, Literal (BOOL true)), 
-                  Unop (u, Literal (STRING "true")), 
-                  Unop (u, Literal (STRING "false"))))
+        | Print, STRING_TY
+        | Println, STRING_TY
+        | Print, INT_TY
+        | Println, INT_TY ->
+            ((UNIT_TY, S.SUnop (u, se)), UNIT_TY)
+        | Print, BOOL_TY | Println, BOOL_TY ->
+            ty
+              (If
+                 ( Binop (e, Equal, Literal (BOOL true)),
+                   Unop (u, Literal (STRING "true")),
+                   Unop (u, Literal (STRING "false")) ))
         | _ -> raise (TypeError "type error in unoary operaion"))
     | Lambda (ty, formals, body) ->
         let rec check_lambda tau fs env =
           match (tau, fs) with
           | _, [] ->
-              let se, tau' = typ_of vcon_map env  body in
+              let se, tau' = typ_of vcon_map env body in
               if eqType (tau, tau') then ((ty, S.SLambda (formals, se)), ty)
               else raise (TypeError "lambda type unmatch")
           | A.FUNCTION_TY (tau1, tau2), hd :: tl ->
@@ -231,7 +238,7 @@ let rec typ_of (vcon_map: vcon_env) (ty_env : type_env) (exp : Ast.expr) : S.sex
     | Case (exp, cases) ->
         let se, scrutinee_type = ty exp in
         let patterns, es = List.split cases in
-        let spatterns = List.map (to_spattern vcon_map) patterns in 
+        let spatterns = List.map (to_spattern vcon_map) patterns in
         let bindings = List.map (legalPattern ty_env scrutinee_type) patterns in
         let newEnvs = List.map (bindAllPairs ty_env) bindings in
         let ses, taus = List.split (List.map2 (typ_of vcon_map) newEnvs es) in
@@ -249,7 +256,8 @@ let rec typ_of (vcon_map: vcon_env) (ty_env : type_env) (exp : Ast.expr) : S.sex
   ty exp
 
 (* type_def : def -> type_env -> type_env *)
-let rec type_def (def : Ast.def) (ty_env : type_env) (vcon_map: vcon_env): S.sdef * type_env =
+let rec type_def (def : Ast.def) (ty_env : type_env) (vcon_map : vcon_env) :
+    S.sdef * type_env =
   let ty = function
     | A.Function (tau, funname, args, body) ->
         let new_env = bindUnique funname tau ty_env in
@@ -264,9 +272,9 @@ let rec type_def (def : Ast.def) (ty_env : type_env) (vcon_map: vcon_env): S.sde
         in
         (S.SDatatype (tau, val_cons), bindAllUnique vcons function_taus ty_env)
     | A.Variable (tau, name, e) ->
-        let se, tau' = typ_of vcon_map ty_env e in
+        let (_, e), tau' = typ_of vcon_map ty_env e in
         if eqType (tau, tau') then
-          (S.SVal (tau, name, se), bindUnique name tau ty_env)
+          (S.SVal (tau, name, (tau, e)), bindUnique name tau ty_env)
         else raise (TypeError ("type mismatch in variable definition " ^ name))
     | Exp e ->
         let se, _ = typ_of vcon_map ty_env e in
@@ -275,19 +283,20 @@ let rec type_def (def : Ast.def) (ty_env : type_env) (vcon_map: vcon_env): S.sde
         try
           let _ = type_def d ty_env vcon_map in
           raise (TypeError "supposed to raise type error")
-        with TypeError _ -> (S.SExp (UNIT_TY, S.SNoexpr) , ty_env))
+        with TypeError _ -> (S.SExp (UNIT_TY, S.SNoexpr), ty_env))
   in
   ty def
 
 let typecheck (defs : Ast.program) : S.sprogram * type_env =
-  let add_vcons (vcon_env: vcon_env ) (def: Ast.def)  = 
+  let add_vcons (vcon_env : vcon_env) (def : Ast.def) =
     match def with
-    | A.Datatype (CONSTRUCTOR_TY con_name, cons) -> 
-      let names, _ = List.split cons in 
-      let add_vcon name idx map = StringMap.add name (con_name, idx) map in 
-      fold_left_i add_vcon 1 vcon_env names 
-    | _ -> vcon_env in 
-  let vcon_map = List.fold_left add_vcons StringMap.empty defs in 
+    | A.Datatype (CONSTRUCTOR_TY con_name, cons) ->
+        let names, _ = List.split cons in
+        let add_vcon name idx map = StringMap.add name (con_name, idx) map in
+        fold_left_i add_vcon 1 vcon_env names
+    | _ -> vcon_env
+  in
+  let vcon_map = List.fold_left add_vcons StringMap.empty defs in
   let sdefs, global_env =
     List.fold_left
       (fun (sdefs, ty_env) def ->
@@ -301,17 +310,23 @@ let typecheck (defs : Ast.program) : S.sprogram * type_env =
    2. should value construct only takes in value or expression
 *)
 
-let match_fail = (A.UNIT_TY,  S.SUnop (Ast.Println, (A.STRING_TY, S.SLiteral (S.STRING "no pattern being matched"))))
-let caseConvert (ret_tau: typ) (sexp : S.sexpr) 
-                (cases: S.scase_expr list) (default: S.sexpr): S.sexpr = 
-  let scrutinee_type, _ = sexp in 
-  (match cases with
-  | [] -> match_fail 
-  | (pattern, e ):: cs -> 
-    (match pattern with
-      | VAR_PAT name -> (ret_tau, S.SLet ([((scrutinee_type, name), sexp)],e))
+let match_fail =
+  ( A.UNIT_TY,
+    S.SUnop
+      ( Ast.Println,
+        (A.STRING_TY, S.SLiteral (S.STRING "no pattern being matched")) ) )
+
+let caseConvert (ret_tau : typ) (sexp : S.sexpr) (cases : S.scase_expr list)
+    (default : S.sexpr) : S.sexpr =
+  let scrutinee_type, _ = sexp in
+  match cases with
+  | [] -> match_fail
+  | (pattern, e) :: cs -> (
+      match pattern with
+      | VAR_PAT name -> (ret_tau, S.SLet ([ ((scrutinee_type, name), sexp) ], e))
       | WILDCARD -> e
-      | CONCELL (hd, tl) -> raise (Invalid_argument "list pattern not implemented")
+      | CONCELL (hd, tl) ->
+          raise (Invalid_argument "list pattern not implemented")
       | NIL -> raise (Invalid_argument "list pattern not implemented")
-      | CON_PAT (i,  p) -> raise (Invalid_argument "pattern match unimplementee")
-  ))
+      | CON_PAT (i, p) -> raise (Invalid_argument "pattern match unimplementee")
+      )

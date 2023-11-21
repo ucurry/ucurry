@@ -1,7 +1,9 @@
 module A = Ast
-  
+
 type typ = A.typ
+
 type sexpr = typ * sx
+
 and sx =
   | SLiteral of svalue
   | SVar of string
@@ -15,25 +17,26 @@ and sx =
   | SLambda of string list * sexpr
   | SCase of sexpr * scase_expr list
   | SNoexpr
+
 and scase_expr = pattern * sexpr
 
 and pattern =
   | VAR_PAT of string
-  | CON_PAT of int * pattern list 
+  | CON_PAT of int * pattern list
   | WILDCARD
   | CONCELL of string * string
   | NIL
 
 (* data constructor name becomes index *)
-and svalue = 
+and svalue =
   | Construct of (string * int) * svalue
-  | INT of int 
+  | INT of int
   | STRING of string
   | BOOL of bool
-  | EMPTYLIST 
-  | LIST of  svalue * svalue
+  | EMPTYLIST
+  | LIST of svalue * svalue
   | TUPLE of svalue list
-  | INF_LIST of int 
+  | INF_LIST of int
   | UNIT
 
 type sdef =
@@ -43,6 +46,6 @@ type sdef =
   | SExp of sexpr
   | SCheckTypeError of sdef
 
-and constructor = string * typ (* TODO: consider changing into int * typ  *) 
+and constructor = string * typ (* TODO: consider changing into int * typ  *)
 
 type sprogram = sdef list

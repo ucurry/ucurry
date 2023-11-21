@@ -1,6 +1,6 @@
 module A = Ast
-module  S =  Sast
-  
+module S = Sast
+
 type sexpr = A.typ * expr
 
 and expr =
