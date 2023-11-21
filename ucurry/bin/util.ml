@@ -28,9 +28,7 @@ let rec fold_left_i (f : 'a -> int -> 'c -> 'c) (i : int) (acc : 'c)
     (l : 'a list) =
   match l with [] -> acc | x :: xs -> fold_left_i f (i + 1) (f x i acc) xs
 
-let rec map_i (f: 'a -> int -> 'b) (i: int) (l: 'a list) = 
-  match l with 
-  | [] ->  []
-  | x :: xs -> (f x i) :: (map_i f (i + 1) xs)
+let rec map_i (f : 'a -> int -> 'b) (i : int) (l : 'a list) =
+  match l with [] -> [] | x :: xs -> f x i :: map_i f (i + 1) xs
 
 let list_to_arr l = Array.init (List.length l) (List.nth l)
