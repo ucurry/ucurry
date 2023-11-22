@@ -15,13 +15,13 @@ let build_main_body defs =
   let i1_t = L.i1_type context in
   let void_t = L.void_type context in
   let string_t = L.pointer_type i8_t in
-
   let main_ftype = L.function_type void_t [| i32_t |] in
   let the_module = L.create_module context "uCurry" in
   let ltype_of_type = function
     | A.INT_TY -> i32_t
     | A.BOOL_TY -> i1_t
     | A.STRING_TY -> string_t
+    | A.UNIT_TY -> i1_t
     | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "ltype_of_type")
   in
 
@@ -101,20 +101,19 @@ let build_main_body defs =
       StringMap.empty defs
   in
   let lookup n varmap = StringMap.find n varmap in
-  let getFunctiontype funty =
-    match funty with
-    | A.FUNCTION_TY (formalty, retty) -> (formalty, retty)
-    | _ -> raise (SHOULDNT_RAISED "not a function type")
+ 
+  let rec getFormalTypes = function
+    | A.FUNCTION_TY (formalty, retty) -> formalty :: getFormalTypes retty
+    | _ -> []
   in
-  let deconstructSLambda (ty, se) =
-    match (ty, se) with
-    | A.FUNCTION_TY (formalty, retty), S.SLambda (formals, body) ->
-        (formalty, retty, formals, body)
+  let rec getRetType = function
+    | A.FUNCTION_TY (_, retty) -> getRetType retty
+    | retty -> retty
+  in
+  let deconstructSLambda (ty, se) = (* NOTE: didn't check if ty is actually a funty  *)
+    match se with
+    | S.SLambda (formals, body) -> (getFormalTypes ty, getRetType ty, formals, body)
     | _ -> raise (SHOULDNT_RAISED "not an slambda type")
-  in
-  let getRetty funty =
-    let _, retty = getFunctiontype funty in
-    retty
   in
 
   let add_terminal builder instr =
@@ -138,7 +137,9 @@ let build_main_body defs =
       | S.SLiteral (INF_LIST i) ->
           raise (CODEGEN_NOT_YET_IMPLEMENTED "inf list")
       | S.SLiteral UNIT ->
-          L.const_null void_t (* TOOD: double check unit value *)
+          L.const_int i1_t 0
+          (* L.const_null void_t  *)
+          (* TOOD: double check unit value *)
       | S.SVar name ->
           L.build_load (lookup name varmap) name
             builder (* %a1 = load i32, i32* %a, align 4 *)
@@ -147,17 +148,18 @@ let build_main_body defs =
           let _ = L.build_store e' (lookup name varmap) builder in
           e'
       | S.SApply ((ft, f), args) -> (
-          (* TODO: can only call named function *)
-          let fretty = getRetty ft in
+          let fretty = getRetType ft in
+          let llargs = List.rev (List.map (expr builder) (List.rev args)) in
           match f with
           | S.SVar fname ->
               let fdef = StringMap.find fname varmap in
-              let llargs = List.rev (List.map (expr builder) (List.rev args)) in
-              let result =
-                match fretty with A.UNIT_TY -> "" | _ -> fname ^ "_result"
-              in
+              let result = match fretty with A.UNIT_TY -> "" | _ -> fname ^ "_result" in
               L.build_call fdef (Array.of_list llargs) result builder
-          | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "anonymous fun"))
+          | S.SLambda _ -> 
+              let e'= expr builder (ft, f) in
+              let result = match fretty with A.UNIT_TY -> "" | _ -> "lambda" ^ "_result" in
+              L.build_call e' (Array.of_list llargs) result builder 
+          | _ -> raise (SHOULDNT_RAISED "Illegal function application"))
       | S.SIf (pred, then_expr, else_expr) ->
           (* 90% code referenced from https://releases.llvm.org/12.0.1/docs/tutorial/OCamlLangImpl5.html#llvm-ir-for-if-then-else *)
           (* emit expression for condition code *)
@@ -274,20 +276,21 @@ let build_main_body defs =
           | A.Not, _ -> L.build_not e' "temp" builder
           | A.Hd, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "hd")
           | A.Tl, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "tl"))
-      | S.SLambda _ as l ->
-          raise (CODEGEN_NOT_YET_IMPLEMENTED "lambda")
-          (* TODO: find a real fresh name *)
-          (* TODO: propagate the new varmap ? *)
+      | S.SLambda _ ->
+          let (e', _) = generateFunction varmap "lambda" (ty, top_exp) in (* No need to worry about naming - LLVM will take care of it *)
+          e'
       | S.SCase _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "Case")
       | S.SNoexpr -> L.const_null void_t (* TOOD: double check noexpr value *)
     in
     expr builder
+  
   and generateFunction varmap name slambda =
-    let formalty, retty, formals, body = deconstructSLambda slambda in
-    let formaltypes = ltype_of_type formalty :: [] in
-    let formalsandtypes = List.combine formaltypes formals in
+    (* NOTE: current goal is to write parallel arguments - no automatic curry but can take in more than one arg *)
+    let formaltypes, retty, formals, body = deconstructSLambda slambda in
+    let formal_lltypes = List.map ltype_of_type formaltypes in
+    let formalsandtypes = List.combine formal_lltypes formals in
     let ftype =
-      L.function_type (ltype_of_type retty) (Array.of_list formaltypes)
+      L.function_type (ltype_of_type retty) (Array.of_list formal_lltypes)
     in
     let the_function = L.define_function name ftype the_module in
     let varmap' = StringMap.add name the_function varmap in
@@ -298,13 +301,13 @@ let build_main_body defs =
       let _ = L.build_store p local builder in
       StringMap.add n local m (* return a new local varmap *)
     in
-    let localvarmap =
+    let localvarmap = (* TODO: need to reimplement after closure convert ! *)
       List.fold_left2 add_formal varmap formalsandtypes
         (Array.to_list (L.params the_function))
     in
     let e' = exprWithVarmap builder localvarmap body in
     let _ = add_terminal builder (fun b -> L.build_ret e' b) in
-    (e', varmap')
+    (the_function, varmap')
   in
 
   (* varmap is the variable environment that maps (variable : string |---> to reg : llvale) *)
