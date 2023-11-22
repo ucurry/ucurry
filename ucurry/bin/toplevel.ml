@@ -35,9 +35,8 @@ let () =
   | LLVMIR ->
       let last = List.map Lazyconvert.lazyDef sast in
       let cast = Clconvert.closeProgram last in
-      let renamed_cast = Rename.rename cast in
-      (* let llvmir = Codegen.build_main_body renamed_cast in *)
-      (* let _ = print_string (Llvm.string_of_llmodule llvmir) in *)
+      let llvmir = Codegen.build_main_body cast in
+      let _ = print_string (Llvm.string_of_llmodule llvmir) in
       print_newline ()
   | TRY ->
       let llvmir = CodegenFromSast.build_main_body sast in

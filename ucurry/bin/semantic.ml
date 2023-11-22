@@ -198,6 +198,7 @@ let rec typ_of (ty_env : type_env) (exp : Ast.expr) : S.sexpr * typ =
               check_lambda tau2 tl (StringMap.add hd tau1 env)
           | _ -> raise (TypeError "lambda type unmatch")
         in
+        (* let _ = Printf.printf "formals in semant: %d\n" (List.length formals) in  *)
         check_lambda ty formals ty_env
     | Case (exp, cases) ->
         let se, scrutinee_type = ty exp in

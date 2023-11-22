@@ -1,4 +1,8 @@
-int a = 1;
+--int a = 1;
+--a;
+--println a;
 
 fun: int -> int:
-f x = a + x;
+f x = 1;
+(f 1);
+
