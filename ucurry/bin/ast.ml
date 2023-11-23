@@ -56,7 +56,7 @@ type expr =
   | Unop of uop * expr
   | Lambda of typ * string list * expr
   | Case of expr * case_expr list
-  | At of expr * int 
+  | At of expr * int
   | Noexpr
 
 and value =
@@ -173,7 +173,7 @@ let rec string_of_expr exp =
                  string_of_typ t ^ " " ^ v ^ " = " ^ string_of_expr e)
                vl)
         ^ " in " ^ string_of_expr e
-    | At (e, i) -> string_of_expr e ^ "." ^ string_of_int i 
+    | At (e, i) -> string_of_expr e ^ "." ^ string_of_int i
     | Noexpr -> ""
   in
   match exp with Noexpr -> "" | _ -> "(" ^ flat_string_of_exp exp ^ ")"

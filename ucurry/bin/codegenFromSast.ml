@@ -271,9 +271,9 @@ let build_main_body defs =
           (* TODO: propagate the new varmap ? *)
       | S.SCase _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "Case")
       | S.SNoexpr -> L.const_null void_t (* TOOD: double check noexpr value *)
-      | S.SAt (e, i) -> 
-        let tuple_ptr = expr builder e in 
-        Util.get_data_field i tuple_ptr builder "tuple field"
+      | S.SAt (e, i) ->
+          let tuple_ptr = expr builder e in
+          Util.get_data_field i tuple_ptr builder "tuple field"
     in
     expr builder
   and generateFunction varmap name slambda =

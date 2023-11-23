@@ -9,9 +9,11 @@ type typ = A.typ
 type type_env = typ StringMap.t
 type vcon_env = (string * int) StringMap.t
 
-let nth (l : 'a list) (n : int) = 
-  try List.nth l n 
-  with Failure _ | Invalid_argument _ -> raise (TypeError "access out of the bound")
+let nth (l : 'a list) (n : int) =
+  try List.nth l n
+  with Failure _ | Invalid_argument _ ->
+    raise (TypeError "access out of the bound")
+
 let findType (name : string) (env : 'a StringMap.t) =
   try StringMap.find name env
   with Not_found -> raise (TypeError ("name " ^ name ^ "unbound"))
@@ -204,7 +206,9 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
         | (Equal | Neq) when same -> ((BOOL_TY, S.SBinop (se1, b, se2)), BOOL_TY)
         | Cons when eqType (LIST_TY tau1, tau2) ->
             ((tau2, S.SBinop (se1, b, se2)), tau2)
-        | _ -> raise (TypeError ("type error in expression " ^ A.string_of_expr exp)))
+        | _ ->
+            raise
+              (TypeError ("type error in expression " ^ A.string_of_expr exp)))
     | A.Unop (u, e) -> (
         let se, tau = ty e in
         match (u, tau) with
@@ -252,10 +256,11 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
         in
         if allSame then ((exptau, S.SCase (se, scases)), exptau)
         else raise (TypeError "ill typed case expression ")
-    | A.At (e, i) ->
-      let se, tau = ty e in (match tau with
-        | TUPLE_TY ts -> (nth ts i, S.SAt (se, i)),nth ts i 
-        | _-> raise (TypeError "access field from non tuple value")) 
+    | A.At (e, i) -> (
+        let se, tau = ty e in
+        match tau with
+        | TUPLE_TY ts -> ((nth ts i, S.SAt (se, i)), nth ts i)
+        | _ -> raise (TypeError "access field from non tuple value"))
     | A.Noexpr -> ((UNIT_TY, S.SNoexpr), UNIT_TY)
   in
   ty exp
@@ -320,4 +325,3 @@ let match_fail =
     S.SUnop
       ( Ast.Println,
         (A.STRING_TY, S.SLiteral (S.STRING "no pattern being matched")) ) )
-
