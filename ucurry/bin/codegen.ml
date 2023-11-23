@@ -135,14 +135,14 @@ let build_main_body defs =
       | C.Captured index -> 
         U.get_data_field index clstruct builder "capvar"
       | C.Closure (_, _) ->
-          let e', _ = generate_closure varmap "lambda" clstruct (ty, top_exp) in 
+          let e', _ = generate_closure builder varmap "lambda" clstruct (ty, top_exp) in 
           e'
       | C.Case _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "case")
       | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "SIFN")
     in
     expr builder clstruct 
   
-  and generate_closure varmap name clstruct closure =
+  and generate_closure builder varmap name clstruct closure =
     let formaltypes, retty, formals, body, cap = deconstructClosure closure in
 
     (* Get the value of the captured list *)
@@ -151,7 +151,7 @@ let build_main_body defs =
     (* get the type of captured list *)
     let captured_types = List.map (fun (t, _) -> t) cap in 
 
-    (* Alloc for the struct *)
+    (* Alloc for the captured struct *)
     let struct_ptr = L.build_alloca (get_struct_type captured_types) "captured_struct" builder in 
 
     (* set each struct field *)
@@ -167,6 +167,7 @@ let build_main_body defs =
     let e' = L.build_load struct_ptr "tmp" builder in
     let _ = L.build_store e' reg builder in 
 
+    (* build the function *)
     let formal_lltypes = List.map ltype_of_type formaltypes in
     let formalsandtypes = List.combine formal_lltypes formals in
     let ftype =
