@@ -1,10 +1,11 @@
 module L = Llvm
 module A = Ast
 module S = Sast
+module C = Cast
 module StringMap = Map.Make (String)
 open Util
 
-type def = Sast.sdef
+type def = Cast.def
 type literal = Sast.svalue
 type type_env = A.typ StringMap.t
 
@@ -18,10 +19,14 @@ let rec ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
     | A.BOOL_TY -> L.i1_type context
     | A.STRING_TY -> L.pointer_type (L.i8_type context)
     | A.UNIT_TY -> L.i1_type context
-    | A.FUNCTION_TY (arg, ret) ->
-        L.function_type (ltype_of ret) [| ltype_of arg |]
-    (* confirm on the function type  *)
-    (* for constructor type, tupple type, and list type, the lltyp will be a pointer to the struct *)
+    | A.FUNCTION_TY (_, _) as ft ->
+        let formal_types = getFormalTypes ft in
+        let retty = getRetType ft in
+        let formal_lltypes = List.map ltype_of formal_types in
+        let fun_type =
+          L.function_type (ltype_of retty) (Array.of_list formal_lltypes)
+        in
+        L.pointer_type fun_type
     | A.CONSTRUCTOR_TY name -> L.pointer_type (StringMap.find name ty_map)
     | A.TUPLE_TY taus ->
         let taus = Array.of_list (List.map ltype_of taus) in
@@ -40,20 +45,28 @@ let rec ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
   in
   ltype_of ty
 
-let build_datatype (context : L.llcontext) (llmodule : L.llmodule)
-    (map : L.lltype StringMap.t) : def -> L.lltype StringMap.t = function
-  | Sast.SDatatype (CONSTRUCTOR_TY con_name, cons) ->
-      let names, taus = List.split cons in
-      let subtypesList = List.map (ltype_of_type map llmodule context) taus in
-      let newmap =
-        StringMap.add_seq (List.to_seq @@ (List.combine names) subtypesList) map
-      in
-      let newContype =
-        L.struct_type context (list_to_arr (L.i32_type context :: subtypesList))
-      in
-      StringMap.add con_name newContype newmap
-  | _ -> map
+(* given the program return a map that maps the datatype name to its lltype *)
+let build_datatypes (context : L.llcontext) (llmodule : L.llmodule)
+    (program : def list) : L.lltype StringMap.t =
+  let add_datatype map = function
+    | Cast.Datatype (CONSTRUCTOR_TY con_name, cons) ->
+        let names, taus = List.split cons in
+        let subtypesList = List.map (ltype_of_type map llmodule context) taus in
+        let newmap =
+          StringMap.add_seq
+            (List.to_seq @@ (List.combine names) subtypesList)
+            map
+        in
+        let newContype =
+          L.struct_type context
+            (list_to_arr (L.i32_type context :: subtypesList))
+        in
+        StringMap.add con_name newContype newmap
+    | _ -> map
+  in
+  List.fold_left add_datatype StringMap.empty program
 
+(* build a llvm value from a literal value  *)
 let rec build_literal builder (ty_map : L.lltype StringMap.t)
     (context : L.llcontext) (llmodule : L.llmodule)
     (string_pool : L.llvalue StringMap.t) (ty : Ast.typ) (v : literal) =
@@ -61,7 +74,7 @@ let rec build_literal builder (ty_map : L.lltype StringMap.t)
   let rec to_lit ty = function
     | S.Construct ((con_name, i, inner_ty), value) ->
         let field_v = to_lit inner_ty value
-        (* TODO: needs to know the field_v's type to handle 
+        (* TODO: needs to know the field_v's type to handle
                  cases for tuple and list *)
         and con_v =
           L.build_alloca (StringMap.find con_name ty_map) con_name builder
@@ -108,6 +121,7 @@ let rec build_literal builder (ty_map : L.lltype StringMap.t)
   in
   to_lit ty v
 
+(* return the formating string for a A.typ  *)
 let ty_fmt_string ty (builder : L.llbuilder) : L.llvalue =
   let rec string_matcher = function
     | A.INT_TY -> "%d"
@@ -121,3 +135,69 @@ let ty_fmt_string ty (builder : L.llbuilder) : L.llvalue =
     | A.FUNCTION_TY _ -> raise (Impossible "function cannot be printed")
   in
   L.build_global_stringptr (string_matcher ty) "fmt" builder
+
+let build_string_pool (program : C.program) (builder : L.llbuilder) :
+    L.llvalue StringMap.t =
+  let rec mk_expr_string_pool builder pool (_, sx) =
+    let rec mk_value_string_pool (v_pool : L.llvalue StringMap.t) (v : S.svalue)
+        =
+      match v with
+      | S.STRING s -> (
+          match StringMap.find_opt s v_pool with
+          | Some _ -> v_pool
+          | None ->
+              StringMap.add s
+                (L.build_global_stringptr s "strlit" builder)
+                v_pool)
+      | S.LIST (hd, tl) ->
+          let v_pool' = mk_value_string_pool v_pool hd in
+          mk_value_string_pool v_pool' tl
+      | S.Construct (_, v) -> mk_value_string_pool v_pool v
+      | S.TUPLE vs -> List.fold_left mk_value_string_pool v_pool vs
+      | S.BOOL _ -> v_pool
+      | S.EMPTYLIST -> v_pool
+      | S.INF_LIST _ -> v_pool
+      | S.INT _ -> v_pool
+      | S.UNIT -> v_pool
+    in
+    match sx with
+    | C.Literal l -> mk_value_string_pool pool l
+    | C.Var _ -> pool
+    | C.Assign (_, sexpr) -> mk_expr_string_pool builder pool sexpr
+    | C.Apply (func, args) ->
+        let pool' = mk_expr_string_pool builder pool func in
+        List.fold_left (mk_expr_string_pool builder) pool' args
+    | C.If (condition, texpr, eexpr) ->
+        let pool' = mk_expr_string_pool builder pool condition in
+        let pool'' = mk_expr_string_pool builder pool' texpr in
+        mk_expr_string_pool builder pool'' eexpr
+    | C.Let (bindings, sexpr) ->
+        let _, es = List.split bindings in
+        let pool' = List.fold_left (mk_expr_string_pool builder) pool es in
+        mk_expr_string_pool builder pool' sexpr
+    | C.Begin sexprs -> List.fold_left (mk_expr_string_pool builder) pool sexprs
+    | C.Binop (operand1, _, operand2) ->
+        let pool' = mk_expr_string_pool builder pool operand1 in
+        mk_expr_string_pool builder pool' operand2
+    | C.Unop (_, operand) -> mk_expr_string_pool builder pool operand
+    | C.Closure ((_, sexpr), cap) ->
+        let pool' = mk_expr_string_pool builder pool sexpr in
+        let pool'' = List.fold_left (mk_expr_string_pool builder) pool' cap in
+        pool''
+    | C.Case (scrutinee, patterns) ->
+        let _, es = List.split patterns in
+        let pool' = mk_expr_string_pool builder pool scrutinee in
+        List.fold_left (mk_expr_string_pool builder) pool' es
+    | C.At (sexpr, _) -> mk_expr_string_pool builder pool sexpr
+    | C.Noexpr -> pool
+    | _ -> failwith "string pool "
+  in
+  let mk_defs_string_pool builder pool sdef =
+    match sdef with
+    | C.Function (_, sexpr) -> mk_expr_string_pool builder pool sexpr
+    | C.Datatype _ -> pool
+    | C.Val (_, _, sexpr) -> mk_expr_string_pool builder pool sexpr
+    | C.Exp sexpr -> mk_expr_string_pool builder pool sexpr
+    | C.CheckTypeError _ -> pool
+  in
+  List.fold_left (mk_defs_string_pool builder) StringMap.empty program

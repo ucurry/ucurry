@@ -302,7 +302,9 @@ let typecheck (defs : Ast.program) : S.sprogram * type_env =
   let add_vcons (vcon_env : vcon_env) (def : Ast.def) =
     match def with
     | A.Datatype (CONSTRUCTOR_TY con_name, cons) ->
-        let add_vcon (name, typ) idx map = StringMap.add name (con_name, idx, typ) map in
+        let add_vcon (name, typ) idx map =
+          StringMap.add name (con_name, idx, typ) map
+        in
         fold_left_i add_vcon 1 vcon_env cons
     | _ -> vcon_env
   in

@@ -18,8 +18,10 @@ and sx =
   | SCase of sexpr * scase_expr list
   | SAt of sexpr * int
   | SNoexpr
+
 and scase_expr = pattern * sexpr
 and lambda = string list * sexpr
+
 and pattern =
   | VAR_PAT of string
   | CON_PAT of int * pattern list
@@ -29,8 +31,9 @@ and pattern =
 
 (* data constructor name becomes index *)
 and svalue =
-  | Construct of (string * int * Ast.typ) * svalue (* NOTE: add additional information 
-                                                            on the datatyp AST node *)
+  | Construct of (string * int * Ast.typ) * svalue
+    (* NOTE: add additional information
+             on the datatyp AST node *)
   | INT of int
   | STRING of string
   | BOOL of bool

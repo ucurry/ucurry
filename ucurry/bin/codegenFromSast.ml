@@ -21,9 +21,7 @@ let build_main_body defs =
   let main_ftype = L.function_type void_t [| i32_t |] in
   let the_module = L.create_module context "uCurry" in
   (* datatype map stores the map from the datatype name to its lltype  *)
-  let datatype_map =
-    List.fold_left (U.build_datatype context the_module) StringMap.empty defs
-  in
+  let datatype_map = U.build_datatypes context the_module defs in
   let ltype_of_type = U.ltype_of_type datatype_map the_module context in
   let main_function = L.define_function "main" main_ftype the_module in
   let builder = L.builder_at_end context (L.entry_block main_function) in

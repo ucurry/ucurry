@@ -1,7 +1,7 @@
 (* module A = Ast *)
 module A = Ast
 module SA = Sast
-module L = L 
+module L = L
 module C = Cast
 
 type freevar = A.typ * string
@@ -102,8 +102,8 @@ let rec closeExpWith (captured : freevar list) (le : SA.sexpr) : C.sexpr =
           let cases' = List.map (fun (p, e) -> (p, exp e)) cases in
           C.Case (scrutinee', cases')
       | SA.SLambda lambda -> C.Closure (asClosure ty lambda)
-      | SA.SNoexpr -> Noexpr 
-      | SA.SAt _ -> failwith "not implemented")
+      | SA.SNoexpr -> Noexpr
+      | SA.SAt (se, i) -> C.At (exp se, i) )
   in
   exp le
 
@@ -115,7 +115,8 @@ let close (def : SA.sdef) : Cast.def =
      can only capture global veriables*)
   | SA.SFunction (name, lambda) -> C.Function (name, closeExpWith [] lambda)
   | SA.SDatatype (t, cons) -> C.Datatype (t, cons)
-  | SA.SCheckTypeError _ -> raise (CLOSURE_NOT_YET_IMPLEMENTED "check type error")
+  | SA.SCheckTypeError _ ->
+      raise (CLOSURE_NOT_YET_IMPLEMENTED "check type error")
   | SA.SVal (ty, name, se) -> C.Val (ty, name, closeExpWith [] se)
 
 let closeProgram (p : SA.sprogram) : C.program = List.map close p

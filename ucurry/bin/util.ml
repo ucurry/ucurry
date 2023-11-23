@@ -1,9 +1,8 @@
 module L = Llvm
 module A = Ast
-module C = Cast 
+module C = Cast
+
 exception Impossible of string
-
-
 
 (* type utility function *)
 let list_subtype = function
@@ -42,6 +41,7 @@ let rec getRetType = function
   | retty -> retty
 
 let getFuntionType ty = (getFormalTypes ty, getRetType ty)
+
 let rec map_i (f : 'a -> int -> 'b) (i : int) (l : 'a list) =
   match l with [] -> [] | x :: xs -> f x i :: map_i f (i + 1) xs
 

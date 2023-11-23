@@ -39,7 +39,7 @@ let () =
       let _ = print_string (Llvm.string_of_llmodule llvmir) in
       print_newline ()
   | TRY ->
-      let llvmir = CodegenFromSast.build_main_body sast in
-      let _ = print_string (Llvm.string_of_llmodule llvmir) in
+      (* let llvmir = CodegenFromSast.build_main_body sast in *)
+      (* let _ = print_string (Llvm.string_of_llmodule llvmir) in *)
       print_newline ()
   | _ -> print_string usage_msg
