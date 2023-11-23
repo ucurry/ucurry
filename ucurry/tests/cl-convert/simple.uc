@@ -1,8 +1,11 @@
 int a = 1;
-a;
-println a;
+--a;
+--println a;
 
 fun: int -> int:
-f x = 1;
-(f 1);
+f x = a;
 
+
+--fun: int -> int :
+--g x = (f x); 
+--(g 1);
