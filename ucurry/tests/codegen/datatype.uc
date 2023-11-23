@@ -18,6 +18,11 @@ Person prof = (Professor "NR");
 Person speaker = (Speaker ("speaker1", ["cs117", "cs107"]));
 Person teacher = (Teacher ["cs107", "cs112", "cs111"]);
 
+-- datatype within datatype 
+datatype Nested = NestedP of (Person * int) | NestedC of (Color * int);
+Nested color_nested = (NestedC ((White 255), 1));
+int z = ((White 255), 1).1;
+println z;
 println "datatype finished";
 
 -- no syntax to support consuming a datatype; 
