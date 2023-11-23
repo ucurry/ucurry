@@ -16,7 +16,16 @@ type binop =
   | Or
   | Cons
 
-type uop = Neg | Not | Hd | Tl | Print | Println
+type uop =
+  | Neg
+  | Not
+  | Hd
+  | Tl
+  | Print
+  | Println
+  | IsNull
+  | GetField
+  | GetPattern
 
 type typ =
   | INT_TY
@@ -30,7 +39,7 @@ type typ =
 
 type pattern =
   | VAR_PAT of string
-  | CON_PAT of string * pattern list option
+  | CON_PAT of string * pattern list
   | WILDCARD
   | CONCELL of string * string
   | NIL
@@ -47,6 +56,7 @@ type expr =
   | Unop of uop * expr
   | Lambda of typ * string list * expr
   | Case of expr * case_expr list
+  | At of expr * int
   | Noexpr
 
 and value =
@@ -54,7 +64,8 @@ and value =
   | INT of int
   | STRING of string
   | BOOL of bool
-  | LIST of value list
+  | EMPTYLIST
+  | LIST of value * value
   | TUPLE of value list
   | INF_LIST of int
   | UNIT
@@ -68,7 +79,7 @@ type def =
   | Exp of expr
   | CheckTypeError of def
 
-and constructor = string * typ option
+and constructor = string * typ
 
 type program = def list
 
@@ -97,15 +108,16 @@ let string_of_uop = function
   | Tl -> "tl"
   | Print -> "print"
   | Println -> "println"
+  | _ -> "internal primitive"
 
 (* | Tuple(l) -> string_of_tupleLiteral l *)
 
 let rec string_of_pattern = function
   | VAR_PAT s -> s
-  | CON_PAT (c, Some [ p ]) -> c ^ " " ^ string_of_pattern p
-  | CON_PAT (c, Some pl) ->
+  | CON_PAT (c, []) -> c
+  | CON_PAT (c, [ p ]) -> c ^ " " ^ string_of_pattern p
+  | CON_PAT (c, pl) ->
       c ^ " (" ^ String.concat ", " (List.map string_of_pattern pl) ^ ")"
-  | CON_PAT (c, None) -> c
   | WILDCARD -> "_"
   (* TODO: HACK a temporary way to get away with pattern matching for list *)
   | NIL -> "[]"
@@ -161,6 +173,7 @@ let rec string_of_expr exp =
                  string_of_typ t ^ " " ^ v ^ " = " ^ string_of_expr e)
                vl)
         ^ " in " ^ string_of_expr e
+    | At (e, i) -> string_of_expr e ^ "." ^ string_of_int i
     | Noexpr -> ""
   in
   match exp with Noexpr -> "" | _ -> "(" ^ flat_string_of_exp exp ^ ")"
@@ -169,15 +182,23 @@ and string_of_literal = function
   | INT l -> string_of_int l
   | STRING l -> "\"" ^ l ^ "\""
   | BOOL l -> string_of_bool l
-  | LIST l -> "[" ^ String.concat ", " (List.map string_of_literal l) ^ "]"
+  | EMPTYLIST -> "[]"
+  | LIST (x, xs) ->
+      let rec listString (x, xs) =
+        match (x, xs) with
+        | x, EMPTYLIST -> string_of_literal x
+        | x, LIST (y, ys) -> string_of_literal x ^ "," ^ listString (y, ys)
+        | _ -> raise (Invalid_argument "should not be reached")
+      in
+      "[" ^ listString (x, xs) ^ "]"
   | TUPLE l -> "(" ^ String.concat ", " (List.map string_of_literal l) ^ ")"
   | UNIT -> "()"
   | INF_LIST n -> "[" ^ string_of_int n ^ "..]"
   | Construct (c, e) -> "(" ^ c ^ " " ^ string_of_literal e ^ ")"
 
 let string_of_constructor = function
-  | c, None -> c
-  | c, Some t -> c ^ " of " ^ string_of_typ t
+  | c, UNIT_TY -> c
+  | c, t -> c ^ " of " ^ string_of_typ t
 
 let rec string_of_def = function
   | Function (ty, f, args, e) ->

@@ -15,6 +15,7 @@ int list list emptyMatrix = [[], [], []];
 -- tuples 
 (int * int list * string) t2 = (1, [1 , 2], "hello");
 (int * (int * int)) t3 = (1, (1, 2));
+int g = (1, 2, 3).1;
 
 
 -- datatype 

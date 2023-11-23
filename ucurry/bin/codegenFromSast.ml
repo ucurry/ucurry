@@ -2,6 +2,7 @@ module L = Llvm
 module A = Ast
 module S = Sast
 module StringMap = Map.Make (String)
+module U = Cgutil
 
 exception CODEGEN_NOT_YET_IMPLEMENTED of string
 exception SHOULDNT_RAISED of string
@@ -17,41 +18,39 @@ let build_main_body defs =
   let string_t = L.pointer_type i8_t in
   let main_ftype = L.function_type void_t [| i32_t |] in
   let the_module = L.create_module context "uCurry" in
-  let ltype_of_type = function
-    | A.INT_TY -> i32_t
-    | A.BOOL_TY -> i1_t
-    | A.STRING_TY -> string_t
-    | A.UNIT_TY -> i1_t
-    | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "ltype_of_type")
+  let main_ftype = L.function_type void_t [| i32_t |] in
+  let the_module = L.create_module context "uCurry" in
+  (* datatype map stores the map from the datatype name to its lltype  *)
+  let datatype_map =
+    List.fold_left (U.build_datatype context the_module) StringMap.empty defs
   in
-
-  (* | A.LIST_TY t       ->
-     | A.UNIT_TY         ->
-     | A.FUNCTION_TY (t1, t2) ->
-     | A.CONSTRUCTOR_TY s ->
-     | A.TUPLE_TY taus    -> *)
+  let ltype_of_type = U.ltype_of_type datatype_map the_module context in
   let main_function = L.define_function "main" main_ftype the_module in
   let builder = L.builder_at_end context (L.entry_block main_function) in
-
   let int_format_str = L.build_global_stringptr "%d" "fmt" builder
   and string_format_str = L.build_global_stringptr "%s" "fmt" builder
-  and true_str = L.build_global_stringptr "true" "true_s" builder
-  and false_str = L.build_global_stringptr "false" "false_s" builder
   and int_nl_format_str = L.build_global_stringptr "%d\n" "fmt" builder
-  and string_nl_format_str = L.build_global_stringptr "%s\n" "fmt" builder
-  and true_nl_str = L.build_global_stringptr "true\n" "true_s" builder
-  and false_nl_str = L.build_global_stringptr "false\n" "false_s" builder in
-
+  and string_nl_format_str = L.build_global_stringptr "%s\n" "fmt" builder in
   let string_pool =
     let rec mk_expr_string_pool pool builder (_, sx) =
+      let rec save_vstring (pool : L.llvalue StringMap.t) (v : S.svalue) =
+        match v with
+        | S.STRING s -> (
+            match StringMap.find_opt s pool with
+            | Some _ -> pool
+            | None ->
+                StringMap.add s
+                  (L.build_global_stringptr s "strlit" builder)
+                  pool)
+        | S.LIST (hd, tl) ->
+            let pool' = save_vstring pool hd in
+            save_vstring pool' tl
+        | S.Construct (_, v) -> save_vstring pool v
+        | S.TUPLE vs -> List.fold_left save_vstring pool vs
+        | _ -> pool
+      in
       match sx with
-      | S.SLiteral (A.STRING s) -> (
-          match StringMap.find_opt s pool with
-          | Some _ -> pool
-          | None ->
-              StringMap.add s (L.build_global_stringptr s "strlit" builder) pool
-          )
-      | S.SLiteral _ -> pool
+      | S.SLiteral l -> save_vstring pool l
       | S.SVar _ -> pool
       | S.SAssign (_, sexpr) -> mk_expr_string_pool pool builder sexpr
       | S.SApply (func, args) ->
@@ -87,6 +86,7 @@ let build_main_body defs =
               mk_expr_string_pool poolacc builder sexpr)
             pool' patterns
       | S.SNoexpr -> pool
+      | S.SAt (sexpr, _) -> mk_expr_string_pool pool builder sexpr
     in
     let mk_defs_string_pool pool builder sdef =
       match sdef with
@@ -127,21 +127,9 @@ let build_main_body defs =
   let rec exprWithVarmap builder varmap =
     let rec expr builder (ty, top_exp) =
       match top_exp with
-      | S.SLiteral (Construct (name, value)) ->
-          raise (CODEGEN_NOT_YET_IMPLEMENTED "constructor literal")
-      | S.SLiteral (INT i) -> L.const_int i32_t i
-      | S.SLiteral (STRING s) -> StringMap.find s string_pool
-      | S.SLiteral (BOOL b) -> L.const_int i1_t (if b then 1 else 0)
-      | S.SLiteral (LIST values) ->
-          raise (CODEGEN_NOT_YET_IMPLEMENTED "list literal")
-      | S.SLiteral (TUPLE values) ->
-          raise (CODEGEN_NOT_YET_IMPLEMENTED "tuple literal")
-      | S.SLiteral (INF_LIST i) ->
-          raise (CODEGEN_NOT_YET_IMPLEMENTED "inf list")
-      | S.SLiteral UNIT ->
-          L.const_int i1_t 0
-          (* L.const_null void_t  *)
-          (* TOOD: double check unit value *)
+      | S.SLiteral l ->
+          U.build_literal builder datatype_map context the_module string_pool ty
+            l
       | S.SVar name ->
           L.build_load (lookup name varmap) name
             builder (* %a1 = load i32, i32* %a, align 4 *)
@@ -219,7 +207,6 @@ let build_main_body defs =
             (fun _ sexpr -> expr builder sexpr)
             (L.const_int i1_t 0)
             sexprs (*TODO: Double check with team + Jank as hell*)
-      (* | S.SBegin _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "Begin") *)
       | S.SBinop (e1, binop, e2) -> (
           let e1' = expr builder e1
           and e2' = expr builder e2
@@ -280,14 +267,22 @@ let build_main_body defs =
           | A.Println, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "println")
           | A.Neg, _ -> L.build_neg e' "temp" builder
           | A.Not, _ -> L.build_not e' "temp" builder
-          | A.Hd, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "hd")
-          | A.Tl, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "tl"))
+          | A.Hd, _ ->
+              let list_ptr = expr builder inner_e in
+              Util.get_data_field 0 list_ptr builder "hd_field"
+          | A.Tl, _ ->
+              let list_ptr = expr builder inner_e in
+              Util.get_data_field 1 list_ptr builder "tl_field"
+          | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED ""))
       | S.SLambda _ ->
           let e', _ = generateFunction varmap "lambda" (ty, top_exp) in
           (* No need to worry about naming - LLVM will take care of it *)
           e'
       | S.SCase _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "Case")
       | S.SNoexpr -> L.const_null void_t (* TOOD: double check noexpr value *)
+      | S.SAt (e, i) ->
+          let tuple_ptr = expr builder e in
+          Util.get_data_field i tuple_ptr builder "tuple field"
     in
     expr builder
   and generateFunction varmap name slambda =
@@ -326,14 +321,17 @@ let build_main_body defs =
     | S.SVal (tau, name, e) ->
         (* Handle string -> create a global string pointer and assign the global name to the name *)
         let e' = exprWithVarmap builder varmap e in
-        let reg = L.build_alloca (ltype_of_type tau) name builder in
+        let tgt_tau = ltype_of_type tau in
+        let reg = L.build_alloca tgt_tau name builder in
         let varmap' = StringMap.add name reg varmap in
-        let _ = L.build_store e' (lookup name varmap') builder in
+        let _ = L.build_store e' reg builder in
         (builder, varmap')
     | S.SExp e ->
         let _ = exprWithVarmap builder varmap e in
         (builder, varmap)
-    | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "catchall")
+    | S.SDatatype _ -> (builder, varmap)
+    | S.SCheckTypeError _ -> (builder, varmap)
+    (* TODO *)
   in
 
   (* Build the main function body *)

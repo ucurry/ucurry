@@ -3,7 +3,7 @@
 %}
 
 // delimiters
-%token ARROW DOUBLEARROW SEMI COMMA COLON LBRACE RBRACE LBRACKET RBRACKET BAR DOTS
+%token ARROW DOUBLEARROW SEMI COMMA COLON LBRACE RBRACE LBRACKET RBRACKET BAR DOTS DOT 
 // keyword
 %token FUNCTION LAMBDA DATATYPE IF THEN ELSE LET BEGIN IN CASE OF WILDCARD CHECK_TYPE_ERROR 
 // type
@@ -73,8 +73,8 @@ constructor_list:
   | constructor_list BAR constructor { $3 :: $1 }
 
 constructor:
-    CAPNAME        { ($1, None) }
-  | CAPNAME OF typ { ($1, Some $3) }
+    CAPNAME        { ($1, UNIT_TY) }
+  | CAPNAME OF typ { ($1,  $3) }
 
 exp:
     LBRACE exp RBRACE         { $2 }
@@ -90,6 +90,7 @@ exp:
   | lambda                    { $1 }
   // fix: adding brackets to value constructors avoids shift/reduce conflict
   | LBRACE CASE exp OF case_exp_list RBRACE { Case ($3, List.rev $5) }
+  | exp DOT INTEGER           {At ($1, $3)}
 
 
 
@@ -99,9 +100,9 @@ case_exp_list:
 
 pattern:
     NAME                { VAR_PAT $1 }
-  | CAPNAME             { CON_PAT ($1, None) }
-  | CAPNAME pattern     { CON_PAT ($1, Some [$2])}
-  | CAPNAME LBRACE pattern_tuple RBRACE { CON_PAT ($1, Some (List.rev $3)) } // currently our parser doesn't support tuple type, thus a value constructor can at most take in one arg
+  | CAPNAME             { CON_PAT ($1, []) }
+  | CAPNAME pattern     { CON_PAT ($1, [$2])}
+  | CAPNAME LBRACE pattern_tuple RBRACE { CON_PAT ($1, List.rev $3) } // currently our parser doesn't support tuple type, thus a value constructor can at most take in one arg
   | WILDCARD            { WILDCARD }
   | LBRACKET RBRACKET   { NIL }
   | NAME CONS NAME      { CONCELL ($1, $3) }
@@ -151,7 +152,7 @@ value:
     STRINGLIT                      { STRING $1 } 
   | INTEGER                        { INT $1 }
   | BOOL                           { BOOL $1 }
-  | LBRACKET literal_list RBRACKET { LIST (List.rev $2) } 
+  | LBRACKET literal_list RBRACKET {  $2 } 
   | LBRACE literal_tuple RBRACE    { TUPLE (List.rev $2)}
   | UNIT                           { UNIT }
   | LBRACKET INTEGER DOTS RBRACKET { INF_LIST $2 }
@@ -159,9 +160,9 @@ value:
   | LBRACE CAPNAME  RBRACE         { Construct ($2, UNIT) } // HACK: since Construct does not take in expression 
 
 literal_list:
-                               { [] }
-  | value                    { [$1] }
-  | literal_list COMMA value { $3 :: $1}
+                                { EMPTYLIST }
+  | value  COMMA literal_list   { LIST ($1, $3)}
+  | value                       { LIST ($1, EMPTYLIST) }
 
 literal_tuple:
     value  COMMA value     { [$3; $1] }
