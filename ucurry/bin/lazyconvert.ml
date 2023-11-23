@@ -51,7 +51,6 @@ let rec lazyExpWith ((ty, exp) : S.sexpr) : L.sexpr =
 let lazyDef (def : S.sdef) : L.def =
   match def with
   | S.SExp e -> L.Exp (lazyExpWith e)
-  | S.SFunction (fname, slambda) -> L.Function (fname, lazyExpWith slambda)
   | S.SVal (tau, name, e) ->
       let body =
         lazyExpWith (A.FUNCTION_TY (A.UNIT_TY, tau), S.SLambda ([], e))

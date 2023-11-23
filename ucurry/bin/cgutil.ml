@@ -194,11 +194,9 @@ let build_string_pool (program : C.program) (builder : L.llbuilder) :
   in
   let mk_defs_string_pool builder pool sdef =
     match sdef with
-    | C.Function (_, sexpr) -> mk_expr_string_pool builder pool sexpr
     | C.Datatype _ -> pool
     | C.Val (_, _, sexpr) -> mk_expr_string_pool builder pool sexpr
     | C.Exp sexpr -> mk_expr_string_pool builder pool sexpr
     | C.CheckTypeError _ -> pool
   in
   List.fold_left (mk_defs_string_pool builder) StringMap.empty program
-

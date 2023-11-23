@@ -44,7 +44,6 @@ and svalue =
   | UNIT
 
 type sdef =
-  | SFunction of string * sexpr (* This sexpr will be a Lambda expression *)
   | SDatatype of typ * constructor list
   | SVal of typ * string * sexpr
   | SExp of sexpr

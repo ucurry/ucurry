@@ -25,7 +25,6 @@ and closure = (string list * sexpr) * sexpr list (* (lambda, captured list) *)
 and thunk = sexpr (* which will be a Closure form *)
 
 and def =
-  | Function of string * sexpr
   | Val of A.typ * string * sexpr
   | Datatype of A.typ * A.constructor list
   | Exp of sexpr
@@ -79,7 +78,6 @@ let rec string_of_sexpr ((ty, tope) : sexpr) =
 
 let string_of_def = function
   | Exp se -> string_of_sexpr se
-  | Function (name, e) -> name ^ string_of_sexpr e
   | Val (ty, name, e) ->
       Ast.string_of_typ ty ^ " " ^ name ^ " " ^ string_of_sexpr e
   | _ -> raise (Failure "String_of_def Not implemented For Most Cases")

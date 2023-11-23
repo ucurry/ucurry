@@ -273,7 +273,7 @@ let rec type_def (def : Ast.def) (ty_env : type_env) (vcon_map : vcon_env) :
     | A.Function (tau, funname, args, body) ->
         let new_env = bindUnique funname tau ty_env in
         let se, tau' = typ_of vcon_map new_env (Lambda (tau, args, body)) in
-        if eqType (tau', tau) then (S.SFunction (funname, se), new_env)
+        if eqType (tau', tau) then (S.SVal (tau, funname, se), new_env)
         else raise (TypeError "invalid type in function definition")
     | A.Datatype (tau, val_cons) ->
         let vcons, argtaus = List.split val_cons in

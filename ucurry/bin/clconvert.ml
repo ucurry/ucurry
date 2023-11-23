@@ -47,7 +47,7 @@ let rec free ((t, exp) : SA.sexpr) : S.t =
         fscrutinee cexprs
   | SA.SLambda (formals, sexpr) ->
       let formalTypes = Util.getFormalTypes t in
-      (* TODO: no auto curry yet; only one argument allowed *)
+      (* TODO: no auto curry yet; only multi-arg *)
       let formalWithTypes = List.combine formalTypes formals in
       S.diff (free sexpr) (S.of_list formalWithTypes)
   | _ -> S.empty
@@ -70,7 +70,6 @@ let rec closeExpWith (captured : freevar list) (le : SA.sexpr) : C.sexpr =
         (fun (t, n) -> closeExpWith captured (t, SA.SVar n))
         freeVarWithTypes
     in
-    (* TODO: get the type of the free vars! *)
     ((formals, closeExpWith freeVarWithTypes sbody), captured')
   in
 
@@ -113,7 +112,6 @@ let close (def : SA.sdef) : Cast.def =
   | SA.SExp e -> C.Exp (closeExpWith [] e)
   (* 106 uses C.Funcode, probably because toplevel function
      can only capture global veriables*)
-  | SA.SFunction (name, lambda) -> C.Function (name, closeExpWith [] lambda)
   | SA.SDatatype (t, cons) -> C.Datatype (t, cons)
   | SA.SCheckTypeError _ ->
       raise (CLOSURE_NOT_YET_IMPLEMENTED "check type error")
