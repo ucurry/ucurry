@@ -14,13 +14,12 @@ and sx =
   | SBegin of sexpr list
   | SBinop of sexpr * A.binop * sexpr
   | SUnop of A.uop * sexpr
-  | SLambda of string list * sexpr
+  | SLambda of lambda
   | SCase of sexpr * scase_expr list
   | SAt of sexpr * int
   | SNoexpr
-
 and scase_expr = pattern * sexpr
-
+and lambda = string list * sexpr
 and pattern =
   | VAR_PAT of string
   | CON_PAT of int * pattern list

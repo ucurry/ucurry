@@ -1,6 +1,9 @@
 module L = Llvm
-
+module A = Ast
+module C = Cast 
 exception Impossible of string
+
+
 
 (* type utility function *)
 let list_subtype = function
@@ -28,6 +31,16 @@ let rec fold_left_i (f : 'a -> int -> 'c -> 'c) (i : int) (acc : 'c)
     (l : 'a list) =
   match l with [] -> acc | x :: xs -> fold_left_i f (i + 1) (f x i acc) xs
 
+let rec getFormalTypes = function
+  | A.FUNCTION_TY (UNIT_TY, retty) -> getFormalTypes retty
+  | A.FUNCTION_TY (formalty, retty) -> formalty :: getFormalTypes retty
+  | _ -> []
+
+let rec getRetType = function
+  | A.FUNCTION_TY (_, retty) -> getRetType retty
+  | retty -> retty
+
+let getFuntionType ty = (getFormalTypes ty, getRetType ty)
 let rec map_i (f : 'a -> int -> 'b) (i : int) (l : 'a list) =
   match l with [] -> [] | x :: xs -> f x i :: map_i f (i + 1) xs
 

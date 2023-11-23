@@ -102,7 +102,8 @@ let rec closeExpWith (captured : freevar list) (le : SA.sexpr) : C.sexpr =
           let cases' = List.map (fun (p, e) -> (p, exp e)) cases in
           C.Case (scrutinee', cases')
       | SA.SLambda lambda -> C.Closure (asClosure ty lambda)
-      | SA.SNoexpr -> Noexpr )
+      | SA.SNoexpr -> Noexpr 
+      | SA.SAt _ -> failwith "not implemented")
   in
   exp le
 
