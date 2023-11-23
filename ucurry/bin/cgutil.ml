@@ -24,9 +24,7 @@ let rec ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
     (* for constructor type, tupple type, and list type, the lltyp will be a pointer to the struct *)
     | A.CONSTRUCTOR_TY name -> L.pointer_type (StringMap.find name ty_map)
     | A.TUPLE_TY taus ->
-        let taus =
-          Array.init (List.length taus) (fun i -> ltype_of (List.nth taus i))
-        in
+        let taus = Array.of_list (List.map ltype_of taus) in
         L.pointer_type (L.struct_type context taus)
     | A.LIST_TY subtype as l -> (
         (* the lltype will be a pointer to the struct that stores a cons cell *)
