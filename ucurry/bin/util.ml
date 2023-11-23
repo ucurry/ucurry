@@ -23,6 +23,7 @@ let get_data_field index struct_ptr builder name =
 let curry f a b = f (a, b)
 let fst (a, _) = a
 let snd (_, b) = b
+let mid (_, b, _) = b
 let pair_with a b = (b, a)
 let o f g x = f (g x)
 let getOp default = function Some a -> a | None -> default

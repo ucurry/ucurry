@@ -29,7 +29,8 @@ and pattern =
 
 (* data constructor name becomes index *)
 and svalue =
-  | Construct of (string * int) * svalue
+  | Construct of (string * int * Ast.typ) * svalue (* NOTE: add additional information 
+                                                            on the datatyp AST node *)
   | INT of int
   | STRING of string
   | BOOL of bool

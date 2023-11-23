@@ -59,10 +59,10 @@ let rec build_literal builder (ty_map : L.lltype StringMap.t)
     (string_pool : L.llvalue StringMap.t) (ty : Ast.typ) (v : literal) =
   let i32_t = L.i32_type context and i1_t = L.i1_type context in
   let rec to_lit ty = function
-    | S.Construct ((con_name, i), value) ->
-        let this_ty_wont_work = ty in
-        let field_v = to_lit this_ty_wont_work value
-        (* TODO: needs to know the field_v's type to handle cases for tuple and list*)
+    | S.Construct ((con_name, i, inner_ty), value) ->
+        let field_v = to_lit inner_ty value
+        (* TODO: needs to know the field_v's type to handle 
+                 cases for tuple and list *)
         and con_v =
           L.build_alloca (StringMap.find con_name ty_map) con_name builder
         and tag_v = L.const_int i32_t i in

@@ -7,7 +7,7 @@ exception TypeError of string
 
 type typ = A.typ
 type type_env = typ StringMap.t
-type vcon_env = (string * int) StringMap.t
+type vcon_env = (string * int * Ast.typ) StringMap.t
 
 let nth (l : 'a list) (n : int) =
   try List.nth l n
@@ -111,7 +111,7 @@ let rec to_spattern (vcon_map : vcon_env) (c : A.pattern) =
   match c with
   | A.VAR_PAT s -> S.VAR_PAT s
   | A.CON_PAT (name, ps) ->
-      S.CON_PAT (snd @@ findType name vcon_map, List.map pattern_of ps)
+      S.CON_PAT (mid @@ findType name vcon_map, List.map pattern_of ps)
   | A.WILDCARD -> S.WILDCARD
   | A.CONCELL (x, xs) -> S.CONCELL (x, xs)
   | A.NIL -> S.NIL
@@ -302,9 +302,8 @@ let typecheck (defs : Ast.program) : S.sprogram * type_env =
   let add_vcons (vcon_env : vcon_env) (def : Ast.def) =
     match def with
     | A.Datatype (CONSTRUCTOR_TY con_name, cons) ->
-        let names, _ = List.split cons in
-        let add_vcon name idx map = StringMap.add name (con_name, idx) map in
-        fold_left_i add_vcon 1 vcon_env names
+        let add_vcon (name, typ) idx map = StringMap.add name (con_name, idx, typ) map in
+        fold_left_i add_vcon 1 vcon_env cons
     | _ -> vcon_env
   in
   let vcon_map = List.fold_left add_vcons StringMap.empty defs in
