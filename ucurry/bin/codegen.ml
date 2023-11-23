@@ -31,8 +31,8 @@ let build_main_body defs =
   let deconstructClosure (ty, se) =
     (* NOTE: didn't check if ty is actually a funty  *)
     match se with
-    | C.Closure ((formals, body), _) ->
-        (getFormalTypes ty, getRetType ty, formals, body)
+    | C.Closure ((formals, body), cap) ->
+        (getFormalTypes ty, getRetType ty, formals, body, cap)
     | _ -> raise (SHOULDNT_RAISED "not an C.closure type")
   in
   let rec ltype_of_type = function
@@ -109,12 +109,13 @@ let build_main_body defs =
               in
               L.build_call fdef (Array.of_list llargs) result builder
           | _    -> raise (SHOULDNT_RAISED "Illegal function application"))
-          (* | C.Apply ((innerft, innerf), innerargs) as innerapply ->
-              let fdef = expr builder clstruct (ft, innerapply) in 
+          (* | C.Apply (_, _) ->
+              let fdef = expr builder clstruct (ft, f) in 
               let result =
                 match fretty with A.UNIT_TY -> "" | _ -> "innerf" ^ "_result"
               in
-              L.build_call fdef (Array.of_list llargs) result builder *)
+              L.build_call fdef (Array.of_list llargs) result builder
+           *)
 
       | C.If _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "if")
       | C.Let _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "let")
@@ -122,20 +123,20 @@ let build_main_body defs =
       | C.Binop _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "binop")
       | C.Unop _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "unop")
       | C.Captured index -> U.get_data_field index clstruct builder "capvar"
-      | C.Closure (_, cap) ->
-          let captured_values =
-            Array.of_list (List.map (expr builder clstruct) cap)
-          in
-          let newcl_struct = L.const_struct context captured_values in
-          let globalcl_struct = L.define_global "captured" newcl_struct the_module in 
-          let e', _ = generate_lambda varmap "lambda" globalcl_struct (ty, top_exp) in 
+      | C.Closure (_, _) ->
+          let e', _ = generate_closure varmap "lambda" clstruct (ty, top_exp) in 
           e'
       | C.Case _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "case")
       | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "SIFN")
     in
     expr builder clstruct 
-  and generate_lambda varmap name clstruct closure =
-    let formaltypes, retty, formals, body = deconstructClosure closure in
+  and generate_closure varmap name clstruct closure =
+    let formaltypes, retty, formals, body, cap = deconstructClosure closure in
+    let captured_values =
+      Array.of_list (List.map (exprWithVarmap builder clstruct varmap) cap)
+    in
+    let newcl_struct = L.const_struct context captured_values in
+    let globalcl_struct = L.define_global "captured" newcl_struct the_module in
     let formal_lltypes = List.map ltype_of_type formaltypes in
     let formalsandtypes = List.combine formal_lltypes formals in
     let ftype =
@@ -153,7 +154,7 @@ let build_main_body defs =
       List.fold_left2 add_formal varmap formalsandtypes
         (Array.to_list (L.params the_function))
     in
-    let e' = exprWithVarmap builder clstruct localvarmap body in
+    let e' = exprWithVarmap builder globalcl_struct localvarmap body in
     let _ = add_terminal builder (fun b -> L.build_ret e' b) in
     (the_function, varmap')
   in
@@ -162,7 +163,7 @@ let build_main_body defs =
   let rec stmt builder varmap = function
     | C.Function (name, closure) -> 
         (* TODO: partial application?? does LLVM support that?? *)
-        let _, varmap' = generate_lambda varmap name (L.const_null (L.pointer_type void_t)) closure in
+        let _, varmap' = generate_closure varmap name (L.const_null (L.pointer_type void_t)) closure in
         (builder, varmap')
     (* | S.SVal (tau, name, e) ->
         (* Handle string -> create a global string pointer and assign the global name to the name *)
