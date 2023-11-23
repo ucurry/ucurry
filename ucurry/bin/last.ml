@@ -15,6 +15,7 @@ and expr =
   | Unop of A.uop * sexpr
   | Case of sexpr * case_expr list
   | Lambda of lambda
+  | At of sexpr * int
   | Noexpr
 
 and value = S.svalue

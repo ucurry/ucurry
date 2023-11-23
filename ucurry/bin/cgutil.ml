@@ -12,7 +12,7 @@ type type_env = A.typ StringMap.t
 exception UNIMPLEMENTED of string
 
 (* get the ltype for a corresponding ast type *)
-let rec ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
+let ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
     (context : L.llcontext) (ty : Ast.typ) =
   let rec ltype_of = function
     | A.INT_TY -> L.i32_type context
@@ -67,7 +67,7 @@ let build_datatypes (context : L.llcontext) (llmodule : L.llmodule)
   List.fold_left add_datatype StringMap.empty program
 
 (* build a llvm value from a literal value  *)
-let rec build_literal builder (ty_map : L.lltype StringMap.t)
+let build_literal builder (ty_map : L.lltype StringMap.t)
     (context : L.llcontext) (llmodule : L.llmodule)
     (string_pool : L.llvalue StringMap.t) (ty : Ast.typ) (v : literal) =
   let i32_t = L.i32_type context and i1_t = L.i1_type context in
@@ -201,3 +201,4 @@ let build_string_pool (program : C.program) (builder : L.llbuilder) :
     | C.CheckTypeError _ -> pool
   in
   List.fold_left (mk_defs_string_pool builder) StringMap.empty program
+

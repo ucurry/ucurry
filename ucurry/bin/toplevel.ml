@@ -18,13 +18,13 @@ let () =
 
   let lexbuf = Lexing.from_channel !channel in
   let ast = Parser.program Scanner.token lexbuf in
-  let sast, global_env = Semantic.typecheck ast in
+  let sast, _ = Semantic.typecheck ast in
   match !action with
   | Ast ->
       let _ = print_string (Ast.string_of_program ast) in
       print_newline ()
   | LAST ->
-      let last = List.map Lazyconvert.lazyDef sast in
+      let _ = List.map Lazyconvert.lazyDef sast in
       print_newline ()
   | CAST ->
       (* let last = List.map Lazyconvert.lazyDef sast in *)

@@ -34,6 +34,7 @@
 %left ADD SUB  
 %left TIMES DIVIDE MOD 
 %right HD TL NEG NOT 
+%left DOT
 %left LISTTYPE
 
 

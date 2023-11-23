@@ -1,7 +1,7 @@
 (* module A = Ast *)
 module A = Ast
 module SA = Sast
-module L = L
+module L = Last
 module C = Cast
 
 type freevar = A.typ * string

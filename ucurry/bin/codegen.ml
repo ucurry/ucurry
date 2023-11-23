@@ -15,33 +15,21 @@ let build_main_body defs =
   let i8_t = L.i8_type context in
   let i1_t = L.i1_type context in
   let void_t = L.void_type context in
-  let string_t = L.pointer_type i8_t in
   let main_ftype = L.function_type void_t [| i32_t |] in
   let the_module = L.create_module context "uCurry" in
-  let rec getFormalTypes = function
-    | A.FUNCTION_TY (A.UNIT_TY, _) -> []
-    | A.FUNCTION_TY (formalty, retty) -> formalty :: getFormalTypes retty
-    | _ -> []
-  in
-  let rec getRetType = function
-    | A.FUNCTION_TY (_, retty) -> getRetType retty
-    | retty -> retty
-  in
   let deconstructClosure (ty, se) =
     (* NOTE: didn't check if ty is actually a funty  *)
     match se with
     | C.Closure ((formals, body), cap) ->
-        (getFormalTypes ty, getRetType ty, formals, body, cap)
+        (U.getFormalTypes ty, U.getRetType ty, formals, body, cap)
     | _ -> raise (SHOULDNT_RAISED "not an C.closure type")
   in
   let datatype_map = CGUtil.build_datatypes context the_module defs in
   let ltype_of_type = CGUtil.ltype_of_type datatype_map the_module context in
-
   let get_struct_type typs =
     let field_types = Array.of_list (List.map ltype_of_type typs) in
     L.struct_type context field_types
   in
-
   let main_function = L.define_function "main" main_ftype the_module in
   let builder = L.builder_at_end context (L.entry_block main_function) in
   let int_format_str = L.build_global_stringptr "%d" "fmt" builder
@@ -69,8 +57,8 @@ let build_main_body defs =
           let e' = expr builder e in
           let _ = L.build_store e' (lookup name varmap) builder in
           e'
-      | C.Apply (((ft, f) as sf), args) ->
-          let fretty = getRetType ft in
+      | C.Apply (((ft, _) as sf), args) ->
+          let fretty = U.getRetType ft in
           let llargs = List.rev (List.map (expr builder) (List.rev args)) in
           let fdef = expr builder sf in
           let result =

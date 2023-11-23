@@ -13,7 +13,7 @@ let rec transform_funty args ty =
   | _ -> failwith "argument list and function type does not match"
 
 let rec lazyExpWith ((ty, exp) : S.sexpr) : L.sexpr =
-  let to_thunk ((t, e) as thunk : S.sexpr) : L.sexpr =
+  let to_thunk ((t, _) as thunk : S.sexpr) : L.sexpr =
     (A.FUNCTION_TY (A.UNIT_TY, t), L.Lambda ([], lazyExpWith thunk))
   in
   match exp with
@@ -46,8 +46,9 @@ let rec lazyExpWith ((ty, exp) : S.sexpr) : L.sexpr =
       and ty' = transform_funty args ty in
       (ty', e')
   | S.SNoexpr -> (ty, L.Noexpr)
+  | S.SAt (e, i) -> (ty, L.At (lazyExpWith e, i))
 
-let rec lazyDef (def : S.sdef) : L.def =
+let lazyDef (def : S.sdef) : L.def =
   match def with
   | S.SExp e -> L.Exp (lazyExpWith e)
   | S.SFunction (fname, slambda) -> L.Function (fname, lazyExpWith slambda)
