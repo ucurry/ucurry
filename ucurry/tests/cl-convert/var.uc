@@ -1,2 +1,2 @@
 int a = 1;
-a;
+int b = a;

@@ -48,6 +48,10 @@ let build_main_body defs =
     | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "ltype_of_type")
   in
 
+  let get_struct_type typs = 
+    let field_types = Array.of_list (List.map ltype_of_type typs) in 
+    (L.struct_type context field_types)
+  in
   (* | A.LIST_TY t       ->
      | A.UNIT_TY         ->
      | A.FUNCTION_TY (t1, t2) ->
@@ -55,7 +59,6 @@ let build_main_body defs =
      | A.TUPLE_TY taus    -> *)
   let main_function = L.define_function "main" main_ftype the_module in
   let builder = L.builder_at_end context (L.entry_block main_function) in
-
   let int_format_str = L.build_global_stringptr "%d" "fmt" builder
   and string_format_str = L.build_global_stringptr "%s" "fmt" builder
   and int_nl_format_str = L.build_global_stringptr "%d\n" "fmt" builder
@@ -89,37 +92,13 @@ let build_main_body defs =
           let fdef = expr builder clstruct sf in 
           let result = match fretty with A.UNIT_TY -> "" | _ -> "apply" ^ "_result" in
           L.build_call fdef (Array.of_list llargs) result builder
-          (* (match f with
-          | C.Var fname ->
-              let fdef = lookup fname varmap in
-              (* let fdef = L.build_load fdef "tmp" builder in  *)
-              let result =
-                match fretty with A.UNIT_TY -> "" | _ -> fname ^ "_result"
-              in
-              L.build_call fdef (Array.of_list llargs) result builder
-          | C.Closure _ -> 
-              let e' = expr builder clstruct (ft, f) in
-              let result =
-                match fretty with A.UNIT_TY -> "" | _ -> "lambda" ^ "_result"
-              in
-              L.build_call e' (Array.of_list llargs) result builder
-          | C.Literal _-> failwith "literal in function application"
-          | C.Captured i -> U.get_data_field i clstruct builder "capvar"
-          | C.Apply (_, _) ->
-              let fdef = expr builder clstruct (ft, f) in 
-              let result =
-                match fretty with A.UNIT_TY -> "" | _ -> "innerf" ^ "_result"
-              in
-              L.build_call fdef (Array.of_list llargs) result builder
-          | _    -> raise (SHOULDNT_RAISED "Illegal function application")) *)
-          
-
       | C.If _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "if")
       | C.Let _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "let")
       | C.Begin _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "begin")
       | C.Binop _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "binop")
       | C.Unop _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "unop")
-      | C.Captured index -> U.get_data_field index clstruct builder "capvar"
+      | C.Captured index -> 
+        U.get_data_field index clstruct builder "capvar"
       | C.Closure (_, _) ->
           let e', _ = generate_closure varmap "lambda" clstruct (ty, top_exp) in 
           e'
@@ -127,13 +106,35 @@ let build_main_body defs =
       | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "SIFN")
     in
     expr builder clstruct 
+  
   and generate_closure varmap name clstruct closure =
     let formaltypes, retty, formals, body, cap = deconstructClosure closure in
+    (* Get the value of the free vars *)
     let captured_values =
-      Array.of_list (List.map (exprWithVarmap builder clstruct varmap) cap)
+      List.map (exprWithVarmap builder clstruct varmap) cap
     in
-    let newcl_struct = L.const_struct context captured_values in
-    let globalcl_struct = L.define_global "captured" newcl_struct the_module in
+    let captured_globals = 
+      List.map (fun v -> L.define_global "field" v the_module) captured_values in 
+
+    (* get the type of captured list *)
+    let captured_types = List.map (fun (t, _) -> t) cap in 
+
+    (* Alloc for the struct *)
+    let struct_ptr = L.build_alloca (get_struct_type captured_types) "captured_struct" builder in 
+
+    (* set each struct field *)
+    let _ = List.fold_left 
+            (fun counter v -> let _ = Util.set_data_field v counter struct_ptr builder in counter + 1)
+            0
+            captured_globals
+    in 
+    
+    (* make the struct pointer global *)
+    let struct_init = L.const_struct context (Array.of_list captured_globals) in
+    let reg = L.define_global "captured" struct_init the_module in
+    let _ = L.build_store struct_ptr reg builder in
+
+
     let formal_lltypes = List.map ltype_of_type formaltypes in
     let formalsandtypes = List.combine formal_lltypes formals in
     let ftype =
@@ -151,7 +152,7 @@ let build_main_body defs =
       List.fold_left2 add_formal varmap formalsandtypes
         (Array.to_list (L.params the_function))
     in
-    let e' = exprWithVarmap builder globalcl_struct localvarmap body in
+    let e' = exprWithVarmap builder reg localvarmap body in
     let _ = add_terminal builder (fun b -> L.build_ret e' b) in
     (the_function, varmap')
   in
