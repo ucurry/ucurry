@@ -7,7 +7,6 @@ module StringMap = Map.Make (String)
 exception CODEGEN_NOT_YET_IMPLEMENTED of string
 exception SHOULDNT_RAISED of string
 exception REACHED
-(* TODO: consider adding an SAST to add type to each expression *)
 
 let build_main_body defs =
   let context = L.global_context () in
@@ -40,8 +39,9 @@ let build_main_body defs =
     | A.BOOL_TY -> i1_t
     | A.STRING_TY -> string_t
     | A.UNIT_TY -> void_t
-    | A.FUNCTION_TY (_, retty) as ft -> 
+    | A.FUNCTION_TY (_, _) as ft -> 
         let formal_types = getFormalTypes ft in 
+        let retty = getRetType ft in 
         let formal_lltypes = List.map ltype_of_type formal_types in 
         let fun_type = L.function_type (ltype_of_type retty) (Array.of_list formal_lltypes) in 
         L.pointer_type fun_type 
@@ -75,7 +75,7 @@ let build_main_body defs =
   
 
   let rec exprWithVarmap builder clstruct varmap =
-    let rec expr builder clstruct (ty, top_exp) =
+    let rec expr builder (ty, top_exp) =
       match top_exp with
       | C.Literal (INT i) -> L.const_int i32_t i
       | C.Literal (STRING s) -> L.build_global_stringptr s "strlit" builder
@@ -83,19 +83,94 @@ let build_main_body defs =
       | C.Literal UNIT -> L.const_int i1_t 0
       | C.Var name -> L.build_load (lookup name varmap) name builder 
       | C.Assign (name, e) ->
-          let e' = expr builder clstruct e in
+          let e' = expr builder e in
           let _ = L.build_store e' (lookup name varmap) builder in
           e'
       | C.Apply ((ft, f) as sf, args) ->
           let fretty = getRetType ft in
-          let llargs = List.rev (List.map (expr builder clstruct) (List.rev args)) in
-          let fdef = expr builder clstruct sf in 
+          let llargs = List.rev (List.map (expr builder) (List.rev args)) in
+          let fdef = expr builder sf in 
           let result = match fretty with A.UNIT_TY -> "" | _ -> "apply" ^ "_result" in
           L.build_call fdef (Array.of_list llargs) result builder
-      | C.If _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "if")
-      | C.Let _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "let")
-      | C.Begin _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "begin")
-      | C.Binop _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "binop")
+      | C.If (pred, then_expr, else_expr) ->
+          (* 90% code referenced from https://releases.llvm.org/12.0.1/docs/tutorial/OCamlLangImpl5.html#llvm-ir-for-if-then-else *)
+          (* emit expression for condition code *)
+          let pred_res = expr builder pred in
+          (* start a block *)
+          let start_bb = L.insertion_block builder in
+          (* [the_if_fun] will own the [start_bb] *)
+          let the_if_fun = L.block_parent start_bb in
+          (* start building [then_bb] *)
+          let then_bb = L.append_block context "then" the_if_fun in
+          L.position_at_end then_bb builder;
+          (* start build code for then branch *)
+          let then_val = expr builder then_expr in
+          (* make sure getting an updated builder position for later use in phi function *)
+          let new_then_bb = L.insertion_block builder in
+          (* repeat the same above for else branch *)
+          let else_bb = L.append_block context "else" the_if_fun in
+          L.position_at_end else_bb builder;
+          let else_val = expr builder else_expr in
+          let new_else_bb = L.insertion_block builder in
+          (* emit the merge block *)
+          let merge_bb = L.append_block context "ifcon" the_if_fun in
+          L.position_at_end merge_bb builder;
+          (* create the phi node and set up the block/value pair for the phi *)
+          let incoming = [ (then_val, new_then_bb); (else_val, new_else_bb) ] in
+          let phi = L.build_phi incoming "iftmp" builder in
+          (* return to the start block to add conditional branch *)
+          L.position_at_end start_bb builder;
+          ignore (L.build_cond_br pred_res then_bb else_bb builder);
+          (* set up branch for then and else block to go to merge block at the end *)
+          L.position_at_end new_then_bb builder;
+          ignore (L.build_br merge_bb builder);
+          L.position_at_end new_else_bb builder;
+          ignore (L.build_br merge_bb builder);
+          L.position_at_end merge_bb builder;
+          phi
+      | C.Let (bindings, exp) ->
+          let varmap' =
+            List.fold_left
+              (fun vm ((tau, name), e) ->
+                let e' = expr builder e in
+                let reg = L.build_alloca (ltype_of_type tau) name builder in
+                let vm' = StringMap.add name reg vm in
+                let _ = L.build_store e' (lookup name vm') builder in
+                vm')
+              varmap bindings
+          in
+          exprWithVarmap builder clstruct varmap' exp
+      | C.Begin sexprs ->
+          List.fold_left
+            (fun _ sexpr -> expr builder sexpr)
+            (L.const_int i1_t 0)
+            sexprs
+      | C.Binop (e1, binop, e2) -> (
+          let e1' = expr builder e1
+          and e2' = expr builder e2
+          and tau_e, _ = e1 in
+          match binop with
+          | A.Add -> L.build_add e1' e2' "temp" builder
+          | A.Sub -> L.build_sub e1' e2' "temp" builder
+          | A.Mult -> L.build_mul e1' e2' "temp" builder
+          | A.Div -> L.build_sdiv e1' e2' "temp" builder
+          | A.Mod -> L.build_srem e1' e2' "temp" builder
+          | A.And -> L.build_and e1' e2' "temp" builder
+          | A.Or -> L.build_or e1' e2' "temp" builder
+          | A.Equal -> (
+              match tau_e with
+              | INT_TY | BOOL_TY ->
+                  L.build_icmp L.Icmp.Eq e1' e2' "temp" builder
+              | _ ->
+                  raise
+                    (CODEGEN_NOT_YET_IMPLEMENTED
+                       "other equality type not implemented"))
+          | A.Neq -> L.build_icmp L.Icmp.Ne e1' e2' "temp" builder
+          | A.Less -> L.build_icmp L.Icmp.Slt e1' e2' "temp" builder
+          | A.Leq -> L.build_icmp L.Icmp.Sle e1' e2' "temp" builder
+          | A.Greater -> L.build_icmp L.Icmp.Sgt e1' e2' "temp" builder
+          | A.Geq -> L.build_icmp L.Icmp.Sge e1' e2' "temp" builder
+          | A.Cons -> raise (CODEGEN_NOT_YET_IMPLEMENTED "cons"))
       | C.Unop (unop, inner_e) -> (
           let printf_t : L.lltype =
             L.var_arg_function_type i32_t [| L.pointer_type i8_t |]
@@ -103,7 +178,7 @@ let build_main_body defs =
           let printf_func : L.llvalue =
             L.declare_function "printf" printf_t the_module
           in
-          let e' = expr builder clstruct inner_e in
+          let e' = expr builder inner_e in
           let tau, _ = inner_e in
           match (unop, tau) with
           | A.Print, A.INT_TY ->
@@ -140,7 +215,7 @@ let build_main_body defs =
       | C.Case _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "case")
       | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "SIFN")
     in
-    expr builder clstruct 
+    expr builder
   
   and generate_closure builder varmap name clstruct closure =
     let formaltypes, retty, formals, body, cap = deconstructClosure closure in

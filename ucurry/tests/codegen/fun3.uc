@@ -1,6 +1,6 @@
 fun: unit -> int :
-idfun u = 1;
-println (idfun ());
+idfun = 1;
+println (idfun);
 
 
 
