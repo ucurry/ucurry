@@ -101,21 +101,21 @@ let build_main_body defs =
               L.build_call e' (Array.of_list llargs) result builder
           | C.Literal _-> failwith "literal in function application"
           | C.Captured i -> U.get_data_field i clstruct builder "capvar"
-          | C.Apply ((innerft, C.Var innerfname), _) -> (* TODO: this is hard-coding for simple.uc *)
+          (* | C.Apply ((innerft, C.Var innerfname), _) -> (* TODO: this is hard-coding for simple.uc *)
               let innerfretty = getRetType innerft in 
               let fdef = StringMap.find innerfname varmap in
               let result =
                 match innerfretty with A.UNIT_TY -> "" | _ -> innerfname ^ "_result"
               in
-              L.build_call fdef (Array.of_list llargs) result builder
-          | _    -> raise (SHOULDNT_RAISED "Illegal function application"))
-          (* | C.Apply (_, _) ->
+              L.build_call fdef (Array.of_list llargs) result builder *)
+          | C.Apply (_, _) ->
               let fdef = expr builder clstruct (ft, f) in 
               let result =
                 match fretty with A.UNIT_TY -> "" | _ -> "innerf" ^ "_result"
               in
               L.build_call fdef (Array.of_list llargs) result builder
-           *)
+          | _    -> raise (SHOULDNT_RAISED "Illegal function application"))
+          
 
       | C.If _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "if")
       | C.Let _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "let")
@@ -165,13 +165,13 @@ let build_main_body defs =
         (* TODO: partial application?? does LLVM support that?? *)
         let _, varmap' = generate_closure varmap name (L.const_null (L.pointer_type void_t)) closure in
         (builder, varmap')
-    (* | S.SVal (tau, name, e) ->
+    | C.Val (tau, name, e) ->
         (* Handle string -> create a global string pointer and assign the global name to the name *)
-        let e' = exprWithVarmap builder varmap e in
+        let e' = exprWithVarmap builder (L.const_null (L.pointer_type void_t) )varmap e in
         let reg = L.build_alloca (ltype_of_type tau) name builder in
         let varmap' = StringMap.add name reg varmap in
         let _ = L.build_store e' (lookup name varmap') builder in
-        (builder, varmap') *)
+        (builder, varmap')
     | C.Exp e ->
         let _ = exprWithVarmap builder (L.const_null (L.pointer_type void_t)) varmap e in
         (builder, varmap)

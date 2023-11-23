@@ -1,5 +1,5 @@
---int a = 1;
---a;
+int a = 1;
+a;
 --println a;
 
 fun: int -> int:
