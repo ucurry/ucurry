@@ -1,6 +1,6 @@
---int a = 1;
---a;
---println a;
+int a = 1;
+a;
+println a;
 
 fun: int -> int:
 f x = 1;

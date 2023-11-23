@@ -1,6 +1,7 @@
 (* module A = Ast *)
 module A = Ast
-module L = Last
+module SA = Sast
+module L = L 
 module C = Cast
 
 type freevar = A.typ * string
@@ -16,35 +17,35 @@ module S = Set.Make (FreeVar)
 exception CLOSURE_NOT_YET_IMPLEMENTED of string
 
 (* do free variable analysis *)
-let rec free ((t, exp) : L.sexpr) : S.t =
+let rec free ((t, exp) : SA.sexpr) : S.t =
   let unionSets (sets : S.t list) : S.t =
     List.fold_left (fun acc s -> S.union s acc) S.empty sets
   in
-  let unionFree (sexprs : L.sexpr list) : S.t =
+  let unionFree (sexprs : SA.sexpr list) : S.t =
     unionSets (List.map free sexprs)
   in
 
   match exp with
-  | L.Literal _ -> S.empty
-  | L.Var name -> S.of_list [ (t, name) ]
-  | L.Assign (_, thunk) -> free thunk
-  | L.Apply (f, thunks) -> unionFree (f :: thunks)
-  | L.If (s1, s2, s3) -> unionFree [ s1; s2; s3 ]
-  | L.Let (bindings, body) ->
+  | SA.SLiteral _ -> S.empty
+  | SA.SVar name -> S.of_list [ (t, name) ]
+  | SA.SAssign (_, thunk) -> free thunk
+  | SA.SApply (f, thunks) -> unionFree (f :: thunks)
+  | SA.SIf (s1, s2, s3) -> unionFree [ s1; s2; s3 ]
+  | SA.SLet (bindings, body) ->
       let localsWithTypes, thunks = List.split bindings in
       let freeXSet = S.of_list localsWithTypes in
       let freeESet = unionFree thunks in
       let freeBody = free body in
       S.union freeESet (S.diff freeBody freeXSet)
-  | L.Begin sexprs -> unionFree sexprs
-  | L.Binop (operand1, _, operand2) -> S.union (free operand1) (free operand2)
-  | L.Unop (_, operand) -> free operand
-  | L.Case (scrutinee, cexprs) ->
+  | SA.SBegin sexprs -> unionFree sexprs
+  | SA.SBinop (operand1, _, operand2) -> S.union (free operand1) (free operand2)
+  | SA.SUnop (_, operand) -> free operand
+  | SA.SCase (scrutinee, cexprs) ->
       let fscrutinee = free scrutinee in
       List.fold_left
         (fun freevars (_, sexpr) -> S.union freevars (free sexpr))
         fscrutinee cexprs
-  | L.Lambda (formals, sexpr) ->
+  | SA.SLambda (formals, sexpr) ->
       let formalTypes = Util.getFormalTypes t in
       (* TODO: no auto curry yet; only one argument allowed *)
       let formalWithTypes = List.combine formalTypes formals in
@@ -60,59 +61,60 @@ let indexOf (x : string) (xs : freevar list) : int option =
   indexOf' x xs 0
 
 (* close expression *)
-let rec closeExpWith (captured : freevar list) (le : L.sexpr) : C.sexpr =
-  let asClosure (funty : A.typ) (lambda : L.lambda) : C.closure =
+let rec closeExpWith (captured : freevar list) (le : SA.sexpr) : C.sexpr =
+  let asClosure (funty : A.typ) (lambda : SA.lambda) : C.closure =
     let formals, sbody = lambda in
-    let freeVarWithTypes = S.elements (free (funty, L.Lambda lambda)) in
+    let freeVarWithTypes = S.elements (free (funty, SA.SLambda lambda)) in
     let captured' =
       List.map
-        (fun (t, n) -> closeExpWith captured (t, L.Var n))
+        (fun (t, n) -> closeExpWith captured (t, SA.SVar n))
         freeVarWithTypes
     in
     (* TODO: get the type of the free vars! *)
     ((formals, closeExpWith freeVarWithTypes sbody), captured')
   in
 
-  let rec exp ((ty, tope) : L.sexpr) : C.sexpr =
+  let rec exp ((ty, tope) : SA.sexpr) : C.sexpr =
     ( ty,
       match tope with
-      | L.Literal l -> C.Literal l
-      | L.Var name -> (
+      | SA.SLiteral l -> C.Literal l
+      | SA.SVar name -> (
           match indexOf name captured with
           | Some i -> C.Captured i
           | None -> C.Var name (* this case, name is a local *))
-      | L.Assign (name, e) -> (
+      | SA.SAssign (name, e) -> (
           (* cannot captured local cannot be set, why?d *)
           match indexOf name captured with
           | Some _ -> raise (Failure "Cannot assign to captured variable")
           | None -> C.Assign (name, exp e))
-      | L.Apply (f, ls) -> C.Apply (exp f, List.map exp ls)
-      | L.If (i, t, e) -> C.If (exp i, exp t, exp e)
-      | L.Begin es -> C.Begin (List.map exp es)
-      | L.Binop (l, o, r) -> C.Binop (exp l, o, exp r)
-      | L.Unop (op, se) -> C.Unop (op, exp se)
-      | L.Let (ls, e) ->
+      | SA.SApply (f, ls) -> C.Apply (exp f, List.map exp ls)
+      | SA.SIf (i, t, e) -> C.If (exp i, exp t, exp e)
+      | SA.SBegin es -> C.Begin (List.map exp es)
+      | SA.SBinop (l, o, r) -> C.Binop (exp l, o, exp r)
+      | SA.SUnop (op, se) -> C.Unop (op, exp se)
+      | SA.SLet (ls, e) ->
           let ls' = List.map (fun (name, l) -> (name, exp l)) ls in
           (* need to recheck*)
           let e' = exp e in
           C.Let (ls', e')
-      | L.Case (scrutinee, cases) ->
+      | SA.SCase (scrutinee, cases) ->
           let scrutinee' = exp scrutinee in
           let cases' = List.map (fun (p, e) -> (p, exp e)) cases in
           C.Case (scrutinee', cases')
-      | L.Lambda lambda -> C.Closure (asClosure ty lambda)
-      | L.Noexpr -> Noexpr )
+      | SA.SLambda lambda -> C.Closure (asClosure ty lambda)
+      | SA.SNoexpr -> Noexpr )
   in
   exp le
 
 (* close definition *)
-let close (def : L.def) : Cast.def =
+let close (def : SA.sdef) : Cast.def =
   match def with
-  | L.Exp e -> C.Exp (closeExpWith [] e)
+  | SA.SExp e -> C.Exp (closeExpWith [] e)
   (* 106 uses C.Funcode, probably because toplevel function
      can only capture global veriables*)
-  | L.Function (name, lambda) -> C.Function (name, closeExpWith [] lambda)
-  | L.Datatype (t, cons) -> C.Datatype (t, cons)
-  | L.CheckTypeError _ -> raise (CLOSURE_NOT_YET_IMPLEMENTED "check type error")
+  | SA.SFunction (name, lambda) -> C.Function (name, closeExpWith [] lambda)
+  | SA.SDatatype (t, cons) -> C.Datatype (t, cons)
+  | SA.SCheckTypeError _ -> raise (CLOSURE_NOT_YET_IMPLEMENTED "check type error")
+  | SA.SVal (ty, name, se) -> C.Val (ty, name, closeExpWith [] se)
 
-let closeProgram (p : L.program) : C.program = List.map close p
+let closeProgram (p : SA.sprogram) : C.program = List.map close p

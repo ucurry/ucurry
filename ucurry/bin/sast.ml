@@ -12,12 +12,12 @@ and sx =
   | SBegin of sexpr list
   | SBinop of sexpr * binop * sexpr
   | SUnop of uop * sexpr
-  | SLambda of string list * sexpr
+  | SLambda of lambda
   | SCase of sexpr * scase_expr list
   | SNoexpr
 
 and scase_expr = pattern * sexpr
-
+and lambda = string list * sexpr
 type sdef =
   | SFunction of string * sexpr (* This sexpr will be a Lambda expression *)
   | SDatatype of typ * constructor list
