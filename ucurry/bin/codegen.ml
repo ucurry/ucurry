@@ -96,7 +96,42 @@ let build_main_body defs =
       | C.Let _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "let")
       | C.Begin _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "begin")
       | C.Binop _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "binop")
-      | C.Unop _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "unop")
+      | C.Unop (unop, inner_e) -> (
+          let printf_t : L.lltype =
+            L.var_arg_function_type i32_t [| L.pointer_type i8_t |]
+          in
+          let printf_func : L.llvalue =
+            L.declare_function "printf" printf_t the_module
+          in
+          let e' = expr builder clstruct inner_e in
+          let tau, _ = inner_e in
+          match (unop, tau) with
+          | A.Print, A.INT_TY ->
+              L.build_call printf_func [| int_format_str; e' |] "printf" builder
+          | A.Print, A.STRING_TY ->
+              L.build_call printf_func
+                [| string_format_str; e' |]
+                "printf" builder
+          | A.Println, A.INT_TY ->
+              L.build_call printf_func
+                [| int_nl_format_str; e' |]
+                "printf" builder
+          | A.Println, A.STRING_TY ->
+              L.build_call printf_func
+                [| string_nl_format_str; e' |]
+                "printf" builder
+          | A.Println, A.BOOL_TY ->
+              L.build_call printf_func
+                [| int_nl_format_str; e' |]
+                "printf" builder
+          | A.Print, A.BOOL_TY ->
+              L.build_call printf_func [| int_format_str; e' |] "printf" builder
+          | A.Print, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "print")
+          | A.Println, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "println")
+          | A.Neg, _ -> L.build_neg e' "temp" builder
+          | A.Not, _ -> L.build_not e' "temp" builder
+          | A.Hd, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "hd")
+          | A.Tl, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "tl"))
       | C.Captured index -> 
         U.get_data_field index clstruct builder "capvar"
       | C.Closure (_, _) ->
@@ -109,12 +144,9 @@ let build_main_body defs =
   
   and generate_closure varmap name clstruct closure =
     let formaltypes, retty, formals, body, cap = deconstructClosure closure in
-    (* Get the value of the free vars *)
-    let captured_values =
-      List.map (exprWithVarmap builder clstruct varmap) cap
-    in
-    let captured_globals = 
-      List.map (fun v -> L.define_global "field" v the_module) captured_values in 
+
+    (* Get the value of the captured list *)
+    let captured_values = List.map (exprWithVarmap builder clstruct varmap) cap in
 
     (* get the type of captured list *)
     let captured_types = List.map (fun (t, _) -> t) cap in 
@@ -126,14 +158,14 @@ let build_main_body defs =
     let _ = List.fold_left 
             (fun counter v -> let _ = Util.set_data_field v counter struct_ptr builder in counter + 1)
             0
-            captured_globals
+            captured_values
     in 
-    
-    (* make the struct pointer global *)
-    let struct_init = L.const_struct context (Array.of_list captured_globals) in
-    let reg = L.define_global "captured" struct_init the_module in
-    let _ = L.build_store struct_ptr reg builder in
 
+    (* make the struct pointer global *)
+    let struct_init = L.const_struct context (Array.of_list (List.map (fun t -> L.const_null t) (List.map ltype_of_type captured_types))) in
+    let reg = L.define_global "captured" struct_init the_module in
+    let e' = L.build_load struct_ptr "tmp" builder in
+    let _ = L.build_store e' reg builder in 
 
     let formal_lltypes = List.map ltype_of_type formaltypes in
     let formalsandtypes = List.combine formal_lltypes formals in
