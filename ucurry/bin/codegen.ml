@@ -83,12 +83,16 @@ let build_main_body defs =
           let e' = expr builder clstruct e in
           let _ = L.build_store e' (lookup name varmap) builder in
           e'
-      | C.Apply ((ft, f), args) ->
+      | C.Apply ((ft, f) as sf, args) ->
           let fretty = getRetType ft in
           let llargs = List.rev (List.map (expr builder clstruct) (List.rev args)) in
-          (match f with
+          let fdef = expr builder clstruct sf in 
+          let result = match fretty with A.UNIT_TY -> "" | _ -> "apply" ^ "_result" in
+          L.build_call fdef (Array.of_list llargs) result builder
+          (* (match f with
           | C.Var fname ->
-              let fdef = StringMap.find fname varmap in
+              let fdef = lookup fname varmap in
+              (* let fdef = L.build_load fdef "tmp" builder in  *)
               let result =
                 match fretty with A.UNIT_TY -> "" | _ -> fname ^ "_result"
               in
@@ -101,20 +105,13 @@ let build_main_body defs =
               L.build_call e' (Array.of_list llargs) result builder
           | C.Literal _-> failwith "literal in function application"
           | C.Captured i -> U.get_data_field i clstruct builder "capvar"
-          (* | C.Apply ((innerft, C.Var innerfname), _) -> (* TODO: this is hard-coding for simple.uc *)
-              let innerfretty = getRetType innerft in 
-              let fdef = StringMap.find innerfname varmap in
-              let result =
-                match innerfretty with A.UNIT_TY -> "" | _ -> innerfname ^ "_result"
-              in
-              L.build_call fdef (Array.of_list llargs) result builder *)
           | C.Apply (_, _) ->
               let fdef = expr builder clstruct (ft, f) in 
               let result =
                 match fretty with A.UNIT_TY -> "" | _ -> "innerf" ^ "_result"
               in
               L.build_call fdef (Array.of_list llargs) result builder
-          | _    -> raise (SHOULDNT_RAISED "Illegal function application"))
+          | _    -> raise (SHOULDNT_RAISED "Illegal function application")) *)
           
 
       | C.If _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "if")
@@ -161,10 +158,11 @@ let build_main_body defs =
 
   (* varmap is the variable environment that maps (variable : string |---> to reg : llvale) *)
   let rec stmt builder varmap = function
-    | C.Function (name, closure) -> 
+    | C.Function (name, (ty, c)) -> 
         (* TODO: partial application?? does LLVM support that?? *)
-        let _, varmap' = generate_closure varmap name (L.const_null (L.pointer_type void_t)) closure in
-        (builder, varmap')
+        (* let _, varmap' = generate_closure varmap name (L.const_null (L.pointer_type void_t)) closure in
+        (builder, varmap') *)
+        stmt builder varmap (C.Val (ty, name, (ty, c)))
     | C.Val (tau, name, e) ->
         (* Handle string -> create a global string pointer and assign the global name to the name *)
         let e' = exprWithVarmap builder (L.const_null (L.pointer_type void_t) )varmap e in

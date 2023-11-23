@@ -3,6 +3,9 @@ a;
 --println a;
 
 fun: int -> int:
-f x = 1;
-(f 1);
+f x = a;
+f;
 
+--fun: int -> int :
+--g x = (f x); 
+--(g 1);
