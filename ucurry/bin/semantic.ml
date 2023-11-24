@@ -161,8 +161,15 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
         else raise (TypeError "assigned unmatched type")
     | A.Apply (e, es) ->
         let sexpr, expr_type = ty e in
-        let formals, formal_types = List.split (List.map ty es) in
+        (* let formals, formal_types = List.split (List.map ty es) in *)
+        (* removed the unit from argument *)
+        let formals, formal_types = List.split 
+                                    (match (List.map ty es) 
+                                      with  ((_, A.UNIT_TY) :: rest) -> rest
+                                      | formals' -> formals'  )
+      in
         let rec matchfun = function
+          | A.FUNCTION_TY (A.UNIT_TY, tau), [] -> tau
           | ret_tau, [] -> ret_tau
           | A.FUNCTION_TY (tau1, tau2), hd :: tl ->
               if eqType (tau1, hd) then matchfun (tau2, tl)
@@ -231,6 +238,10 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
     | A.Lambda (ty, formals, body) ->
         let rec check_lambda tau fs env =
           match (tau, fs) with
+          | A.FUNCTION_TY (A.UNIT_TY, ret_tau), [] -> 
+              let se, tau' = typ_of vcon_map env body in
+              if eqType (ret_tau, tau') then ((ty, S.SLambda (formals, se)), ty)
+              else raise (TypeError "lambda type unmatch")
           | _, [] ->
               let se, tau' = typ_of vcon_map env body in
               if eqType (tau, tau') then ((ty, S.SLambda (formals, se)), ty)

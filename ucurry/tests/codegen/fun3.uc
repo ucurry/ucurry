@@ -1,7 +1,6 @@
 fun: unit -> int :
 idfun = 1;
-println (idfun);
-
+println (idfun ());
 
 
 -- -- TODO: automatic curry

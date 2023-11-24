@@ -174,6 +174,7 @@ exp_list:
   | exp_list COMMA exp  { $3 :: $1 }
 
 args:
+//   | UNIT {[]}
   | exp { [$1] }
   | args exp { $2 :: $1 }
 

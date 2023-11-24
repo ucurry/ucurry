@@ -12,3 +12,7 @@ println h;
 string list ss = ["hello", "world"];
 string s = hd ss;
 println s;
+int list tl_list = [1, 2, 3];
+int front = 1;
+int list cons_list = front :: tl_list;
+println (hd cons_list);
