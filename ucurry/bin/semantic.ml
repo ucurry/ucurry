@@ -234,6 +234,7 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
                  ( Binop (e, Equal, Literal (BOOL true)),
                    Unop (u, Literal (STRING "true")),
                    Unop (u, Literal (STRING "false")) ))
+        | IsNull, LIST_TY _ -> (BOOL_TY, S.SUnop (u, se)), BOOL_TY
         | _ -> raise (TypeError "type error in unoary operaion"))
     | A.Lambda (ty, formals, body) ->
         let rec check_lambda tau fs env =

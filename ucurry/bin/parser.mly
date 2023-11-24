@@ -3,7 +3,7 @@
 %}
 
 // delimiters
-%token ARROW DOUBLEARROW SEMI COMMA COLON LBRACE RBRACE LBRACKET RBRACKET BAR DOTS DOT 
+%token ARROW DOUBLEARROW SEMI COMMA COLON LBRACE RBRACE LBRACKET RBRACKET BAR DOTS DOT ISNULL
 // keyword
 %token FUNCTION LAMBDA DATATYPE IF THEN ELSE LET BEGIN IN CASE OF WILDCARD CHECK_TYPE_ERROR 
 // type
@@ -22,8 +22,8 @@
 %token UNIT
 %token EOF 
 
-
 %nonassoc PRINT PRINTLN
+%nonassoc ISNULL
 %nonassoc IN ELSE 
 %right ARROW
 %right ASN 
@@ -201,4 +201,4 @@ unop:
   | NOT  exp            { Unop (Not, $2) }
   | PRINT exp           { Unop (Print, $2) }
   | PRINTLN exp         { Unop (Println, $2) }
-
+  | ISNULL exp          { Unop (IsNull, $2) }

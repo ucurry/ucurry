@@ -74,6 +74,7 @@ rule token = parse
 | "~"        { NEG }
 | "print"    { PRINT }
 | "println"  { PRINTLN }
+| "null?"    { ISNULL }
 
 
 (* literal   *)

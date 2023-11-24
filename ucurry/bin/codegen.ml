@@ -191,7 +191,11 @@ let build_main_body defs =
           | A.Tl, _ ->
               let list_ptr = expr builder inner_e in
               Util.get_data_field 1 list_ptr builder "tl_field"
-          | A.IsNull, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "is null")
+          | A.IsNull, _ -> 
+              let list_ptr = expr builder inner_e in 
+              (* let list = L.build_load list_ptr "list_content" builder in  *)
+              (* if L.is_null list_ptr then L.const_int i1_t 1 else L.const_int i1_t 0  *)
+              L.build_is_null list_ptr "null?" builder
           | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "unop"))
       | C.Captured index -> U.get_data_field index clstruct builder "capvar"
       | C.Closure (_, _) ->

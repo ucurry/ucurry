@@ -108,6 +108,7 @@ let string_of_uop = function
   | Tl -> "tl"
   | Print -> "print"
   | Println -> "println"
+  | IsNull -> "null?"
   | _ -> "internal primitive"
 
 (* | Tuple(l) -> string_of_tupleLiteral l *)
