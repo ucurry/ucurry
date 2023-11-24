@@ -197,4 +197,3 @@ let build_string_pool (program : C.program) (builder : L.llbuilder) :
     | C.CheckTypeError _ -> pool
   in
   List.fold_left (mk_defs_string_pool builder) StringMap.empty program
-

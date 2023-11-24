@@ -23,16 +23,14 @@ let rec case_convert (ret_tau : A.typ) (scrutinee : S.sexpr)
                 continue_covert rest ) )
       | CONCELL (hd, tl) ->
           let subtype = list_subtype scrutinee_type in
-          let hd_binding =
-            ((subtype, hd), (subtype, S.SUnop (A.Hd, scrutinee)))
-          in
-          let tl_binding =
+          let hd_binding = ((subtype, hd), (subtype, S.SUnop (A.Hd, scrutinee)))
+          and tl_binding =
             ((scrutinee_type, tl), (scrutinee_type, S.SUnop (A.Tl, scrutinee)))
           in
           let matched_exp = S.SLet ([ hd_binding; tl_binding ], e) in
-          ( ret_tau,
+          (ret_tau,
             S.SIf
               ( (A.BOOL_TY, S.SUnop (A.IsNull, scrutinee)),
                 continue_covert rest,
                 (ret_tau, matched_exp) ) )
-      | _ -> raise (Invalid_argument "invalid"))
+      | CON_PAT _ -> e (* TODO: place holder - not implemneted yet  *))

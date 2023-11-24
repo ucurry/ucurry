@@ -142,15 +142,14 @@ let build_main_body defs =
           | A.Leq -> L.build_icmp L.Icmp.Sle e1' e2' "temp" builder
           | A.Greater -> L.build_icmp L.Icmp.Sgt e1' e2' "temp" builder
           | A.Geq -> L.build_icmp L.Icmp.Sge e1' e2' "temp" builder
-          | A.Cons -> 
-              let list_ty = L.element_type (ltype_of_type ty) 
+          | A.Cons ->
+              let list_ty = L.element_type (ltype_of_type ty)
               and hd_v = e1'
-              and tl_ptr = e2' in 
-              let list_ptr = L.build_alloca list_ty "list_ptr" builder in 
+              and tl_ptr = e2' in
+              let list_ptr = L.build_alloca list_ty "list_ptr" builder in
               ignore (Util.set_data_field hd_v 0 list_ptr builder);
-              ignore (Util.set_data_field tl_ptr 1 list_ptr builder); 
-              list_ptr
-            )
+              ignore (Util.set_data_field tl_ptr 1 list_ptr builder);
+              list_ptr)
       | C.Unop (unop, inner_e) -> (
           let printf_t : L.lltype =
             L.var_arg_function_type i32_t [| L.pointer_type i8_t |]
@@ -191,8 +190,8 @@ let build_main_body defs =
           | A.Tl, _ ->
               let list_ptr = expr builder inner_e in
               Util.get_data_field 1 list_ptr builder "tl_field"
-          | A.IsNull, _ -> 
-              let list_ptr = expr builder inner_e in 
+          | A.IsNull, _ ->
+              let list_ptr = expr builder inner_e in
               (* let list = L.build_load list_ptr "list_content" builder in  *)
               (* if L.is_null list_ptr then L.const_int i1_t 1 else L.const_int i1_t 0  *)
               L.build_is_null list_ptr "null?" builder
