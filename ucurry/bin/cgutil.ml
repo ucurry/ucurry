@@ -186,7 +186,7 @@ let build_string_pool (program : C.program) (builder : L.llbuilder) :
         List.fold_left (mk_expr_string_pool builder) pool' es
     | C.At (sexpr, _) -> mk_expr_string_pool builder pool sexpr
     | C.Noexpr -> pool
-    | _ -> failwith "string pool "
+    | C.Captured _ -> pool
   in
   let mk_defs_string_pool builder pool sdef =
     match sdef with

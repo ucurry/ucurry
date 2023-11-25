@@ -32,13 +32,11 @@ let rec fold_left_i (f : 'a -> int -> 'c -> 'c) (i : int) (acc : 'c)
   match l with [] -> acc | x :: xs -> fold_left_i f (i + 1) (f x i acc) xs
 
 let rec getFormalTypes = function
-  | A.FUNCTION_TY (A.UNIT_TY, retty) -> getFormalTypes retty
   | A.FUNCTION_TY (formalty, retty) -> formalty :: getFormalTypes retty
   | _ -> []
 
 let rec combine_formal_types taus formals =
   match (taus, formals) with
-  | Ast.UNIT_TY :: rest, _ -> combine_formal_types rest formals
   | tau :: tau_rest, f :: f_rest ->
       (tau, f) :: combine_formal_types tau_rest f_rest
   | _ -> failwith "combine formals"

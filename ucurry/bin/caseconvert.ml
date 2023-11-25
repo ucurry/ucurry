@@ -28,7 +28,7 @@ let rec case_convert (ret_tau : A.typ) (scrutinee : S.sexpr)
             ((scrutinee_type, tl), (scrutinee_type, S.SUnop (A.Tl, scrutinee)))
           in
           let matched_exp = S.SLet ([ hd_binding; tl_binding ], e) in
-          (ret_tau,
+          ( ret_tau,
             S.SIf
               ( (A.BOOL_TY, S.SUnop (A.IsNull, scrutinee)),
                 continue_covert rest,

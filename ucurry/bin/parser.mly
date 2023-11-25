@@ -113,7 +113,7 @@ pattern_tuple:
   | pattern_tuple COMMA pattern { $3 :: $1 }
 
 lambda:
-  LAMBDA LBRACE funtype RBRACE formals ARROW exp { Lambda($3, List.rev $5, $7) }
+  LAMBDA LBRACE funtype RBRACE formals_opt ARROW exp { Lambda($3, List.rev $5, $7) }
 
 bindings:
     typ NAME ASN exp          { [(($1, $2), $4)] }
@@ -174,7 +174,6 @@ exp_list:
   | exp_list COMMA exp  { $3 :: $1 }
 
 args:
-//   | UNIT {[]}
   | exp { [$1] }
   | args exp { $2 :: $1 }
 

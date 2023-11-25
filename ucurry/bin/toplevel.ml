@@ -1,3 +1,5 @@
+module Se = Semant
+
 type action = Ast | CAST | LAST | Default | LLVMIR | TRY
 
 let () =
@@ -18,7 +20,8 @@ let () =
 
   let lexbuf = Lexing.from_channel !channel in
   let ast = Parser.program Scanner.token lexbuf in
-  let sast, _ = Semantic.typecheck ast in
+  let sast, _ = Semant.semant_check ast in
+  (* let sast, _ = Semantic.typecheck ast in *)
   match !action with
   | Ast ->
       let _ = print_string (Ast.string_of_program ast) in

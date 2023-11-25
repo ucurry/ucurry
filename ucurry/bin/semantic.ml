@@ -45,12 +45,12 @@ let subtypeOfList tau =
   match tau with
   | A.LIST_TY tau1 -> tau1
   | _ -> raise (TypeError ("expected list type but got " ^ A.string_of_typ tau))
-let rec remove_unit_tau tau1 tau2 =  match (tau1, tau2) with
-  | (A.LIST_TY A.UNIT_TY , (A.LIST_TY _ )) -> tau2, tau2
-  | (A.LIST_TY _ , A.LIST_TY A.UNIT_TY) -> tau1, tau1 
-  | (_, _) -> tau1, tau2
 
-
+let rec remove_unit_tau tau1 tau2 =
+  match (tau1, tau2) with
+  | A.LIST_TY A.UNIT_TY, A.LIST_TY _ -> (tau2, tau2)
+  | A.LIST_TY _, A.LIST_TY A.UNIT_TY -> (tau1, tau1)
+  | _, _ -> (tau1, tau2)
 
 let rec eqType = function
   | A.INT_TY, A.INT_TY -> true
@@ -188,10 +188,11 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
     | A.If (e1, e2, e3) -> (
         match (ty e1, ty e2, ty e3) with
         | (se1, BOOL_TY), (se2, tau2), (se3, tau3) ->
-            let _,innerSe2 = se2 
-            and _,innerSe3 = se3 
-            and tau2', tau3' = remove_unit_tau tau2 tau3 in 
-            if eqType (tau2', tau3') then ((tau2', S.SIf (se1, (tau2', innerSe2), (tau3', innerSe3))), tau3')
+            let _, innerSe2 = se2
+            and _, innerSe3 = se3
+            and tau2', tau3' = remove_unit_tau tau2 tau3 in
+            if eqType (tau2', tau3') then
+              ((tau2', S.SIf (se1, (tau2', innerSe2), (tau3', innerSe3))), tau3')
             else raise (TypeError "if branches contain different types")
         | _ -> raise (TypeError "if condition contains non-boolean types"))
     | A.Let (bindings, e) ->
@@ -199,10 +200,14 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
         let dec_taus, names = List.split vars in
         let newEnv = bindAll names dec_taus ty_env in
         let sexprs, stys = List.split (List.map ty es) in
-        let _, inner_e = List.split sexprs in 
+        let _, inner_e = List.split sexprs in
         let sameTypes = eqTypes dec_taus stys in
-        if sameTypes then let sexpr, e_type = typ_of vcon_map newEnv e in
-          ((e_type, S.SLet (List.combine vars (List.combine dec_taus inner_e), sexpr)), e_type)
+        if sameTypes then
+          let sexpr, e_type = typ_of vcon_map newEnv e in
+          ( ( e_type,
+              S.SLet (List.combine vars (List.combine dec_taus inner_e), sexpr)
+            ),
+            e_type )
         else raise (TypeError "binding types are not annotated correctly")
     | A.Begin [] -> ((UNIT_TY, S.SBegin []), UNIT_TY)
     | A.Begin es ->
@@ -222,8 +227,8 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
             ((BOOL_TY, S.SBinop (se1, b, se2)), BOOL_TY)
         | (Equal | Neq) when same -> ((BOOL_TY, S.SBinop (se1, b, se2)), BOOL_TY)
         | Cons when eqType (LIST_TY tau1, tau2) ->
-             let _, tl_val = se2 in 
-             let _, tl_tau = remove_unit_tau (LIST_TY tau1) tau2 in 
+            let _, tl_val = se2 in
+            let _, tl_tau = remove_unit_tau (LIST_TY tau1) tau2 in
             ((tl_tau, S.SBinop (se1, b, (tl_tau, tl_val))), tl_tau)
         | _ ->
             raise
@@ -238,7 +243,8 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
         | Print, STRING_TY
         | Println, STRING_TY
         | Print, INT_TY
-        | Println, INT_TY -> ((UNIT_TY, S.SUnop (u, se)), UNIT_TY)
+        | Println, INT_TY ->
+            ((UNIT_TY, S.SUnop (u, se)), UNIT_TY)
         | Print, BOOL_TY | Println, BOOL_TY ->
             ty
               (If
@@ -278,7 +284,7 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
             (List.tl taus)
         in
         if allSame then
-          let default = 
+          let default =
             (* (A.LIST_TY A.INT_TY, S.SLiteral (S.EMPTYLIST)) *)
             (* (A.INT_TY, S.SLiteral (S.INT 0)) *)
             ( ret_tau,

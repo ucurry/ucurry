@@ -48,12 +48,13 @@ let rec string_of_literal : Sast.svalue -> string = function
         | x, Sast.EMPTYLIST -> string_of_literal x
         | x, Sast.LIST (y, ys) -> string_of_literal x ^ "," ^ listString (y, ys)
         | _ -> raise (Invalid_argument "should not be reached")
-      in 
+      in
       "[" ^ listString (x, xs) ^ "]"
-  | Sast.TUPLE l -> "(" ^ String.concat ", " (List.map string_of_literal l) ^ ")"
+  | Sast.TUPLE l ->
+      "(" ^ String.concat ", " (List.map string_of_literal l) ^ ")"
   | Sast.UNIT -> "()"
   | Sast.INF_LIST n -> "[" ^ string_of_int n ^ "..]"
-  | Sast.Construct ((s, _, _), e) -> "(" ^ s  ^ " " ^ string_of_literal e ^ ")"
+  | Sast.Construct ((s, _, _), e) -> "(" ^ s ^ " " ^ string_of_literal e ^ ")"
 
 let rec string_of_typ = function
   | A.INT_TY -> "int"
@@ -77,18 +78,27 @@ let rec string_of_sexpr ((ty, tope) : sexpr) =
       | Begin el ->
           "(begin " ^ String.concat ", " (List.map string_of_sexpr el) ^ ")"
       | Binop (e1, o, e2) ->
-          string_of_sexpr e1 ^ " " ^ Ast.string_of_binop o ^ " " ^ string_of_sexpr e2
-      | Unop (o, e) -> A.string_of_uop o ^" " ^string_of_sexpr e
-      | If (e1, e2, e3) -> "if " ^ (string_of_sexpr e1) ^ " then \n" ^ (string_of_sexpr e2) ^ " else \n" ^(string_of_sexpr e3)
+          string_of_sexpr e1 ^ " " ^ Ast.string_of_binop o ^ " "
+          ^ string_of_sexpr e2
+      | Unop (o, e) -> A.string_of_uop o ^ " " ^ string_of_sexpr e
+      | If (e1, e2, e3) ->
+          "if " ^ string_of_sexpr e1 ^ " then \n" ^ string_of_sexpr e2
+          ^ " else \n" ^ string_of_sexpr e3
       | Closure ((_, (_, e)), _) -> string_of_expr e
       | Let (vl, e) ->
-          "let " ^ String.concat ", " (List.map (fun ((t, v), e) -> string_of_typ t ^ " " ^ v ^ " = " ^ string_of_sexpr e) vl) ^ " in \n" ^ string_of_sexpr e
+          "let "
+          ^ String.concat ", "
+              (List.map
+                 (fun ((t, v), e) ->
+                   string_of_typ t ^ " " ^ v ^ " = " ^ string_of_sexpr e)
+                 vl)
+          ^ " in \n" ^ string_of_sexpr e
       | Noexpr -> ""
       | _ -> raise (Failure "String_of_expr Not implemented For Most Cases")
     in
     match exp with Noexpr -> "" | _ -> "(" ^ flat_string_of_exp exp ^ ")"
   in
-   string_of_typ ty ^ " " ^ string_of_expr tope
+  string_of_typ ty ^ " " ^ string_of_expr tope
 
 let string_of_def = function
   | Exp se -> string_of_sexpr se
