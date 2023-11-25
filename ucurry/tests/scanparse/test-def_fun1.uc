@@ -8,7 +8,7 @@ addx = (f x);
 
 int y = (addx 2);
 
-fun : int -> int -> int :
+zfun : int -> int -> int :
 ff = f;
 
 fun: unit -> int :
