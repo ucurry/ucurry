@@ -20,8 +20,8 @@ let ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
     | A.STRING_TY -> L.pointer_type (L.i8_type context)
     | A.UNIT_TY -> L.i1_type context
     | A.FUNCTION_TY (_, _) as ft ->
-        let formal_types = getFormalTypes ft in
-        let retty = getRetType ft in
+        let formal_types = Util.get_formalty ft in
+        let retty = Util.get_retty ft in
         let formal_lltypes = List.map ltype_of formal_types in
         let fun_type =
           L.function_type (ltype_of retty) (Array.of_list formal_lltypes)

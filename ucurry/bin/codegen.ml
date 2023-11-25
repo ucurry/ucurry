@@ -21,7 +21,8 @@ let build_main_body defs =
     (* NOTE: didn't check if ty is actually a funty  *)
     match se with
     | C.Closure ((formals, body), cap) ->
-        (U.getFormalTypes ty, U.getRetType ty, formals, body, cap)
+        let (formalty, retty) = Util.get_ft ty in
+        ([formalty], retty, formals, body, cap)
     | _ -> raise (SHOULDNT_RAISED "not an C.closure type")
   in
   let datatype_map = CGUtil.build_datatypes context the_module defs in
@@ -114,7 +115,7 @@ let build_main_body defs =
           let _ = L.build_store e' (lookup name varmap) builder in
           e'
       | C.Apply (((ft, _) as sf), args) ->
-          let fretty = U.getRetType ft in
+          let fretty = U.get_retty ft in
           let llargs = List.rev (List.map (expr builder) (List.rev args)) in
           let fdef = expr builder sf in
           let result =

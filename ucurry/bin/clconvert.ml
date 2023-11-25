@@ -46,7 +46,7 @@ let rec free ((t, exp) : SA.sexpr) : S.t =
         (fun freevars (_, sexpr) -> S.union freevars (free sexpr))
         fscrutinee cexprs
   | SA.SLambda (formals, sexpr) ->
-      let formalTypes = Util.getFormalTypes t in
+      let formalTypes = Util.get_formalty t in
       (* TODO: no auto curry yet; only multi-arg *)
       let formalWithTypes = List.combine formalTypes formals in
       S.diff (free sexpr) (S.of_list formalWithTypes)

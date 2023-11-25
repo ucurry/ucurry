@@ -27,6 +27,10 @@ let nth (l : 'a list) (n : int) =
   with Failure _ | Invalid_argument _ ->
     raise (TypeError "access out of the bound")
 
+let get_ft = function 
+  | A.FUNCTION_TY (formalty, retty) -> (formalty, retty) 
+  | _ -> raise (TypeError "not function type")
+
 let findType (name : string) (env : 'a StringMap.t) =
   try StringMap.find name env
   with Not_found -> raise (TypeError ("name " ^ name ^ "unbound"))
@@ -169,22 +173,17 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
         let var_ty = findType x ty_env and assign_ty, se = ty e in
         let final_tau = get_checked_types var_ty assign_ty in
         (final_tau, S.SAssign (x, (final_tau, se)))
-    | A.Apply (e, es) ->
-        let fun_tau, fun_es = ty e in
-        let formal_taus, formals = List.split (List.map ty es) in
-        let rec match_fun fun_tau arg_taus final_formal_taus =
-          match (fun_tau, arg_taus) with
-          | ret_tau, [] -> (ret_tau, final_formal_taus)
-          | A.FUNCTION_TY (tau1, tau2), arg_tau :: rest ->
-              let final_tau = get_checked_types arg_tau tau1 in
-              match_fun tau2 rest (final_tau :: final_formal_taus)
-          | _ -> raise (TypeError "argument types not matched")
-        in
-        let ret_tau, final_formal_taus = match_fun fun_tau formal_taus [] in
-        ( ret_tau,
-          S.SApply
-            ( (fun_tau, fun_es),
-              List.combine (List.rev final_formal_taus) formals ) )
+
+    | A.Apply (e, [arg]) -> (* base case: type checks *)
+        let ft, fe = ty e in 
+        let formalty, retty = get_ft ft in 
+        let argty, arge = ty arg in
+        let final_arg_tau = get_checked_types formalty argty in 
+        (retty, S.SApply((ft, fe), [(final_arg_tau, arge)]))
+
+    | A.Apply (e, es) -> (* make nested apply to conform to the one-arg apply form *)
+        ty (List.fold_left (fun acc_apply arg -> A.Apply (acc_apply, [arg])) e es)
+         
     | A.If (cond, e1, e2) ->
         let cond_tau, cond_e = ty cond
         and e1_tau, se1 = ty e1
@@ -251,9 +250,9 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
           | _, [] ->
               let tau', se = typ_of vcon_map env body in
               let _ = get_checked_types tau' tau in
-              (lambda_tau, S.SLambda (formals, (tau', se)))
-          | A.FUNCTION_TY (tau1, tau2), hd :: tl ->
-              check_lambda tau2 tl (StringMap.add hd tau1 env)
+              (tau, se)
+          | A.FUNCTION_TY (tau1, tau2), hd :: tl -> (* make nested lambda to conform to one-arg function form *)
+              (tau, S.SLambda ([hd], check_lambda tau2 tl (StringMap.add hd tau1 env)))
           | _ -> raise (TypeError "lambda type unmatch")
         in
         check_lambda lambda_tau formals ty_env
