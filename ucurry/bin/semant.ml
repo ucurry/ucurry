@@ -176,14 +176,11 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
           match (fun_tau, arg_taus) with
           | ret_tau, [] -> (ret_tau, final_formal_taus)
           | A.FUNCTION_TY (tau1, tau2), arg_tau :: rest ->
-              let final_tau = get_checked_types tau1 arg_tau in
+              let final_tau = get_checked_types arg_tau tau1 in
               match_fun tau2 rest (final_tau :: final_formal_taus)
           | _ -> raise (TypeError "argument types not matched")
         in
         let ret_tau, final_formal_taus = match_fun fun_tau formal_taus [] in
-        (* let applied_taus, applied_args = match (formal_taus, formals)  with
-           | A.UNIT_TY :: rest_tau , _ ::rest_formals  -> rest_tau, rest_formals
-           | _, _ -> formal_taus, formals in *)
         ( ret_tau,
           S.SApply
             ( (fun_tau, fun_es),
@@ -256,7 +253,7 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
           match (tau, fs) with
           | _, [] ->
               let tau', se = typ_of vcon_map env body in
-              let _ = get_checked_types tau tau' in
+              let _ = get_checked_types tau' tau in
               (lambda_tau, S.SLambda (final_formals, (tau', se)))
           | A.FUNCTION_TY (tau1, tau2), hd :: tl ->
               check_lambda tau2 tl (StringMap.add hd tau1 env)
@@ -299,7 +296,7 @@ let rec typ_def (def : A.def) (ty_env : type_env) (vcon_map : vcon_env) :
     | A.Function (tau, funname, args, body) ->
         let new_env = bindUnique funname tau ty_env in
         let tau', se = typ_of vcon_map new_env (Lambda (tau, args, body)) in
-        let fun_tau = get_checked_types tau' tau in
+        let fun_tau = get_checked_types tau tau' in
         (S.SFunction (funname, (fun_tau, se)), new_env)
     | A.Datatype (tau, val_cons) ->
         let vcons, argtaus = List.split val_cons in
