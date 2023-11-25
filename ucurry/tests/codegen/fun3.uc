@@ -1,5 +1,5 @@
 fun: unit -> int :
-idfun = 1;
+idfun u = 1;
 println (idfun ());
 
 --fun : unit -> (unit -> int):

@@ -246,20 +246,17 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
         | IsNull, LIST_TY _ -> (BOOL_TY, S.SUnop (u, (tau, se)))
         | _ -> raise (TypeError "type error in unoary operaion"))
     | A.Lambda (lambda_tau, formals, body) ->
-        let final_formals =
-          match formals with [] -> [ "unit_arg" ] | fms -> fms
-        in
         let rec check_lambda tau fs env =
           match (tau, fs) with
           | _, [] ->
               let tau', se = typ_of vcon_map env body in
               let _ = get_checked_types tau' tau in
-              (lambda_tau, S.SLambda (final_formals, (tau', se)))
+              (lambda_tau, S.SLambda (formals, (tau', se)))
           | A.FUNCTION_TY (tau1, tau2), hd :: tl ->
               check_lambda tau2 tl (StringMap.add hd tau1 env)
           | _ -> raise (TypeError "lambda type unmatch")
         in
-        check_lambda lambda_tau final_formals ty_env
+        check_lambda lambda_tau formals ty_env
     | A.At (e, i) -> (
         let tau, se = ty e in
         match tau with
@@ -297,7 +294,7 @@ let rec typ_def (def : A.def) (ty_env : type_env) (vcon_map : vcon_env) :
         let new_env = bindUnique funname tau ty_env in
         let tau', se = typ_of vcon_map new_env (Lambda (tau, args, body)) in
         let fun_tau = get_checked_types tau tau' in
-        (S.SFunction (funname, (fun_tau, se)), new_env)
+        (S.SVal (fun_tau, funname, (fun_tau, se)), new_env)
     | A.Datatype (tau, val_cons) ->
         let vcons, argtaus = List.split val_cons in
         let func_taus =
