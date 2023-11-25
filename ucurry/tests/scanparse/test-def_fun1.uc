@@ -3,12 +3,15 @@ fun: int -> int -> int :
 f x y = x + y;
 
 int x = 1;
-fun: int -> int :
+fun: unit -> int -> int :
 addx = (f x);
 
-int y = (addx 2);
+int -> int addx2 = (f x);
+int y2 = (addx2 2);
 
-fun : int -> int -> int :
+int y = ((addx ()) 2);
+
+fun : unit -> int -> int -> int :
 ff = f;
 
 fun: unit -> int :

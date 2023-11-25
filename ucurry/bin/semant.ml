@@ -9,16 +9,18 @@ type vcon_env = (string * int * typ) StringMap.t
 
 exception TypeError of string
 
+let default_case tau =
+  let rec get_value tau' =
+    match tau' with
+    | A.INT_TY -> S.INT 0
+    | A.STRING_TY -> S.STRING "case not matched"
+    | A.BOOL_TY -> S.BOOL false
+    | A.LIST_TY tau -> S.LIST (get_value tau, S.EMPTYLIST)
+    | A.TUPLE_TY taus -> S.TUPLE (List.map get_value taus)
+    | _ -> UNIT (* HACK : when case is unmatched , should thrown exception *)
+  in
+  (tau, S.SLiteral (get_value tau))
 
-let  default_case tau = 
- let rec get_value tau' = match tau' with 
-    |A.INT_TY -> S.INT 0 
-    |A.STRING_TY -> S.STRING "case not matched"
-    |A.BOOL_TY -> S.BOOL false 
-    |A.LIST_TY tau -> S.LIST (get_value tau, S.EMPTYLIST)
-    |A.TUPLE_TY taus -> S.TUPLE (List.map get_value taus)
-    |_ -> UNIT (* HACK : when case is unmatched , should thrown exception *)
-in tau, S.SLiteral (get_value tau)
 (* get the nth element from a list  *)
 let nth (l : 'a list) (n : int) =
   try List.nth l n
@@ -60,26 +62,25 @@ let subtypeOfList tau =
 (* return the final types if tau1 and tau2 can be the same, else raise type error  *)
 let rec get_checked_types tau1 tau2 =
   match (tau1, tau2) with
-  | A.INT_TY, A.INT_TY -> (tau1, tau2)
-  | A.STRING_TY, A.STRING_TY -> (tau1, tau2)
-  | A.UNIT_TY, A.UNIT_TY -> (tau1, tau2)
-  | A.BOOL_TY, A.BOOL_TY -> (tau1, tau2)
-  | A.LIST_TY A.UNIT_TY, A.LIST_TY _ -> (tau2, tau2)
-  | A.LIST_TY _, A.LIST_TY A.UNIT_TY -> (tau1, tau1)
+  | A.INT_TY, A.INT_TY -> tau1
+  | A.STRING_TY, A.STRING_TY -> tau1
+  | A.UNIT_TY, A.UNIT_TY -> tau1
+  | A.BOOL_TY, A.BOOL_TY -> tau1
+  | A.LIST_TY A.UNIT_TY, A.LIST_TY _ -> tau2
+  | A.LIST_TY _, A.LIST_TY A.UNIT_TY -> tau1
   | A.LIST_TY tau1, A.LIST_TY tau2 ->
-      let tau1', tau2' = get_checked_types tau1 tau2 in
-      (A.LIST_TY tau1', A.LIST_TY tau2')
+      let tau = get_checked_types tau1 tau2 in
+      A.LIST_TY tau
   | A.FUNCTION_TY (arg_tau1, ret_tau1), A.FUNCTION_TY (arg_tau2, ret_tau2) ->
-      let arg_tau1', arg_tau2' = get_checked_types arg_tau1 arg_tau2
-      and ret_tau1', ret_tau2' = get_checked_types ret_tau1 ret_tau2 in
-      ( A.FUNCTION_TY (arg_tau1', ret_tau1'),
-        A.FUNCTION_TY (arg_tau2', ret_tau2') )
+      let arg_tau = get_checked_types arg_tau1 arg_tau2
+      and ret_tau = get_checked_types ret_tau1 ret_tau2 in
+      A.FUNCTION_TY (arg_tau, ret_tau)
   | A.CONSTRUCTOR_TY n1, A.CONSTRUCTOR_TY n2 ->
-      if String.equal n1 n2 then (tau1, tau2)
+      if String.equal n1 n2 then tau1
       else raise (TypeError "failed to check equal type")
   | A.TUPLE_TY tys1, A.TUPLE_TY tys2 ->
-      let tys1', tys2' = List.split (List.map2 get_checked_types tys1 tys2) in
-      (A.TUPLE_TY tys1', A.TUPLE_TY tys2')
+      let tys = List.map2 get_checked_types tys1 tys2 in
+      A.TUPLE_TY tys
   | tau1, tau2 ->
       raise
         (TypeError
@@ -110,11 +111,11 @@ let rec bs_from_legal_pat (ty_env : type_env) (tau : typ) (pat : A.pattern) :
   | A.WILDCARD -> []
   | A.CON_PAT (name, []) ->
       let _, ret_tau = findFunctionType name ty_env in
-      let _, _ = get_checked_types tau ret_tau in
+      let _ = get_checked_types tau ret_tau in
       []
   | A.CON_PAT (name, pats) -> (
       let exp_tau, ret_tau = findFunctionType name ty_env in
-      let _, _ = get_checked_types tau ret_tau in
+      let _ = get_checked_types tau ret_tau in
       match (exp_tau, pats) with
       | TUPLE_TY types, _ ->
           List.concat (List.map2 (bs_from_legal_pat ty_env) types pats)
@@ -147,7 +148,7 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
           | A.EMPTYLIST -> (A.LIST_TY A.UNIT_TY, S.EMPTYLIST)
           | A.LIST (hd, tl) ->
               let hd_tau, hd_val = lit_ty hd and tl_tau, tl_val = lit_ty tl in
-              let list_tau, _ = get_checked_types (A.LIST_TY hd_tau) tl_tau in
+              let list_tau = get_checked_types (A.LIST_TY hd_tau) tl_tau in
               (list_tau, S.LIST (hd_val, tl_val))
           | A.TUPLE xs ->
               let taus, vals = List.split (List.map lit_ty xs) in
@@ -166,29 +167,30 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
     | A.Var x -> (findType x ty_env, S.SVar x)
     | A.Assign (x, e) ->
         let var_ty = findType x ty_env and assign_ty, se = ty e in
-        let final_tau, _ = get_checked_types var_ty assign_ty in
+        let final_tau = get_checked_types var_ty assign_ty in
         (final_tau, S.SAssign (x, (final_tau, se)))
     | A.Apply (e, es) ->
         let fun_tau, fun_es = ty e in
         let formal_taus, formals = List.split (List.map ty es) in
-        let rec match_fun fun_tau arg_taus final_formal_taus = match (fun_tau, arg_taus) with 
-          | ret_tau, [] -> ret_tau, final_formal_taus
+        let rec match_fun fun_tau arg_taus final_formal_taus =
+          match (fun_tau, arg_taus) with
+          | ret_tau, [] -> (ret_tau, final_formal_taus)
           | A.FUNCTION_TY (tau1, tau2), arg_tau :: rest ->
-              let final_tau, _ = get_checked_types tau1 arg_tau in 
+              let final_tau = get_checked_types arg_tau tau1 in
               match_fun tau2 rest (final_tau :: final_formal_taus)
           | _ -> raise (TypeError "argument types not matched")
         in
         let ret_tau, final_formal_taus = match_fun fun_tau formal_taus [] in
-        (* let applied_taus, applied_args = match (formal_taus, formals)  with
-           | A.UNIT_TY :: rest_tau , _ ::rest_formals  -> rest_tau, rest_formals
-           | _, _ -> formal_taus, formals in *)
-        (ret_tau, S.SApply ((fun_tau, fun_es), List.combine (List.rev final_formal_taus) formals))
+        ( ret_tau,
+          S.SApply
+            ( (fun_tau, fun_es),
+              List.combine (List.rev final_formal_taus) formals ) )
     | A.If (cond, e1, e2) ->
         let cond_tau, cond_e = ty cond
         and e1_tau, se1 = ty e1
         and e2_tau, se2 = ty e2 in
-        let branch_tau, _ = get_checked_types e1_tau e2_tau
-        and cond_tau', _ = get_checked_types cond_tau A.BOOL_TY in
+        let branch_tau = get_checked_types e1_tau e2_tau
+        and cond_tau' = get_checked_types cond_tau A.BOOL_TY in
         ( branch_tau,
           S.SIf ((cond_tau', cond_e), (branch_tau, se1), (branch_tau, se2)) )
     | A.Let (bindings, e) ->
@@ -196,9 +198,7 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
         let dec_taus, names = List.split vars in
         let newEnv = bindAll names dec_taus ty_env in
         let taus, ses = List.split (List.map ty es) in
-        let final_taus, _ =
-          List.split (List.map2 get_checked_types dec_taus taus)
-        in
+        let final_taus = List.map2 get_checked_types dec_taus taus in
         let bind_ses = List.combine vars @@ List.combine final_taus ses in
         let body_tau, body_es = typ_of vcon_map newEnv e in
         (body_tau, S.SLet (bind_ses, (body_tau, body_es)))
@@ -220,7 +220,7 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
         | (Equal | Neq) when same ->
             (BOOL_TY, S.SBinop ((tau1, se1), b, (tau2, se2)))
         | Cons ->
-            let final_tau, _ = get_checked_types (LIST_TY tau1) tau2 in
+            let final_tau = get_checked_types (LIST_TY tau1) tau2 in
             (final_tau, S.SBinop ((tau1, se1), b, (final_tau, se2)))
         | _ ->
             raise
@@ -253,7 +253,7 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
           match (tau, fs) with
           | _, [] ->
               let tau', se = typ_of vcon_map env body in
-              let _, _ = get_checked_types tau tau' in
+              let _ = get_checked_types tau' tau in
               (lambda_tau, S.SLambda (final_formals, (tau', se)))
           | A.FUNCTION_TY (tau1, tau2), hd :: tl ->
               check_lambda tau2 tl (StringMap.add hd tau1 env)
@@ -280,9 +280,7 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
         in
         let scases = List.combine spatterns case_exps in
         let final_tau =
-          List.fold_left
-            (fun tau1 tau2 -> U.fst (get_checked_types tau1 tau2))
-            (List.hd taus) (List.tl taus)
+          List.fold_left get_checked_types (List.hd taus) (List.tl taus)
         in
         let final_scases =
           List.map (fun (pat, se) -> (pat, (final_tau, se))) scases
@@ -298,7 +296,7 @@ let rec typ_def (def : A.def) (ty_env : type_env) (vcon_map : vcon_env) :
     | A.Function (tau, funname, args, body) ->
         let new_env = bindUnique funname tau ty_env in
         let tau', se = typ_of vcon_map new_env (Lambda (tau, args, body)) in
-        let fun_tau, _ = get_checked_types tau' tau in
+        let fun_tau = get_checked_types tau tau' in
         (S.SFunction (funname, (fun_tau, se)), new_env)
     | A.Datatype (tau, val_cons) ->
         let vcons, argtaus = List.split val_cons in
@@ -308,7 +306,7 @@ let rec typ_def (def : A.def) (ty_env : type_env) (vcon_map : vcon_env) :
         (S.SDatatype (tau, val_cons), bindAllUnique vcons func_taus ty_env)
     | A.Variable (tau, name, e) ->
         let tau', se = typ_of vcon_map ty_env e in
-        let var_tau, _ = get_checked_types tau tau' in
+        let var_tau = get_checked_types tau tau' in
         (S.SVal (var_tau, name, (var_tau, se)), bindUnique name tau ty_env)
     | A.Exp e ->
         let tau, e' = typ_of vcon_map ty_env e in
@@ -340,4 +338,3 @@ let semant_check (defs : A.def list) : S.sprogram * type_env =
       ([], StringMap.empty) defs
   in
   (List.rev sdefs, global_env)
-
