@@ -3,7 +3,7 @@
 %}
 
 // delimiters
-%token ARROW DOUBLEARROW SEMI COMMA COLON LBRACE RBRACE LBRACKET RBRACKET BAR DOTS DOT 
+%token ARROW DOUBLEARROW SEMI COMMA COLON LBRACE RBRACE LBRACKET RBRACKET BAR DOTS DOT ISNULL
 // keyword
 %token FUNCTION LAMBDA DATATYPE IF THEN ELSE LET BEGIN IN CASE OF WILDCARD CHECK_TYPE_ERROR 
 // type
@@ -22,8 +22,8 @@
 %token UNIT
 %token EOF 
 
-
 %nonassoc PRINT PRINTLN
+%nonassoc ISNULL
 %nonassoc IN ELSE 
 %right ARROW
 %right ASN 
@@ -113,7 +113,7 @@ pattern_tuple:
   | pattern_tuple COMMA pattern { $3 :: $1 }
 
 lambda:
-  LAMBDA LBRACE funtype RBRACE formals ARROW exp { Lambda($3, List.rev $5, $7) }
+  LAMBDA LBRACE funtype RBRACE formals_opt ARROW exp { Lambda($3, List.rev $5, $7) }
 
 bindings:
     typ NAME ASN exp          { [(($1, $2), $4)] }
@@ -200,4 +200,4 @@ unop:
   | NOT  exp            { Unop (Not, $2) }
   | PRINT exp           { Unop (Print, $2) }
   | PRINTLN exp         { Unop (Println, $2) }
-
+  | ISNULL exp          { Unop (IsNull, $2) }

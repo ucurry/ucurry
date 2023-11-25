@@ -87,11 +87,7 @@ let build_literal builder (ty_map : L.lltype StringMap.t)
     | S.BOOL b -> L.const_int i1_t (if b then 1 else 0)
     | S.EMPTYLIST ->
         let list_ptr_ty = ltype_of_type ty_map llmodule context ty in
-        let list_ty = L.element_type list_ptr_ty in
-        let list_ptr = L.build_alloca list_ty "empty_list_address" builder in
-        let null_list = L.const_null list_ty in
-        ignore (L.build_store null_list list_ptr builder);
-        list_ptr
+        L.const_null list_ptr_ty
     | S.LIST (hd, tl) ->
         let subty = Util.list_subtype ty in
         let list_ty =
@@ -190,7 +186,7 @@ let build_string_pool (program : C.program) (builder : L.llbuilder) :
         List.fold_left (mk_expr_string_pool builder) pool' es
     | C.At (sexpr, _) -> mk_expr_string_pool builder pool sexpr
     | C.Noexpr -> pool
-    | _ -> failwith "string pool "
+    | C.Captured _ -> pool
   in
   let mk_defs_string_pool builder pool sdef =
     match sdef with

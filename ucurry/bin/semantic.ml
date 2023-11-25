@@ -46,6 +46,12 @@ let subtypeOfList tau =
   | A.LIST_TY tau1 -> tau1
   | _ -> raise (TypeError ("expected list type but got " ^ A.string_of_typ tau))
 
+let rec remove_unit_tau tau1 tau2 =
+  match (tau1, tau2) with
+  | A.LIST_TY A.UNIT_TY, A.LIST_TY _ -> (tau2, tau2)
+  | A.LIST_TY _, A.LIST_TY A.UNIT_TY -> (tau1, tau1)
+  | _, _ -> (tau1, tau2)
+
 let rec eqType = function
   | A.INT_TY, A.INT_TY -> true
   | A.STRING_TY, A.STRING_TY -> true
@@ -161,8 +167,16 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
         else raise (TypeError "assigned unmatched type")
     | A.Apply (e, es) ->
         let sexpr, expr_type = ty e in
-        let formals, formal_types = List.split (List.map ty es) in
+        (* let formals, formal_types = List.split (List.map ty es) in *)
+        (* removed the unit from argument *)
+        let formals, formal_types =
+          List.split
+            (match List.map ty es with
+            | (_, A.UNIT_TY) :: rest -> rest
+            | formals' -> formals')
+        in
         let rec matchfun = function
+          | A.FUNCTION_TY (A.UNIT_TY, tau), [] -> tau
           | ret_tau, [] -> ret_tau
           | A.FUNCTION_TY (tau1, tau2), hd :: tl ->
               if eqType (tau1, hd) then matchfun (tau2, tl)
@@ -173,19 +187,27 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
         ((ret_ty, S.SApply (sexpr, formals)), ret_ty)
     | A.If (e1, e2, e3) -> (
         match (ty e1, ty e2, ty e3) with
-        | (se1, BOOL_TY), (se2, tau1), (se3, tau2) ->
-            if eqType (tau1, tau2) then ((tau1, S.SIf (se1, se2, se3)), tau1)
+        | (se1, BOOL_TY), (se2, tau2), (se3, tau3) ->
+            let _, innerSe2 = se2
+            and _, innerSe3 = se3
+            and tau2', tau3' = remove_unit_tau tau2 tau3 in
+            if eqType (tau2', tau3') then
+              ((tau2', S.SIf (se1, (tau2', innerSe2), (tau3', innerSe3))), tau3')
             else raise (TypeError "if branches contain different types")
         | _ -> raise (TypeError "if condition contains non-boolean types"))
     | A.Let (bindings, e) ->
         let vars, es = List.split bindings in
-        let types, names = List.split vars in
-        let newEnv = bindAll names types ty_env in
-        let sexprs, e_types = List.split (List.map ty es) in
-        let sameTypes = eqTypes types e_types in
+        let dec_taus, names = List.split vars in
+        let newEnv = bindAll names dec_taus ty_env in
+        let sexprs, stys = List.split (List.map ty es) in
+        let _, inner_e = List.split sexprs in
+        let sameTypes = eqTypes dec_taus stys in
         if sameTypes then
           let sexpr, e_type = typ_of vcon_map newEnv e in
-          ((e_type, S.SLet (List.combine vars sexprs, sexpr)), e_type)
+          ( ( e_type,
+              S.SLet (List.combine vars (List.combine dec_taus inner_e), sexpr)
+            ),
+            e_type )
         else raise (TypeError "binding types are not annotated correctly")
     | A.Begin [] -> ((UNIT_TY, S.SBegin []), UNIT_TY)
     | A.Begin es ->
@@ -205,7 +227,9 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
             ((BOOL_TY, S.SBinop (se1, b, se2)), BOOL_TY)
         | (Equal | Neq) when same -> ((BOOL_TY, S.SBinop (se1, b, se2)), BOOL_TY)
         | Cons when eqType (LIST_TY tau1, tau2) ->
-            ((tau2, S.SBinop (se1, b, se2)), tau2)
+            let _, tl_val = se2 in
+            let _, tl_tau = remove_unit_tau (LIST_TY tau1) tau2 in
+            ((tl_tau, S.SBinop (se1, b, (tl_tau, tl_val))), tl_tau)
         | _ ->
             raise
               (TypeError ("type error in expression " ^ A.string_of_expr exp)))
@@ -227,10 +251,15 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
                  ( Binop (e, Equal, Literal (BOOL true)),
                    Unop (u, Literal (STRING "true")),
                    Unop (u, Literal (STRING "false")) ))
+        | IsNull, LIST_TY _ -> ((BOOL_TY, S.SUnop (u, se)), BOOL_TY)
         | _ -> raise (TypeError "type error in unoary operaion"))
     | A.Lambda (ty, formals, body) ->
         let rec check_lambda tau fs env =
           match (tau, fs) with
+          | A.FUNCTION_TY (A.UNIT_TY, ret_tau), [] ->
+              let se, tau' = typ_of vcon_map env body in
+              if eqType (ret_tau, tau') then ((ty, S.SLambda (formals, se)), ty)
+              else raise (TypeError "lambda type unmatch")
           | _, [] ->
               let se, tau' = typ_of vcon_map env body in
               if eqType (tau, tau') then ((ty, S.SLambda (formals, se)), ty)
@@ -239,23 +268,32 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
               check_lambda tau2 tl (StringMap.add hd tau1 env)
           | _ -> raise (TypeError "lambda type unmatch")
         in
-        (* let _ = Printf.printf "formals in semant: %d\n" (List.length formals) in  *)
         check_lambda ty formals ty_env
     | A.Case (exp, cases) ->
-        let se, scrutinee_type = ty exp in
+        let scrutinee, scrutinee_type = ty exp in
         let patterns, es = List.split cases in
         let spatterns = List.map (to_spattern vcon_map) patterns in
         let bindings = List.map (legalPattern ty_env scrutinee_type) patterns in
         let newEnvs = List.map (bindAllPairs ty_env) bindings in
         let ses, taus = List.split (List.map2 (typ_of vcon_map) newEnvs es) in
         let scases = List.combine spatterns ses in
-        let allSame, exptau =
+        let allSame, ret_tau =
           List.fold_left
             (fun (same, tau) tau' -> (same && eqType (tau, tau'), tau))
             (true, List.hd taus)
             (List.tl taus)
         in
-        if allSame then ((exptau, S.SCase (se, scases)), exptau)
+        if allSame then
+          let default =
+            (* (A.LIST_TY A.INT_TY, S.SLiteral (S.EMPTYLIST)) *)
+            (* (A.INT_TY, S.SLiteral (S.INT 0)) *)
+            ( ret_tau,
+              S.SUnop
+                ( A.Println,
+                  (A.STRING_TY, S.SLiteral (S.STRING "pattern not matched")) )
+            )
+          in
+          (Caseconvert.case_convert ret_tau scrutinee scases default, ret_tau)
         else raise (TypeError "ill typed case expression ")
     | A.At (e, i) -> (
         let se, tau = ty e in

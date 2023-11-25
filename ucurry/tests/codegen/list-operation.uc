@@ -1,3 +1,4 @@
+---- hd and tl
 int x = hd [1, 2];
 println x;
 int y = hd [4, 2, 3, 4];
@@ -12,3 +13,15 @@ println h;
 string list ss = ["hello", "world"];
 string s = hd ss;
 println s;
+
+---- cons 
+int list tl_list = [1, 2, 3];
+int front = 1;
+int list cons_list = front :: tl_list;
+println (hd cons_list);
+
+---- null
+println (null? []);
+println (null? [1, 2]);
+println (null? (tl [1]));
+println (null? (tl [1, 2, 3]));
