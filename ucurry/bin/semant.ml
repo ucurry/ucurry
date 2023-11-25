@@ -171,18 +171,18 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
     | A.Apply (e, es) ->
         let fun_tau, fun_es = ty e in
         let formal_taus, formals = List.split (List.map ty es) in
-        let rec match_fun = function
-          | ret_tau, [] -> ret_tau
+        let rec match_fun fun_tau arg_taus final_formal_taus = match (fun_tau, arg_taus) with 
+          | ret_tau, [] -> ret_tau, final_formal_taus
           | A.FUNCTION_TY (tau1, tau2), arg_tau :: rest ->
-              ignore (get_checked_types tau1 arg_tau);
-              match_fun (tau2, rest)
+              let final_tau, _ = get_checked_types tau1 arg_tau in 
+              match_fun tau2 rest (final_tau :: final_formal_taus)
           | _ -> raise (TypeError "argument types not matched")
         in
-        let ret_tau = match_fun (fun_tau, formal_taus) in
+        let ret_tau, final_formal_taus = match_fun fun_tau formal_taus [] in
         (* let applied_taus, applied_args = match (formal_taus, formals)  with
            | A.UNIT_TY :: rest_tau , _ ::rest_formals  -> rest_tau, rest_formals
            | _, _ -> formal_taus, formals in *)
-        (ret_tau, S.SApply ((fun_tau, fun_es), List.combine formal_taus formals))
+        (ret_tau, S.SApply ((fun_tau, fun_es), List.combine (List.rev final_formal_taus) formals))
     | A.If (cond, e1, e2) ->
         let cond_tau, cond_e = ty cond
         and e1_tau, se1 = ty e1
