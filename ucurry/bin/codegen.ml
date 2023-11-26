@@ -49,8 +49,21 @@ let build_main_body defs =
 
   let rec generate_function builder varmap name clstruct closure =
     let formaltypes, retty, formals, body, cap = deconstructClosure closure in
+    let formal_lltypes = List.map ltype_of_type formaltypes in
+    (* let _ = Printf.printf "formals: %d\n" (List.length formals) in 
+    let _ = Printf.printf "formal_types: %d\n" (List.length formaltypes) in
+    let _ = raise REACHED in *)
+    let formalsandtypes = List.combine formal_lltypes formals in
+    let ftype =
+      L.function_type (ltype_of_type retty) (Array.of_list formal_lltypes)
+    in
+    let reg = L.build_alloca (L.pointer_type ftype) name builder in
+    let the_function = L.define_function name ftype the_module in
+    let _ = L.build_store the_function reg builder in 
+    let varmap' = StringMap.add name reg varmap in
+
     (* Get the values and types of the captured list *)
-    let captured_values = List.map (exprWithVarmap builder clstruct varmap) cap in
+    let captured_values = List.map (exprWithVarmap builder clstruct varmap') cap in
     let captured_types = List.map (fun (t, _) -> t) cap in
     let captured_lltypes = List.map ltype_of_type captured_types in
 
@@ -73,16 +86,7 @@ let build_main_body defs =
     let _ = L.build_store e' global_struct_ptr builder in
 
     (* build the function *)
-    let formal_lltypes = List.map ltype_of_type formaltypes in
-    let formalsandtypes = List.combine formal_lltypes formals in
-    let ftype =
-      L.function_type (ltype_of_type retty) (Array.of_list formal_lltypes)
-    in
-    (* let _ = failwith "REACHED" in  *)
-    let reg = L.build_alloca (L.pointer_type ftype) name builder in
-    let the_function = L.define_function name ftype the_module in
-    let _ = L.build_store the_function reg builder in 
-    let varmap' = StringMap.add name reg varmap in
+    
     let builder = L.builder_at_end context (L.entry_block the_function) in
     let add_formal m (t, n) p =
       let _ = L.set_value_name n p in

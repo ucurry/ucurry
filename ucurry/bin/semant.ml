@@ -251,8 +251,8 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
           match (tau, fs) with
           | _, [] -> 
               let tau', se = typ_of vcon_map env body in
-              let _ = get_checked_types tau' tau in
-              (tau, se)
+              let final_tau = get_checked_types tau' tau in
+              (final_tau, se)
           | A.FUNCTION_TY (tau1, tau2), hd :: []  ->
               let new_env = StringMap.add hd tau1 env in
               let tau', se = typ_of vcon_map new_env body in
@@ -302,12 +302,14 @@ let rec typ_def (def : A.def) (ty_env : type_env) (vcon_map : vcon_env) :
   let ty = function
     | A.Function (tau, funname, args, body) ->
         let new_env = bindUnique funname tau ty_env in
-        let tau', se = typ_of vcon_map new_env (Lambda (tau, args, body)) in
-        let get_lambda_body  = function 
-          | S.SLambda (_, body) -> body
-          | _ -> raise (TypeError "Encountered non lambda")  in
-        let fun_tau = get_checked_types tau tau' in
-        (S.SFunction (fun_tau, funname, (args, get_lambda_body se)), new_env)
+        let tau', sx = typ_of vcon_map new_env (Lambda (tau, args, body)) in
+        let final_tau = get_checked_types tau tau' in
+        let match_retrun  = function 
+        | S.SLambda body -> 
+            (S.SFunction (final_tau, funname, body), new_env) 
+        | _ -> (S.SVal (final_tau, funname, (final_tau, sx)), new_env) (*TODO double check*)
+        in 
+        match_retrun sx
     | A.Datatype (tau, val_cons) ->
         let vcons, argtaus = List.split val_cons in
         let func_taus =

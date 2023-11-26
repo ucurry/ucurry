@@ -47,6 +47,9 @@ let rec free ((t, exp) : SA.sexpr) : S.t =
         fscrutinee cexprs
   | SA.SLambda (formals, sexpr) ->
       let formalTypes = Util.get_formalty t in
+      (* let _ = Printf.printf "formals: %d\n" (List.length formals) in 
+    let _ = Printf.printf "formal_types: %d\n" (List.length formalTypes) in
+    let _ = failwith "REACHED CL" in *)
       let formalWithTypes = List.combine formalTypes formals in
       S.diff (free sexpr) (S.of_list formalWithTypes)
   | _ -> S.empty
@@ -59,11 +62,11 @@ let indexOf (x : string) (xs : freevar list) : int option =
   in
   indexOf' x xs 0
 
-let rec asClosure (funty : A.typ) (lambda : SA.lambda) (exclude : S.t)
+let rec asClosure (funty : A.typ) (lambda : SA.lambda)
     (captured : freevar list) : C.closure =
   let formals, sbody = lambda in
   let freeVarWithTypes =
-    S.elements (S.diff (free (funty, SA.SLambda lambda)) exclude)
+    S.elements (free (funty, SA.SLambda lambda))
   in
   let captured' =
     List.map
@@ -102,7 +105,7 @@ and closeExpWith (captured : freevar list) (le : SA.sexpr) : C.sexpr =
           let scrutinee' = exp scrutinee in
           let cases' = List.map (fun (p, e) -> (p, exp e)) cases in
           C.Case (scrutinee', cases')
-      | SA.SLambda lambda -> C.Closure (asClosure ty lambda S.empty captured)
+      | SA.SLambda lambda -> C.Closure (asClosure ty lambda captured)
       | SA.SNoexpr -> Noexpr
       | SA.SAt (se, i) -> C.At (exp se, i) )
   in
@@ -115,7 +118,7 @@ let close (def : SA.sdef) : Cast.def =
   (* 106 uses C.Funcode, probably because toplevel function
      can only capture global veriables*)
   | SA.SFunction (t, name, lambda) ->
-      let closure = asClosure t lambda (S.of_list [ (t, name) ]) [] in
+      let closure = asClosure t lambda [] in
       C.Function (t, name, closure)
   | SA.SDatatype (t, cons) -> C.Datatype (t, cons)
   | SA.SCheckTypeError _ ->
