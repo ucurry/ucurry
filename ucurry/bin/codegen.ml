@@ -21,8 +21,8 @@ let build_main_body defs =
     (* NOTE: didn't check if ty is actually a funty  *)
     match se with
     | C.Closure ((formals, body), cap) ->
-        let (formalty, retty) = Util.get_ft ty in
-        ([formalty], retty, formals, body, cap)
+        let formalty, retty = Util.get_ft ty in
+        ([ formalty ], retty, formals, body, cap)
     | _ -> raise (SHOULDNT_RAISED "not an C.closure type")
   in
   let datatype_map = CGUtil.build_datatypes context the_module defs in
@@ -47,81 +47,79 @@ let build_main_body defs =
     | None -> ignore (instr builder)
   in
 
-  let rec exprWithVarmap builder clstruct varmap =
-    let generate_function builder varmap name clstruct closure =
-      let formaltypes, retty, formals, body, cap = deconstructClosure closure in
+  let rec generate_function builder varmap name clstruct closure =
+    let formaltypes, retty, formals, body, cap = deconstructClosure closure in
+    (* Get the values and types of the captured list *)
+    let captured_values = List.map (exprWithVarmap builder clstruct varmap) cap in
+    let captured_types = List.map (fun (t, _) -> t) cap in
+    let captured_lltypes = List.map ltype_of_type captured_types in
 
-      (* Get the values and types of the captured list *)
-      let captured_values =
-        List.map (exprWithVarmap builder clstruct varmap) cap
-      in
-      let captured_types = List.map (fun (t, _) -> t) cap in
-      let captured_lltypes = List.map ltype_of_type captured_types in
-
-      (* Alloc for the captured struct; set each struct field*)
-      let struct_ptr =
-        L.build_alloca
-          (get_struct_type captured_types)
-          "captured_struct" builder
-      in
-      ignore
-        (U.map_i
-           (fun v i -> U.set_data_field v i struct_ptr builder)
-           0 captured_values);
-
-      (* make the struct pointer global *)
-      let struct_init =
-        L.const_struct context
-          (Array.of_list (List.map L.const_null captured_lltypes))
-      in
-      let global_struct_ptr =
-        L.define_global "captured" struct_init the_module
-      in
-      let e' = L.build_load struct_ptr "tmp" builder in
-      let _ = L.build_store e' global_struct_ptr builder in
-
-      (* build the function *)
-      let formal_lltypes = List.map ltype_of_type formaltypes in
-      let formalsandtypes = List.combine formal_lltypes formals in
-      let ftype =
-        L.function_type (ltype_of_type retty) (Array.of_list formal_lltypes)
-      in
-      let the_function = L.define_function name ftype the_module in
-      let varmap' = StringMap.add name the_function varmap in
-      let builder = L.builder_at_end context (L.entry_block the_function) in
-      let add_formal m (t, n) p =
-        let _ = L.set_value_name n p in
-        let local = L.build_alloca t n builder in
-        let _ = L.build_store p local builder in
-        StringMap.add n local m (* return a new local varmap *)
-      in
-      let localvarmap =
-        List.fold_left2 add_formal varmap formalsandtypes
-          (Array.to_list (L.params the_function))
-      in
-      let e' = exprWithVarmap builder global_struct_ptr localvarmap body in
-      let _ = add_terminal builder (fun b -> L.build_ret e' b) in
-      (the_function, varmap')
+    (* Alloc for the captured struct; set each struct field*)
+    let struct_ptr =
+      L.build_alloca (get_struct_type captured_types) "captured_struct" builder
     in
+    ignore
+      (U.map_i
+         (fun v i -> U.set_data_field v i struct_ptr builder)
+         0 captured_values);
 
+    (* make the struct pointer global *)
+    let struct_init =
+      L.const_struct context
+        (Array.of_list (List.map L.const_null captured_lltypes))
+    in
+    let global_struct_ptr = L.define_global "captured" struct_init the_module in
+    let e' = L.build_load struct_ptr "tmp" builder in
+    let _ = L.build_store e' global_struct_ptr builder in
+
+    (* build the function *)
+    let formal_lltypes = List.map ltype_of_type formaltypes in
+    let formalsandtypes = List.combine formal_lltypes formals in
+    let ftype =
+      L.function_type (ltype_of_type retty) (Array.of_list formal_lltypes)
+    in
+    (* let _ = failwith "REACHED" in  *)
+    let reg = L.build_alloca (L.pointer_type ftype) name builder in
+    let the_function = L.define_function name ftype the_module in
+    let _ = L.build_store the_function reg builder in 
+    let varmap' = StringMap.add name reg varmap in
+    let builder = L.builder_at_end context (L.entry_block the_function) in
+    let add_formal m (t, n) p =
+      let _ = L.set_value_name n p in
+      let local = L.build_alloca t n builder in
+      let _ = L.build_store p local builder in
+      StringMap.add n local m (* return a new local varmap *)
+    in
+    let localvarmap =
+      List.fold_left2 add_formal varmap' formalsandtypes
+        (Array.to_list (L.params the_function))
+    in
+    let e' = exprWithVarmap builder global_struct_ptr localvarmap body in
+    let _ = add_terminal builder (fun b -> L.build_ret e' b) in
+    (the_function, varmap')
+  and exprWithVarmap builder clstruct varmap =
     let rec expr builder (ty, top_exp) =
       match top_exp with
       | C.Literal l ->
           CGUtil.build_literal builder datatype_map context the_module
             string_pool ty l
-      | C.Var name -> L.build_load (lookup name varmap) name builder
+      | C.Var name -> L.build_load (lookup name varmap) name builder 
       | C.Assign (name, e) ->
           let e' = expr builder e in
           let _ = L.build_store e' (lookup name varmap) builder in
           e'
-      | C.Apply (((ft, _) as sf), args) ->
+      | C.Apply (((ft, fn) as sf), args) ->
           let fretty = U.get_retty ft in
           let llargs = List.rev (List.map (expr builder) (List.rev args)) in
+          (* let fdef fn = match fn with
+          | C.Var n -> lookup n varmap
+          | _ -> failwith "sdfs" in  *)
           let fdef = expr builder sf in
           let result =
             match fretty with A.UNIT_TY -> "" | _ -> "apply" ^ "_result"
           in
           L.build_call fdef (Array.of_list llargs) result builder
+          (* L.build_call (fdef fn) (Array.of_list llargs) result builder *)
       | C.If (pred, then_expr, else_expr) ->
           (* 90% code referenced from https://releases.llvm.org/12.0.1/docs/tutorial/OCamlLangImpl5.html#llvm-ir-for-if-then-else *)
           (* emit expression for condition code *)
@@ -272,12 +270,19 @@ let build_main_body defs =
   let stmt builder varmap = function
     | C.Val (tau, name, e) ->
         (* Handle string -> create a global string pointer and assign the global name to the name *)
+        let reg = L.build_alloca (ltype_of_type tau) name builder in
+        let varmap' = StringMap.add name reg varmap in
         let e' =
           exprWithVarmap builder (L.const_null (L.pointer_type void_t)) varmap e
         in
-        let reg = L.build_alloca (ltype_of_type tau) name builder in
-        let varmap' = StringMap.add name reg varmap in
-        let _ = L.build_store e' (lookup name varmap') builder in
+        let _ = L.build_store e' reg builder in
+        (builder, varmap')
+    | C.Function (tau, name, closure) ->
+        let _, varmap' =
+          generate_function builder varmap name
+            (L.const_null (L.pointer_type void_t))
+            (tau, C.Closure closure)
+        in
         (builder, varmap')
     | C.Exp e ->
         let _ =

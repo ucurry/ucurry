@@ -26,6 +26,7 @@ and thunk = sexpr (* which will be a Closure form *)
 
 and def =
   | Val of A.typ * string * sexpr
+  | Function of A.typ * string * closure
   | Datatype of A.typ * A.constructor list
   | Exp of sexpr
   | CheckTypeError of def

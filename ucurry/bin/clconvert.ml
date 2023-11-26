@@ -28,7 +28,7 @@ let rec free ((t, exp) : SA.sexpr) : S.t =
   match exp with
   | SA.SLiteral _ -> S.empty
   | SA.SVar name -> S.of_list [ (t, name) ]
-  | SA.SAssign (_, thunk) -> free thunk
+  | SA.SAssign (assigned, e) -> S.union (free e) (S.of_list [ (t, assigned) ])
   | SA.SApply (f, thunks) -> unionFree (f :: thunks)
   | SA.SIf (s1, s2, s3) -> unionFree [ s1; s2; s3 ]
   | SA.SLet (bindings, body) ->
@@ -47,7 +47,6 @@ let rec free ((t, exp) : SA.sexpr) : S.t =
         fscrutinee cexprs
   | SA.SLambda (formals, sexpr) ->
       let formalTypes = Util.get_formalty t in
-      (* TODO: no auto curry yet; only multi-arg *)
       let formalWithTypes = List.combine formalTypes formals in
       S.diff (free sexpr) (S.of_list formalWithTypes)
   | _ -> S.empty
@@ -60,19 +59,21 @@ let indexOf (x : string) (xs : freevar list) : int option =
   in
   indexOf' x xs 0
 
-(* close expression *)
-let rec closeExpWith (captured : freevar list) (le : SA.sexpr) : C.sexpr =
-  let asClosure (funty : A.typ) (lambda : SA.lambda) : C.closure =
-    let formals, sbody = lambda in
-    let freeVarWithTypes = S.elements (free (funty, SA.SLambda lambda)) in
-    let captured' =
-      List.map
-        (fun (t, n) -> closeExpWith captured (t, SA.SVar n))
-        freeVarWithTypes
-    in
-    ((formals, closeExpWith freeVarWithTypes sbody), captured')
+let rec asClosure (funty : A.typ) (lambda : SA.lambda) (exclude : S.t)
+    (captured : freevar list) : C.closure =
+  let formals, sbody = lambda in
+  let freeVarWithTypes =
+    S.elements (S.diff (free (funty, SA.SLambda lambda)) exclude)
   in
+  let captured' =
+    List.map
+      (fun (t, n) -> closeExpWith captured (t, SA.SVar n))
+      freeVarWithTypes
+  in
+  ((formals, closeExpWith freeVarWithTypes sbody), captured')
 
+(* close expression *)
+and closeExpWith (captured : freevar list) (le : SA.sexpr) : C.sexpr =
   let rec exp ((ty, tope) : SA.sexpr) : C.sexpr =
     ( ty,
       match tope with
@@ -82,8 +83,9 @@ let rec closeExpWith (captured : freevar list) (le : SA.sexpr) : C.sexpr =
           | Some i -> C.Captured i
           | None -> C.Var name (* this case, name is a local *))
       | SA.SAssign (name, e) -> (
-          (* cannot captured local cannot be set, why?d *)
+          (* cannot captured local cannot be set, why? *)
           match indexOf name captured with
+          (* | Some _ -> C.Assign (name, exp e) *)
           | Some _ -> raise (Failure "Cannot assign to captured variable")
           | None -> C.Assign (name, exp e))
       | SA.SApply (f, ls) -> C.Apply (exp f, List.map exp ls)
@@ -100,7 +102,7 @@ let rec closeExpWith (captured : freevar list) (le : SA.sexpr) : C.sexpr =
           let scrutinee' = exp scrutinee in
           let cases' = List.map (fun (p, e) -> (p, exp e)) cases in
           C.Case (scrutinee', cases')
-      | SA.SLambda lambda -> C.Closure (asClosure ty lambda)
+      | SA.SLambda lambda -> C.Closure (asClosure ty lambda S.empty captured)
       | SA.SNoexpr -> Noexpr
       | SA.SAt (se, i) -> C.At (exp se, i) )
   in
@@ -112,6 +114,9 @@ let close (def : SA.sdef) : Cast.def =
   | SA.SExp e -> C.Exp (closeExpWith [] e)
   (* 106 uses C.Funcode, probably because toplevel function
      can only capture global veriables*)
+  | SA.SFunction (t, name, lambda) ->
+      let closure = asClosure t lambda (S.of_list [ (t, name) ]) [] in
+      C.Function (t, name, closure)
   | SA.SDatatype (t, cons) -> C.Datatype (t, cons)
   | SA.SCheckTypeError _ ->
       raise (CLOSURE_NOT_YET_IMPLEMENTED "check type error")

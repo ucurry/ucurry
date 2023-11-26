@@ -37,13 +37,17 @@ let rec combine_formal_types taus formals =
       (tau, f) :: combine_formal_types tau_rest f_rest
   | _ -> failwith "combine formals"
 
-let get_ft = function 
-  | A.FUNCTION_TY (formalty, retty) -> (formalty, retty) 
+let get_ft = function
+  | A.FUNCTION_TY (formalty, retty) -> (formalty, retty)
   | _ -> failwith "not function type"
 
-let get_retty t = let (_, retty) = get_ft t in retty
+let get_retty t =
+  let _, retty = get_ft t in
+  retty
 
-let get_formalty t = let (formalty, _) = get_ft t in [formalty]
+let get_formalty t =
+  let formalty, _ = get_ft t in
+  [ formalty ]
 
 let rec map_i (f : 'a -> int -> 'b) (i : int) (l : 'a list) =
   match l with [] -> [] | x :: xs -> f x i :: map_i f (i + 1) xs

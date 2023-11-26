@@ -46,6 +46,7 @@ and svalue =
 type sdef =
   | SDatatype of typ * constructor list
   | SVal of typ * string * sexpr
+  | SFunction of typ * string * lambda
   | SExp of sexpr
   | SCheckTypeError of sdef
 

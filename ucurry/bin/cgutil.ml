@@ -192,6 +192,7 @@ let build_string_pool (program : C.program) (builder : L.llbuilder) :
     match sdef with
     | C.Datatype _ -> pool
     | C.Val (_, _, sexpr) -> mk_expr_string_pool builder pool sexpr
+    | C.Function (_, _, ((_, se), _)) -> mk_expr_string_pool builder pool se
     | C.Exp sexpr -> mk_expr_string_pool builder pool sexpr
     | C.CheckTypeError _ -> pool
   in
