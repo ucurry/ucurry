@@ -77,7 +77,7 @@ let build_literal builder (ty_map : L.lltype StringMap.t)
         (* TODO: needs to know the field_v's type to handle
                  cases for tuple and list *)
         and con_v =
-          L.build_alloca (StringMap.find con_name ty_map) con_name builder
+          L.build_malloc (StringMap.find con_name ty_map) con_name builder
         and tag_v = L.const_int i32_t i in
         ignore (set_data_field field_v i con_v builder);
         ignore (set_data_field tag_v 0 con_v builder);
@@ -95,7 +95,7 @@ let build_literal builder (ty_map : L.lltype StringMap.t)
         in
         let hd_v = to_lit subty hd in
         let tl_ptr = to_lit ty tl in
-        let list_ptr = L.build_alloca list_ty "list_ptr" builder in
+        let list_ptr = L.build_malloc list_ty "list_ptr" builder in
         ignore (set_data_field hd_v 0 list_ptr builder);
         ignore (set_data_field tl_ptr 1 list_ptr builder);
         list_ptr
@@ -104,7 +104,7 @@ let build_literal builder (ty_map : L.lltype StringMap.t)
         | TUPLE_TY taus ->
             let tuple_ptr_ty = ltype_of_type ty_map llmodule context ty in
             let tuple_ty = L.element_type tuple_ptr_ty in
-            let tuple_ptr = L.build_alloca tuple_ty "tuple address" builder in
+            let tuple_ptr = L.build_malloc tuple_ty "tuple address" builder in
             let inner_values = List.map2 to_lit taus vs in
             let set_feild value index =
               Util.set_data_field value index tuple_ptr builder

@@ -33,7 +33,7 @@ let get_ft = function
 
 let findType (name : string) (env : 'a StringMap.t) =
   try StringMap.find name env
-  with Not_found -> raise (TypeError ("name " ^ name ^ "unbound"))
+  with Not_found -> raise (TypeError ("name " ^ name ^ " unbound"))
 
 let findFunctionType (name : string) (env : type_env) =
   match findType name env with
@@ -244,18 +244,27 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
                    Unop (u, Literal (STRING "false")) ))
         | IsNull, LIST_TY _ -> (BOOL_TY, S.SUnop (u, (tau, se)))
         | _ -> raise (TypeError "type error in unoary operaion"))
-    | A.Lambda (lambda_tau, formals, body) ->
-        let rec check_lambda tau fs env =
-          match (tau, fs) with
-          | _, [] ->
-              let tau', se = typ_of vcon_map env body in
-              let _ = get_checked_types tau' tau in
-              (tau, se)
-          | A.FUNCTION_TY (tau1, tau2), hd :: tl -> (* make nested lambda to conform to one-arg function form *)
-              (tau, S.SLambda ([hd], check_lambda tau2 tl (StringMap.add hd tau1 env)))
-          | _ -> raise (TypeError "lambda type unmatch")
-        in
-        check_lambda lambda_tau formals ty_env
+        | A.Lambda (lambda_tau, formals, body) ->
+          let rec check_lambda tau fs env =
+            match (tau, fs) with
+            | _, [] -> 
+                let tau', se = typ_of vcon_map env body in
+                let _ = get_checked_types tau' tau in
+                (tau, se)
+            | A.FUNCTION_TY (tau1, tau2), hd :: []  ->
+                let new_env = StringMap.add hd tau1 env in
+                let tau', se = typ_of vcon_map new_env body in
+                let final_tau = get_checked_types tau' tau2 in
+                ( tau,
+                  S.SLambda ([hd], (final_tau, se)))
+            | A.FUNCTION_TY (tau1, tau2), hd :: tl ->
+                (* make nested lambda to conform to one-arg function form *)
+                ( tau,
+                  S.SLambda
+                    ([ hd ], check_lambda tau2 tl (StringMap.add hd tau1 env)) )
+            | _ -> raise (TypeError "lambda type unmatch")
+          in
+          check_lambda lambda_tau formals ty_env
     | A.At (e, i) -> (
         let tau, se = ty e in
         match tau with

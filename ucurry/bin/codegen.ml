@@ -47,14 +47,23 @@ let build_main_body defs =
     | None -> ignore (instr builder)
   in
 
-  let rec exprWithVarmap builder clstruct varmap =
-    let generate_function builder varmap name clstruct closure =
+  let rec exprWithVarmap builder clstruct varmap name =
+    let generate_function builder varmap fun_name clstruct closure =
       let formaltypes, retty, formals, body, cap = deconstructClosure closure in
+    
+      (* define the function *)
+      let formal_lltypes = List.map ltype_of_type formaltypes in
+      let formalsandtypes = List.combine formal_lltypes formals in
+      let ftype = L.function_type (ltype_of_type retty) (Array.of_list formal_lltypes) in
+      let the_function = L.define_function name ftype the_module in
+
+      (* store the lambda into the varmap *)
+      let reg = L.build_alloca (L.pointer_type ftype) name builder in
+      let _ = L.build_store the_function reg builder in 
+      let varmap' = StringMap.add fun_name reg varmap in
 
       (* Get the values and types of the captured list *)
-      let captured_values =
-        List.map (exprWithVarmap builder clstruct varmap) cap
-      in
+      let captured_values = List.map (exprWithVarmap builder clstruct varmap' "it") cap  in
       let captured_types = List.map (fun (t, _) -> t) cap in
       let captured_lltypes = List.map ltype_of_type captured_types in
 
@@ -74,20 +83,14 @@ let build_main_body defs =
         L.const_struct context
           (Array.of_list (List.map L.const_null captured_lltypes))
       in
+
       let global_struct_ptr =
         L.define_global "captured" struct_init the_module
       in
+
       let e' = L.build_load struct_ptr "tmp" builder in
       let _ = L.build_store e' global_struct_ptr builder in
-
-      (* build the function *)
-      let formal_lltypes = List.map ltype_of_type formaltypes in
-      let formalsandtypes = List.combine formal_lltypes formals in
-      let ftype =
-        L.function_type (ltype_of_type retty) (Array.of_list formal_lltypes)
-      in
-      let the_function = L.define_function name ftype the_module in
-      let varmap' = StringMap.add name the_function varmap in
+      (* let varmap' = StringMap.add name the_function varmap in *)
       let builder = L.builder_at_end context (L.entry_block the_function) in
       let add_formal m (t, n) p =
         let _ = L.set_value_name n p in
@@ -99,9 +102,9 @@ let build_main_body defs =
         List.fold_left2 add_formal varmap formalsandtypes
           (Array.to_list (L.params the_function))
       in
-      let e' = exprWithVarmap builder global_struct_ptr localvarmap body in
+      let e' = exprWithVarmap builder global_struct_ptr localvarmap "it" body in
       let _ = add_terminal builder (fun b -> L.build_ret e' b) in
-      (the_function, varmap')
+      (the_function, varmap)
     in
 
     let rec expr builder (ty, top_exp) =
@@ -169,7 +172,7 @@ let build_main_body defs =
                 vm')
               varmap bindings
           in
-          exprWithVarmap builder clstruct varmap' exp
+          exprWithVarmap builder clstruct varmap' name exp
       | C.Begin sexprs ->
           List.fold_left
             (fun _ sexpr -> expr builder sexpr)
@@ -203,7 +206,7 @@ let build_main_body defs =
               let list_ty = L.element_type (ltype_of_type ty)
               and hd_v = e1'
               and tl_ptr = e2' in
-              let list_ptr = L.build_alloca list_ty "list_ptr" builder in
+              let list_ptr = L.build_malloc list_ty "list_ptr" builder in
               ignore (Util.set_data_field hd_v 0 list_ptr builder);
               ignore (Util.set_data_field tl_ptr 1 list_ptr builder);
               list_ptr)
@@ -256,7 +259,7 @@ let build_main_body defs =
       | C.Captured index -> U.get_data_field index clstruct builder "capvar"
       | C.Closure (_, _) ->
           let e', _ =
-            generate_function builder varmap "lambda" clstruct (ty, top_exp)
+            generate_function builder varmap name clstruct (ty, top_exp)
           in
           e'
       | C.Case _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "case")
@@ -272,16 +275,14 @@ let build_main_body defs =
   let stmt builder varmap = function
     | C.Val (tau, name, e) ->
         (* Handle string -> create a global string pointer and assign the global name to the name *)
-        let e' =
-          exprWithVarmap builder (L.const_null (L.pointer_type void_t)) varmap e
-        in
         let reg = L.build_alloca (ltype_of_type tau) name builder in
         let varmap' = StringMap.add name reg varmap in
-        let _ = L.build_store e' (lookup name varmap') builder in
+        let e' = exprWithVarmap builder (L.const_null (L.pointer_type void_t)) varmap' name e  in
+        let _ = L.build_store e' reg builder in
         (builder, varmap')
     | C.Exp e ->
         let _ =
-          exprWithVarmap builder (L.const_null (L.pointer_type void_t)) varmap e
+          exprWithVarmap builder (L.const_null (L.pointer_type void_t)) varmap "it" e 
         in
         (builder, varmap)
     | C.Datatype _ -> (builder, varmap)
