@@ -19,6 +19,7 @@ bool is_constant_empty =
                 (case [] 
                   of [] => true
                   | x :: xs => false);
+
 println is_constant_empty;
 
 check_type_error 
@@ -43,10 +44,26 @@ fun : int -> int :
 pow n = n * n ;
 
 fun : (int -> int) -> int list -> int list:
-pows f nums  = (case nums of [] => []
-                 | h :: t => (f h) :: (pows f t) );
-int list powers = ((pows pow) [1, 2, 3]);
+map f nums  = (case nums of [] => []
+                 | h :: t => (f h) :: (map f t));
+int list powers = ((map pow) [1, 2, 3]);
+
 println hd powers;
 println (hd (tl powers));
 println (hd (tl (tl powers)));
 println (null? (tl (tl (tl powers))));
+
+fun : (int -> bool) -> int list -> int list: 
+filter f nums = (case nums of [] => []
+                  | h :: t => if (f h) 
+                              then (h :: (filter f t))
+                              else (filter f t));
+fun : int -> bool :
+even num = (num % 2 == 0);
+println (even 2);
+println (even 1);
+
+int list evens = (filter even [1, 2, 3, 4]);
+println hd evens;
+println (hd (tl evens));
+println (null? (tl (tl evens)));
