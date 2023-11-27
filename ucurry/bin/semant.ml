@@ -27,8 +27,8 @@ let nth (l : 'a list) (n : int) =
   with Failure _ | Invalid_argument _ ->
     raise (TypeError "access out of the bound")
 
-let get_ft = function 
-  | A.FUNCTION_TY (formalty, retty) -> (formalty, retty) 
+let get_ft = function
+  | A.FUNCTION_TY (formalty, retty) -> (formalty, retty)
   | _ -> raise (TypeError "not function type")
 
 let findType (name : string) (env : 'a StringMap.t) =
@@ -173,17 +173,19 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
         let var_ty = findType x ty_env and assign_ty, se = ty e in
         let final_tau = get_checked_types var_ty assign_ty in
         (final_tau, S.SAssign (x, (final_tau, se)))
-
-    | A.Apply (e, [arg]) -> (* base case: type checks *)
-        let ft, fe = ty e in 
-        let formalty, retty = get_ft ft in 
+    | A.Apply (e, [ arg ]) ->
+        (* base case: type checks *)
+        let ft, fe = ty e in
+        let formalty, retty = get_ft ft in
         let argty, arge = ty arg in
-        let final_arg_tau = get_checked_types formalty argty in 
-        (retty, S.SApply((ft, fe), [(final_arg_tau, arge)]))
-
-    | A.Apply (e, es) -> (* make nested apply to conform to the one-arg apply form *)
-        ty (List.fold_left (fun acc_apply arg -> A.Apply (acc_apply, [arg])) e es)
-         
+        let final_arg_tau = get_checked_types formalty argty in
+        (retty, S.SApply ((ft, fe), [ (final_arg_tau, arge) ]))
+    | A.Apply (e, es) ->
+        (* make nested apply to conform to the one-arg apply form *)
+        ty
+          (List.fold_left
+             (fun acc_apply arg -> A.Apply (acc_apply, [ arg ]))
+             e es)
     | A.If (cond, e1, e2) ->
         let cond_tau, cond_e = ty cond
         and e1_tau, se1 = ty e1
@@ -244,27 +246,26 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
                    Unop (u, Literal (STRING "false")) ))
         | IsNull, LIST_TY _ -> (BOOL_TY, S.SUnop (u, (tau, se)))
         | _ -> raise (TypeError "type error in unoary operaion"))
-        | A.Lambda (lambda_tau, formals, body) ->
-          let rec check_lambda tau fs env =
-            match (tau, fs) with
-            | _, [] -> 
-                let tau', se = typ_of vcon_map env body in
-                let _ = get_checked_types tau' tau in
-                (tau, se)
-            | A.FUNCTION_TY (tau1, tau2), hd :: []  ->
-                let new_env = StringMap.add hd tau1 env in
-                let tau', se = typ_of vcon_map new_env body in
-                let final_tau = get_checked_types tau' tau2 in
-                ( tau,
-                  S.SLambda ([hd], (final_tau, se)))
-            | A.FUNCTION_TY (tau1, tau2), hd :: tl ->
-                (* make nested lambda to conform to one-arg function form *)
-                ( tau,
-                  S.SLambda
-                    ([ hd ], check_lambda tau2 tl (StringMap.add hd tau1 env)) )
-            | _ -> raise (TypeError "lambda type unmatch")
-          in
-          check_lambda lambda_tau formals ty_env
+    | A.Lambda (lambda_tau, formals, body) ->
+        let rec check_lambda tau fs env =
+          match (tau, fs) with
+          | _, [] ->
+              let tau', se = typ_of vcon_map env body in
+              let _ = get_checked_types tau' tau in
+              (tau, se)
+          | A.FUNCTION_TY (tau1, tau2), hd :: [] ->
+              let new_env = StringMap.add hd tau1 env in
+              let tau', se = typ_of vcon_map new_env body in
+              let final_tau = get_checked_types tau' tau2 in
+              (tau, S.SLambda ([ hd ], (final_tau, se)))
+          | A.FUNCTION_TY (tau1, tau2), hd :: tl ->
+              (* make nested lambda to conform to one-arg function form *)
+              ( tau,
+                S.SLambda
+                  ([ hd ], check_lambda tau2 tl (StringMap.add hd tau1 env)) )
+          | _ -> raise (TypeError "lambda type unmatch")
+        in
+        check_lambda lambda_tau formals ty_env
     | A.At (e, i) -> (
         let tau, se = ty e in
         match tau with

@@ -21,8 +21,8 @@ let build_main_body defs =
     (* NOTE: didn't check if ty is actually a funty  *)
     match se with
     | C.Closure ((formals, body), cap) ->
-        let (formalty, retty) = Util.get_ft ty in
-        ([formalty], retty, formals, body, cap)
+        let formalty, retty = Util.get_ft ty in
+        ([ formalty ], retty, formals, body, cap)
     | _ -> raise (SHOULDNT_RAISED "not an C.closure type")
   in
   let datatype_map = CGUtil.build_datatypes context the_module defs in
@@ -50,20 +50,24 @@ let build_main_body defs =
   let rec exprWithVarmap builder clstruct varmap name =
     let generate_function builder varmap fun_name clstruct closure =
       let formaltypes, retty, formals, body, cap = deconstructClosure closure in
-    
+
       (* define the function *)
       let formal_lltypes = List.map ltype_of_type formaltypes in
       let formalsandtypes = List.combine formal_lltypes formals in
-      let ftype = L.function_type (ltype_of_type retty) (Array.of_list formal_lltypes) in
+      let ftype =
+        L.function_type (ltype_of_type retty) (Array.of_list formal_lltypes)
+      in
       let the_function = L.define_function name ftype the_module in
 
       (* store the lambda into the varmap *)
       let reg = L.build_alloca (L.pointer_type ftype) name builder in
-      let _ = L.build_store the_function reg builder in 
+      let _ = L.build_store the_function reg builder in
       let varmap' = StringMap.add fun_name reg varmap in
 
       (* Get the values and types of the captured list *)
-      let captured_values = List.map (exprWithVarmap builder clstruct varmap' "it") cap  in
+      let captured_values =
+        List.map (exprWithVarmap builder clstruct varmap' "it") cap
+      in
       let captured_types = List.map (fun (t, _) -> t) cap in
       let captured_lltypes = List.map ltype_of_type captured_types in
 
@@ -277,12 +281,18 @@ let build_main_body defs =
         (* Handle string -> create a global string pointer and assign the global name to the name *)
         let reg = L.build_alloca (ltype_of_type tau) name builder in
         let varmap' = StringMap.add name reg varmap in
-        let e' = exprWithVarmap builder (L.const_null (L.pointer_type void_t)) varmap' name e  in
+        let e' =
+          exprWithVarmap builder
+            (L.const_null (L.pointer_type void_t))
+            varmap' name e
+        in
         let _ = L.build_store e' reg builder in
         (builder, varmap')
     | C.Exp e ->
         let _ =
-          exprWithVarmap builder (L.const_null (L.pointer_type void_t)) varmap "it" e 
+          exprWithVarmap builder
+            (L.const_null (L.pointer_type void_t))
+            varmap "it" e
         in
         (builder, varmap)
     | C.Datatype _ -> (builder, varmap)

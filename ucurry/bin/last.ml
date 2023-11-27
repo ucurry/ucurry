@@ -24,7 +24,8 @@ and lambda = string list * sexpr
 and thunk = sexpr (* which will be a Lambda form *)
 
 and def =
-  | Function of string * sexpr (* TODO: lazy-convert would eventually convert all top-level Val to Val(ty, name, slambda) *)
+  | Function of string * sexpr
+    (* TODO: lazy-convert would eventually convert all top-level Val to Val(ty, name, slambda) *)
   | Datatype of A.typ * A.constructor list
   | Exp of sexpr
   | CheckTypeError of def
