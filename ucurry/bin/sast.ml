@@ -50,6 +50,6 @@ type sdef =
   | SExp of sexpr
   | SCheckTypeError of sdef
 
-and constructor = string * typ (* TODO: consider changing into int * typ  *)
+and constructor = string * typ
 
 type sprogram = sdef list

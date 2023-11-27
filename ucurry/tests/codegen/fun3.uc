@@ -2,13 +2,13 @@ fun: unit -> int :
 idfun u = 1;
 println (idfun ());
 
---fun : unit -> (unit -> int):
---f = \(unit -> int) -> 1;
----- ((f ()) ());
+fun : unit -> (unit -> int):
+f u = \(unit -> int) u -> 1;
+((f ()) ());
 
--- -- TODO: automatic curry
--- fun: int -> int -> int :
--- f x y = x + y;
+-- automatic curry
+fun: int -> int -> int :
+g x y = x + y;
 
--- fun: int -> int:
--- addone = (f 1);
+fun: int -> int:
+addone = (g 1);

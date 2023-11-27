@@ -47,9 +47,9 @@ let rec free ((t, exp) : SA.sexpr) : S.t =
         fscrutinee cexprs
   | SA.SLambda (formals, sexpr) ->
       let formalTypes = Util.get_formalty t in
-      (* let _ = Printf.printf "formals: %d\n" (List.length formals) in 
-    let _ = Printf.printf "formal_types: %d\n" (List.length formalTypes) in
-    let _ = failwith "REACHED CL" in *)
+      (* let _ = Printf.printf "formals: %d\n" (List.length formals) in
+         let _ = Printf.printf "formal_types: %d\n" (List.length formalTypes) in
+         let _ = failwith "REACHED CL" in *)
       let formalWithTypes = List.combine formalTypes formals in
       S.diff (free sexpr) (S.of_list formalWithTypes)
   | _ -> S.empty
@@ -62,12 +62,10 @@ let indexOf (x : string) (xs : freevar list) : int option =
   in
   indexOf' x xs 0
 
-let rec asClosure (funty : A.typ) (lambda : SA.lambda)
-    (captured : freevar list) : C.closure =
+let rec asClosure (funty : A.typ) (lambda : SA.lambda) (captured : freevar list)
+    : C.closure =
   let formals, sbody = lambda in
-  let freeVarWithTypes =
-    S.elements (free (funty, SA.SLambda lambda))
-  in
+  let freeVarWithTypes = S.elements (free (funty, SA.SLambda lambda)) in
   let captured' =
     List.map
       (fun (t, n) -> closeExpWith captured (t, SA.SVar n))
