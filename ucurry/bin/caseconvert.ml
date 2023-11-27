@@ -32,7 +32,7 @@ let generate_tree
                 and body_tau, _ = con_e in 
                 body_tau, S.SLet ([hd_binding; tl_binding], con_e)
           in  Node (cond, Leaf then_exp, Leaf else_exp)
-        | _ -> raise (Impossible "not implemented ")
+        | _ -> Leaf default (* TODO: not implemented for other pattern matching cases  *)
         in convert cases
 
 let case_convert (_ : A.typ) (scrutinee : S.sexpr)
