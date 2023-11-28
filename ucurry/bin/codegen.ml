@@ -201,8 +201,7 @@ let build_main_body defs =
       | C.Closure (_, cap) ->
           let _, the_function = alloc_function "lambda" ty in
           let clstruct' = build_captured_struct builder varmap clstruct cap in
-          ignore
-            (build_function_body the_function clstruct' (ty, top_exp));
+          ignore (build_function_body the_function clstruct' (ty, top_exp));
           the_function
       | C.Case _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "case")
       | C.At (e, i) ->
@@ -211,7 +210,6 @@ let build_main_body defs =
       | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "SIFN")
     in
     expr builder
-  
   and alloc_function name fun_tau =
     let formaltype, retty = Util.get_ft fun_tau in
     let formal_lltypes = List.map ltype_of_type [ formaltype ] in
@@ -220,7 +218,6 @@ let build_main_body defs =
     in
     let the_function = L.define_function name ftype the_module in
     (ftype, the_function)
-  
   and build_captured_struct builder varmap clstruct cap =
     (* Get the values and types of the captured list *)
     let captured_values =
@@ -247,7 +244,6 @@ let build_main_body defs =
     let e' = L.build_load struct_ptr "tmp" builder in
     let _ = L.build_store e' global_struct_ptr builder in
     global_struct_ptr
-  
   and build_function_body the_function clstruct closure =
     let formaltypes, _, formals, body, _ = deconstructClosure closure in
     let formal_lltypes = List.map ltype_of_type formaltypes in
@@ -265,9 +261,8 @@ let build_main_body defs =
         (Array.to_list (L.params the_function))
     in
     let e' = exprWithVarmap builder clstruct localvarmap body in
-    let _ = add_terminal builder (fun b -> L.build_ret e' b) in 
-    builder 
-  
+    let _ = add_terminal builder (fun b -> L.build_ret e' b) in
+    builder
   (* varmap is the variable environment that maps (variable : string |---> to reg : llvale) *)
   and stmt builder varmap = function
     | C.Val (tau, name, e) ->

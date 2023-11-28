@@ -5,4 +5,3 @@ datatype AlphaColor = Green of int
                     | Black of int; 
 datatype Background = Pure of Color 
                     | Number of int;
-check_type_error datatype Color = Purple; 

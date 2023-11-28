@@ -26,6 +26,7 @@ let mid (_, b, _) = b
 let pair_with a b = (b, a)
 let o f g x = f (g x)
 let getOp default = function Some a -> a | None -> default
+let flip f a b = f b a
 
 let rec fold_left_i (f : 'a -> int -> 'c -> 'c) (i : int) (acc : 'c)
     (l : 'a list) =
