@@ -164,7 +164,7 @@ let rec typ_of (vcon_env :S.vcon_env) (vcon_sets: S.vcon_sets) (type_env : S.typ
         | Println, STRING_TY
         | Print, INT_TY
         | Println, INT_TY ->
-            (UNIT_TY, S.SUnop (u, (tau, se)))
+            (INT_TY, S.SUnop (u, (tau, se)))
         | Print, BOOL_TY | Println, BOOL_TY ->
             ty
               (If
