@@ -244,7 +244,8 @@ let build_main_body defs =
     let e' = L.build_load struct_ptr "tmp" builder in
     let _ = L.build_store e' global_struct_ptr builder in
     global_struct_ptr
-  and build_function_body the_function clstruct closure =
+  
+  and build_function_body the_function clstruct closure : unit =
     let formaltypes, _, formals, body, _ = deconstructClosure closure in
     let formal_lltypes = List.map ltype_of_type formaltypes in
     let formalsandtypes = List.combine formal_lltypes formals in
@@ -261,8 +262,8 @@ let build_main_body defs =
         (Array.to_list (L.params the_function))
     in
     let e' = exprWithVarmap builder clstruct localvarmap body in
-    let _ = add_terminal builder (fun b -> L.build_ret e' b) in
-    builder
+    ignore (add_terminal builder (fun b -> L.build_ret e' b)); 
+  
   (* varmap is the variable environment that maps (variable : string |---> to reg : llvale) *)
   and stmt builder varmap = function
     | C.Val (tau, name, e) ->
@@ -285,10 +286,9 @@ let build_main_body defs =
         let clstruct =
           build_captured_struct builder varmap' null_clstruct cap
         in
-        let builder =
+        ignore(
           build_function_body the_function clstruct
-            (tau, C.Closure (lambda, cap))
-        in
+            (tau, C.Closure (lambda, cap)));
         (builder, varmap')
     | C.Exp e ->
         let _ = exprWithVarmap builder null_clstruct varmap e in
