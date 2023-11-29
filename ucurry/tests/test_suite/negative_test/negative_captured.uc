@@ -5,8 +5,9 @@
 -- the variable is unknown (and the capture list should be modified to store
 -- references rather than values)
 
--- If we remove this semantics check (line 90 in `clconvert.ml`), coegen will
--- fail with an unknown exception
+-- If we remove this semantics check (line 90 in `clconvert.ml`), codegen will
+-- fail because we only maintain variable map for formals and locals when
+-- generating a function body (line 266-8 in `codegen.ml`)
 
 -- We are able to mutate local variables in the closure (the ones created by
 -- a lambda or a let (see `set-local.uc`)) becuase their heap location is known 

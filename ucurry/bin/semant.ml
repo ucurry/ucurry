@@ -172,7 +172,7 @@ let rec typ_of (vcon_env :S.vcon_env) (vcon_sets: S.vcon_sets) (type_env : S.typ
                    Unop (u, Literal (STRING "true")),
                    Unop (u, Literal (STRING "false")) ))
         | IsNull, LIST_TY _ -> (BOOL_TY, S.SUnop (u, (tau, se)))
-        | _ -> raise (TypeError "type error in unoary operaion"))
+        | _ -> raise (TypeError "type error in unary operaion"))
     | A.Lambda (lambda_tau, formals, body) ->
         let rec check_lambda tau fs env =
           match (tau, fs) with

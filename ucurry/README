@@ -46,6 +46,8 @@ auto_curry.uc: Tests if auto-currying works when a function is defined to take
                in multiple formals and only partially applied.
 
 hof.uc: Test if a function can be passed in as argument.
+        We also have a map function that operatates on
+        an integer list.
 
 lambda.uc: Define and apply anonymous functions, and bind anonymous functions 
            to a variable.
@@ -70,9 +72,10 @@ negative_capture.uc: A function cannot mutate its captured variable,
                     x is a captured variable in function f, and the function
                     body assign x to other value, which is disallowed in 
                     ucurry semantic.
-negative_func_apply.uc: Function application applies incorrect number of argument.
-                       A type error is raised when extra arguments are applied. 
-                       A partial application will return back a function. 
+negative_func_apply1.uc: A type error is raised when extra arguments are applied. 
+negative_func_apply2.uc:
+                       Type Error. res should be `int -> int` because 
+                       a partial application will return back a function. 
 negative_value_1.uc: list cannot contain elements of different types 
 negative_value_2.uc: case expression on list does not match with the type of the 
                      scrutinee  

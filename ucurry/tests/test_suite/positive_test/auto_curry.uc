@@ -1,3 +1,4 @@
+-- functions are curried, we can do partial application
 fun: int -> int -> int :
 f x y = x + y;
 
