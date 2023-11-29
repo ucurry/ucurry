@@ -38,11 +38,12 @@ type typ =
   | TUPLE_TY of typ list
 
 type pattern =
+  | PATTERNS of pattern list
   | VAR_PAT of string
-  | CON_PAT of string * pattern list
-  | WILDCARD
+  | CON_PAT of string * pattern
   | CONCELL of string * string
   | NIL
+  | WILDCARD
 
 type expr =
   | Literal of value
@@ -58,7 +59,6 @@ type expr =
   | Case of expr * case_expr list
   | At of expr * int
   | Noexpr
-  
 
 and value =
   | Construct of string * value
@@ -112,16 +112,13 @@ let string_of_uop = function
   | IsNull -> "null?"
   | _ -> "internal primitive"
 
-(* | Tuple(l) -> string_of_tupleLiteral l *)
-
 let rec string_of_pattern = function
+  | PATTERNS [] -> ""
+  | PATTERNS ps ->
+      "( " ^ String.concat "," (List.map string_of_pattern ps) ^ ")"
   | VAR_PAT s -> s
-  | CON_PAT (c, []) -> c
-  | CON_PAT (c, [ p ]) -> c ^ " " ^ string_of_pattern p
-  | CON_PAT (c, pl) ->
-      c ^ " (" ^ String.concat ", " (List.map string_of_pattern pl) ^ ")"
+  | CON_PAT (c, p) -> c ^ " " ^ string_of_pattern p
   | WILDCARD -> "_"
-  (* TODO: HACK a temporary way to get away with pattern matching for list *)
   | NIL -> "[]"
   | CONCELL (hd, tl) -> hd ^ "::" ^ tl
 

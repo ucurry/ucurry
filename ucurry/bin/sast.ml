@@ -1,9 +1,13 @@
 module A = Ast
+module StringSet = Set.Make (String)
+module StringMap = Map.Make (String)
 
 type typ = A.typ
+type type_env = typ StringMap.t
+type vcon_env = (string * int * typ) StringMap.t
+type vcon_sets = StringSet.t StringMap.t
 
 type sexpr = typ * sx
-
 and sx =
   | SLiteral of svalue
   | SVar of string
@@ -23,8 +27,9 @@ and scase_expr = pattern * sexpr
 and lambda = string list * sexpr
 
 and pattern =
+  | PATTERNS of pattern list
   | VAR_PAT of string
-  | CON_PAT of int * pattern list
+  | CON_PAT of int * pattern
   | WILDCARD
   | CONCELL of string * string
   | NIL

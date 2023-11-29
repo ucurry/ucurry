@@ -100,13 +100,13 @@ case_exp_list:
   | case_exp_list BAR pattern DOUBLEARROW exp { ($3, $5) :: $1 }
 
 pattern:
-    NAME                { VAR_PAT $1 }
-  | CAPNAME             { CON_PAT ($1, []) }
-  | CAPNAME pattern     { CON_PAT ($1, [$2])}
-  | CAPNAME LBRACE pattern_tuple RBRACE { CON_PAT ($1, List.rev $3) } // currently our parser doesn't support tuple type, thus a value constructor can at most take in one arg
+    LBRACE pattern_tuple RBRACE { PATTERNS (List.rev $2) } 
+  | NAME                { VAR_PAT $1 }
+  | CAPNAME             { CON_PAT ($1, WILDCARD) }
+  | CAPNAME pattern     { CON_PAT ($1, $2)}
+  | NAME CONS NAME      { CONCELL ($1, $3) }
   | WILDCARD            { WILDCARD }
   | LBRACKET RBRACKET   { NIL }
-  | NAME CONS NAME      { CONCELL ($1, $3) }
 
 pattern_tuple:
     pattern COMMA pattern       { [$3; $1] }
@@ -157,8 +157,8 @@ value:
   | LBRACE literal_tuple RBRACE    { TUPLE (List.rev $2)}
   | UNIT                           { UNIT }
   | LBRACKET INTEGER DOTS RBRACKET { INF_LIST $2 }
-  | LBRACE CAPNAME value RBRACE    { Construct ($2, $3) }
-  | LBRACE CAPNAME  RBRACE         { Construct ($2, UNIT) } // HACK: since Construct does not take in expression 
+  | LBRACE CAPNAME value  RBRACE   { Construct ($2, $3) }
+  | LBRACE CAPNAME  RBRACE                      { Construct ($2, UNIT) } // HACK: since Construct does not take in expression 
 
 literal_list:
                                 { EMPTYLIST }

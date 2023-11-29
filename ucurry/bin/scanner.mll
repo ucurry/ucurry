@@ -28,6 +28,8 @@ rule token = parse
 | ".."       { DOTS }
 | "."        { DOT }
 
+
+
 (* keyword *)
 | "check_type_error" { CHECK_TYPE_ERROR } 
 | "fun"      { FUNCTION }
