@@ -8,6 +8,7 @@ type vcon_env = (string * int * typ) StringMap.t
 type vcon_sets = StringSet.t StringMap.t
 
 type sexpr = typ * sx
+
 and sx =
   | SLiteral of svalue
   | SVar of string

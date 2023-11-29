@@ -48,69 +48,76 @@ let generate_tree (scrutinee : S.sexpr) (cases : S.scase_expr list)
   convert cases
 
 let case_convert (_ : A.typ) (scrutinee : S.sexpr) (cases : S.scase_expr list)
-    (default : S.sexpr) : S.sexpr = generate_exp (generate_tree scrutinee cases default)
+    (default : S.sexpr) : S.sexpr =
+  generate_exp (generate_tree scrutinee cases default)
 
-let rec is_exhaustive 
-    (vcon_sets: S.vcon_sets) 
-    (type_env: S.type_env) 
-    (scrutinee_tau: A.typ) 
-    (pats: A.pattern list) 
-    = 
-  let exhaust = is_exhaustive vcon_sets type_env in 
-  let call_all_fall_through ps = List.for_all 
-                                 (fun p -> match p with ( A.WILDCARD | A.VAR_PAT _) 
-                                        ->  true | _ -> false) ps  in 
+let rec is_exhaustive (vcon_sets : S.vcon_sets) (type_env : S.type_env)
+    (scrutinee_tau : A.typ) (pats : A.pattern list) =
+  let exhaust = is_exhaustive vcon_sets type_env in
+  let call_all_fall_through ps =
+    List.for_all
+      (fun p -> match p with A.WILDCARD | A.VAR_PAT _ -> true | _ -> false)
+      ps
+  in
   let rec can_fall_through = function
-        |[] -> false
-        | A.WILDCARD :: _ -> true
-        | A.VAR_PAT _ :: _ -> true
-        | A.PATTERNS ps :: rest -> 
-          call_all_fall_through ps || can_fall_through rest 
-        | _ :: rest   -> can_fall_through rest 
-  in if can_fall_through pats then () else 
-    match (scrutinee_tau) with
-     | A.TUPLE_TY _ -> (* HACK : too much work to check exhaustive pattern on tuple *)
-      (* let add_patterns matrix p  = match p with 
-        A.PATTERNS ps -> ps :: matrix
-      | A.WILDCARD -> matrix 
-      | A.VAR_PAT _ -> matrix 
-      | _ -> raise (TypeError ("tuple cannot be matched on " ^ A.string_of_pattern p)) in 
-      let pat_matric = List.fold_left add_patterns [] pats in  *)
-      raise (TypeError "A pattern matching expression for a tuple must have a fall through case")
-     | A.CONSTRUCTOR_TY name -> 
-      let must_have = StringMap.find name vcon_sets in 
-      let rec collect_all pats must_have collected = 
+    | [] -> false
+    | A.WILDCARD :: _ -> true
+    | A.VAR_PAT _ :: _ -> true
+    | A.PATTERNS ps :: rest -> call_all_fall_through ps || can_fall_through rest
+    | _ :: rest -> can_fall_through rest
+  in
+  if can_fall_through pats then ()
+  else
+    match scrutinee_tau with
+    | A.TUPLE_TY _ ->
+        (* HACK : too much work to check exhaustive pattern on tuple *)
+        (* let add_patterns matrix p  = match p with
+             A.PATTERNS ps -> ps :: matrix
+           | A.WILDCARD -> matrix
+           | A.VAR_PAT _ -> matrix
+           | _ -> raise (TypeError ("tuple cannot be matched on " ^ A.string_of_pattern p)) in
+           let pat_matric = List.fold_left add_patterns [] pats in *)
+        raise
+          (TypeError
+             "A pattern matching expression for a tuple must have a fall \
+              through case")
+    | A.CONSTRUCTOR_TY name ->
+        let must_have = StringMap.find name vcon_sets in
+        let rec collect_all pats must_have collected =
           match pats with
-        | [] -> must_have, collected 
-        | A.CON_PAT (name, p) :: rest -> 
-          let must_have' = StringSet.remove name must_have and 
-              collected' = (
+          | [] -> (must_have, collected)
+          | A.CON_PAT (name, p) :: rest ->
+              let must_have' = StringSet.remove name must_have
+              and collected' =
                 match StringMap.find_opt name collected with
                 | Some ps -> StringMap.add name (p :: ps) collected
-                | None -> StringMap.add name [p] collected
-              ) in 
-             collect_all rest  must_have' collected'
-        | _ :: rest -> collect_all rest must_have collected in 
-      let remain_pat, collected  = collect_all pats must_have empty_env in 
-      let check_sub_pat name pats = 
-        let arg_tau, _ = findFunctionType name type_env in 
-         exhaust arg_tau pats 
-      in 
-      if StringSet.is_empty remain_pat 
-      then StringMap.iter check_sub_pat collected
-      else raise (TypeError "some cases are not matched") 
-     | A.LIST_TY _ -> 
-      let must_have = StringSet.add "cons" (StringSet.add "nil" empty_set) in 
-      let rec has_all pats must_have = 
-        match pats with 
-      | [] -> must_have 
-      | A.CONCELL (_, _) :: rest -> has_all rest (StringSet.remove "cons" must_have)
-      | A.NIL :: rest -> has_all rest (StringSet.remove "nil" must_have)
-      | _ -> must_have in 
-      if StringSet.is_empty (has_all pats must_have) then ()
-      else raise (TypeError "pattern matching non exhastive for list")
-     | A.INT_TY   -> raise (TypeError "an integer is not matched to any pattern")
-     | A.BOOL_TY  -> raise (TypeError "an boolean is not matched to any pattern")
-     | A.STRING_TY -> raise (TypeError "an string is not matched to any pattern")
-     | A.UNIT_TY  -> raise (TypeError "cannot pattern match on unit")
-     | A.FUNCTION_TY _  -> raise (TypeError "cannot pattern match on function")
+                | None -> StringMap.add name [ p ] collected
+              in
+              collect_all rest must_have' collected'
+          | _ :: rest -> collect_all rest must_have collected
+        in
+        let remain_pat, collected = collect_all pats must_have empty_env in
+        let check_sub_pat name pats =
+          let arg_tau, _ = findFunctionType name type_env in
+          exhaust arg_tau pats
+        in
+        if StringSet.is_empty remain_pat then
+          StringMap.iter check_sub_pat collected
+        else raise (TypeError "some cases are not matched")
+    | A.LIST_TY _ ->
+        let must_have = StringSet.add "cons" (StringSet.add "nil" empty_set) in
+        let rec has_all pats must_have =
+          match pats with
+          | [] -> must_have
+          | A.CONCELL (_, _) :: rest ->
+              has_all rest (StringSet.remove "cons" must_have)
+          | A.NIL :: rest -> has_all rest (StringSet.remove "nil" must_have)
+          | _ -> must_have
+        in
+        if StringSet.is_empty (has_all pats must_have) then ()
+        else raise (TypeError "pattern matching non exhastive for list")
+    | A.INT_TY -> raise (TypeError "an integer is not matched to any pattern")
+    | A.BOOL_TY -> raise (TypeError "an boolean is not matched to any pattern")
+    | A.STRING_TY -> raise (TypeError "an string is not matched to any pattern")
+    | A.UNIT_TY -> raise (TypeError "cannot pattern match on unit")
+    | A.FUNCTION_TY _ -> raise (TypeError "cannot pattern match on function")

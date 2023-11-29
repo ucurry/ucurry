@@ -3,6 +3,7 @@ module S = Sast
 module U = Util
 module StringSet = Set.Make (String)
 module StringMap = Map.Make (String)
+
 exception TypeError of string
 
 let empty_env = StringMap.empty
@@ -70,10 +71,15 @@ let rec get_checked_types tau1 tau2 =
       if String.equal n1 n2 then tau1
       else raise (TypeError "failed to check equal type")
   | A.TUPLE_TY tys1, A.TUPLE_TY tys2 ->
-      let tys = try List.map2 get_checked_types tys1 tys2 with Invalid_argument _ -> 
-        raise (TypeError ("failed to check equal type between " ^ A.string_of_typ tau1 ^ " and " ^ A.string_of_typ tau2))in
+      let tys =
+        try List.map2 get_checked_types tys1 tys2
+        with Invalid_argument _ ->
+          raise
+            (TypeError
+               ("failed to check equal type between " ^ A.string_of_typ tau1
+              ^ " and " ^ A.string_of_typ tau2))
+      in
       A.TUPLE_TY tys
-
   | tau1, tau2 ->
       raise
         (TypeError

@@ -7,12 +7,13 @@ open SemantUtil
 
 type semant_envs = {
   type_env : S.type_env;
-  vcon_env : S.vcon_env; (* used to replace value constructor with
-                          (datatype name, index, argument type) *)
-  vcon_sets : S.vcon_sets; (* stores the datatype and its set of value constructor
-                            for checking ehaustive case matching *)
+  vcon_env : S.vcon_env;
+      (* used to replace value constructor with
+         (datatype name, index, argument type) *)
+  vcon_sets : S.vcon_sets;
+      (* stores the datatype and its set of value constructor
+         for checking ehaustive case matching *)
 }
-
 
 let default_case tau =
   let rec get_value tau' =
@@ -33,8 +34,10 @@ let new_binds_from_legal_pat (type_env : S.type_env) (scrutinee_tau : S.typ)
     | A.PATTERNS ps -> (
         match tau with
         | A.TUPLE_TY taus ->
-            let new_envs = try List.map2 get_binds taus ps with 
-                          Invalid_argument _ -> raise (TypeError ("illegal pattern " ^ A.string_of_pattern pat))
+            let new_envs =
+              try List.map2 get_binds taus ps
+              with Invalid_argument _ ->
+                raise (TypeError ("illegal pattern " ^ A.string_of_pattern pat))
             and combine_unique_env =
               StringMap.union (fun _ _ _ ->
                   raise (TypeError "cannot have duplicated name in pattern"))
@@ -69,8 +72,8 @@ let rec to_spattern (vcon_env : S.vcon_env) (c : A.pattern) =
   | A.CONCELL (x, xs) -> S.CONCELL (x, xs)
   | A.NIL -> S.NIL
 
-let rec typ_of (vcon_env :S.vcon_env) (vcon_sets: S.vcon_sets) (type_env : S.type_env) (exp : Ast.expr) :
-    S.typ * S.sx =
+let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
+    (type_env : S.type_env) (exp : Ast.expr) : S.typ * S.sx =
   let rec ty = function
     | A.Literal l ->
         let rec lit_ty = function
@@ -200,38 +203,43 @@ let rec typ_of (vcon_env :S.vcon_env) (vcon_sets: S.vcon_sets) (type_env : S.typ
         | _ -> raise (TypeError "access field from non-tuple value"))
     | A.Noexpr -> (A.UNIT_TY, S.SNoexpr)
     | A.Case (scrutinee, cases) ->
-      let scrutinee_sexp = ty scrutinee in
-      let scrutinee_type, _ = scrutinee_sexp in
-      let patterns, es = List.split cases in
-      let _ = Caseconvert.is_exhaustive vcon_sets type_env scrutinee_type patterns in 
-      let spatterns = List.map (to_spattern vcon_env) patterns in
-      let case_envs =
-        List.map (new_binds_from_legal_pat type_env scrutinee_type) patterns
-      in
-      let new_envs =
-        List.map (StringMap.union (fun _ _ v2 -> Some v2) type_env) case_envs
-      in
-      let taus, case_exps =
-        List.split (List.map2 (typ_of vcon_env vcon_sets) new_envs es)
-      in
-      let scases = List.combine spatterns case_exps in
-      let final_tau =
-        List.fold_left get_checked_types (List.hd taus) (List.tl taus)
-      in
-      let final_scases =
-        List.map (fun (pat, se) -> (pat, (final_tau, se))) scases
-      in
-      let default = default_case final_tau in
-      Caseconvert.case_convert final_tau scrutinee_sexp final_scases default
+        let scrutinee_sexp = ty scrutinee in
+        let scrutinee_type, _ = scrutinee_sexp in
+        let patterns, es = List.split cases in
+        let _ =
+          Caseconvert.is_exhaustive vcon_sets type_env scrutinee_type patterns
+        in
+        let spatterns = List.map (to_spattern vcon_env) patterns in
+        let case_envs =
+          List.map (new_binds_from_legal_pat type_env scrutinee_type) patterns
+        in
+        let new_envs =
+          List.map (StringMap.union (fun _ _ v2 -> Some v2) type_env) case_envs
+        in
+        let taus, case_exps =
+          List.split (List.map2 (typ_of vcon_env vcon_sets) new_envs es)
+        in
+        let scases = List.combine spatterns case_exps in
+        let final_tau =
+          List.fold_left get_checked_types (List.hd taus) (List.tl taus)
+        in
+        let final_scases =
+          List.map (fun (pat, se) -> (pat, (final_tau, se))) scases
+        in
+        let default = default_case final_tau in
+        Caseconvert.case_convert final_tau scrutinee_sexp final_scases default
   in
   ty exp
 
-let rec typ_def (def : A.def) (semant_envs : semant_envs) : S.sdef * S.type_env =
+let rec typ_def (def : A.def) (semant_envs : semant_envs) : S.sdef * S.type_env
+    =
   let { type_env; vcon_env; vcon_sets } = semant_envs in
   let ty = function
     | A.Function (tau, funname, args, body) ->
         let new_env = bindUnique funname tau type_env in
-        let tau', sx = typ_of vcon_env vcon_sets new_env (Lambda (tau, args, body)) in
+        let tau', sx =
+          typ_of vcon_env vcon_sets new_env (Lambda (tau, args, body))
+        in
         let final_tau = get_checked_types tau tau' in
         let match_retrun = function
           | S.SLambda body -> (S.SFunction (final_tau, funname, body), new_env)
@@ -253,8 +261,8 @@ let rec typ_def (def : A.def) (semant_envs : semant_envs) : S.sdef * S.type_env 
         (S.SExp (tau, e'), type_env)
     | A.CheckTypeError d -> (
         try
-           ignore (typ_def d semant_envs);
-           failwith "suppposed to raise type error "
+          ignore (typ_def d semant_envs);
+          failwith "suppposed to raise type error "
         with TypeError _ -> (S.SExp (UNIT_TY, S.SLiteral S.UNIT), type_env))
   in
   ty def
@@ -263,15 +271,18 @@ let semant_check (defs : A.def list) : S.sprogram * S.type_env =
   let add_vcons (vcon_env, vcon_sets) (def : Ast.def) =
     match def with
     | A.Datatype (CONSTRUCTOR_TY con_name, cons) ->
-        let con_names, _ = List.split cons in 
+        let con_names, _ = List.split cons in
         let add_vcon (name, typ) idx map =
           StringMap.add name (con_name, idx, typ) map
         in
-        let new_vcon_env  = U.fold_left_i add_vcon 1 vcon_env cons in
-        let vcon_set      = List.fold_left (U.flip StringSet.add) StringSet.empty con_names in 
-        ignore (match StringMap.find_opt con_name vcon_sets 
-                with Some _ -> raise (TypeError ("name " ^ con_name ^ " has been taken")) 
-                | None -> ());
+        let new_vcon_env = U.fold_left_i add_vcon 1 vcon_env cons in
+        let vcon_set =
+          List.fold_left (U.flip StringSet.add) StringSet.empty con_names
+        in
+        ignore
+          (match StringMap.find_opt con_name vcon_sets with
+          | Some _ -> raise (TypeError ("name " ^ con_name ^ " has been taken"))
+          | None -> ());
         let new_vcon_sets = StringMap.add con_name vcon_set vcon_sets in
         (new_vcon_env, new_vcon_sets)
     | _ -> (vcon_env, vcon_sets)
