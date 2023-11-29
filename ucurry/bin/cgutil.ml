@@ -74,8 +74,6 @@ let build_literal builder (ty_map : L.lltype StringMap.t)
   let rec to_lit ty = function
     | S.Construct ((con_name, i, inner_ty), value) ->
         let field_v = to_lit inner_ty value
-        (* TODO: needs to know the field_v's type to handle
-                 cases for tuple and list *)
         and con_v =
           L.build_malloc (StringMap.find con_name ty_map) con_name builder
         and tag_v = L.const_int i32_t i in
