@@ -237,7 +237,7 @@ let rec typ_of (vcon_map : vcon_env) (ty_env : type_env) (exp : Ast.expr) :
         | Println, STRING_TY
         | Print, INT_TY
         | Println, INT_TY ->
-            (UNIT_TY, S.SUnop (u, (tau, se)))
+            (INT_TY, S.SUnop (u, (tau, se)))
         | Print, BOOL_TY | Println, BOOL_TY ->
             ty
               (If

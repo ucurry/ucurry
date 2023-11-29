@@ -147,7 +147,7 @@ let build_main_body defs =
               let list_ty = L.element_type (ltype_of_type ty)
               and hd_v = e1'
               and tl_ptr = e2' in
-              let list_ptr = L.build_alloca list_ty "list_ptr" builder in
+              let list_ptr = L.build_malloc list_ty "list_ptr" builder in
               ignore (Util.set_data_field hd_v 0 list_ptr builder);
               ignore (Util.set_data_field tl_ptr 1 list_ptr builder);
               list_ptr)
