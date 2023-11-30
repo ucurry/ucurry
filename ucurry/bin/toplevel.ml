@@ -29,14 +29,13 @@ let () =
       let _ = List.map Lazyconvert.lazyDef sast in
       print_newline ()
   | CAST ->
-      (* let last = List.map Lazyconvert.lazyDef sast in *)
-      let cast = Clconvert.closeProgram sast in
-      let renamed_cast = Rename.rename cast in
-      let _ = print_string (Cast.string_of_program renamed_cast) in
+      let last = List.map Lazyconvert.lazyDef sast in
+      let cast = Clconvert.closeProgram last in
+      let _ = print_string (Cast.string_of_program cast) in
       print_newline ()
   | LLVMIR ->
-      (* let last = List.map Lazyconvert.lazyDef sast in *)
-      let cast = Clconvert.closeProgram sast in
+      let last = List.map Lazyconvert.lazyDef sast in
+      let cast = Clconvert.closeProgram last in
       let llvmir = Codegen.build_main_body cast in
       let _ = print_string (Llvm.string_of_llmodule llvmir) in
       print_newline ()

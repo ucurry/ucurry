@@ -4,26 +4,23 @@ module L = Last
 
 exception LAZY_NOT_YET_IMPLEMENTED of string
 
-let rec transform_funty funty =
+let rec transform_funty (funty : A.typ) : A.typ =
   match funty with
   | A.FUNCTION_TY (argty, retty) ->
       A.FUNCTION_TY (A.FUNCTION_TY (UNIT_TY, argty), transform_funty retty)
   | _ -> funty
 
-(* match (args, ty) with
-   | [], ty -> ty
-   | _ :: xs, A.FUNCTION_TY (arg_tau, ret_tau) ->
-       A.FUNCTION_TY
-         (A.FUNCTION_TY (UNIT_TY, arg_tau), transform_funty xs ret_tau)
-   | _ -> failwith "argument list and function type does not match" *)
 
-let rec lazyExpWith ((ty, exp) : S.sexpr) : L.sexpr =
-  let to_thunk ((t, _) as exp : S.sexpr) : L.sexpr =
-    (A.FUNCTION_TY (A.UNIT_TY, t), L.Lambda ([], lazyExpWith exp))
-  in
+let rec to_thunk ((t, _) as exp : S.sexpr) : L.sexpr =
+  (A.FUNCTION_TY (A.UNIT_TY, t), L.Lambda ([ "unit_ph" ], lazyExpWith exp))
+and lazyExpWith ((ty, exp) : S.sexpr) : L.sexpr =
   match exp with
   | S.SLiteral l -> (ty, L.Literal l)
-  | S.SVar v -> (ty, L.Apply ((A.FUNCTION_TY (UNIT_TY, ty), L.Var v), []))
+  | S.SVar v ->
+      ( ty,
+        L.Apply
+          ( (A.FUNCTION_TY (A.UNIT_TY, ty), L.Var v),
+            [ (A.UNIT_TY, L.Literal UNIT) ] ) )
   | S.SAssign (v, e) -> (ty, L.Assign (v, to_thunk e))
   | S.SUnop (unop, e) -> (ty, L.Unop (unop, lazyExpWith e))
   | S.SBinop (e1, binop, e2) ->
@@ -53,12 +50,11 @@ let rec lazyExpWith ((ty, exp) : S.sexpr) : L.sexpr =
 let lazyDef (def : S.sdef) : L.def =
   match def with
   | S.SExp e -> L.Exp (lazyExpWith e)
-  | S.SVal (tau, name, e) ->
-      let body =
-        lazyExpWith (A.FUNCTION_TY (A.UNIT_TY, tau), S.SLambda ([], e))
-      in
-      L.Function (name, body)
+  | S.SVal (_, name, e) ->
+     (*TODO: maybe assert here that the type in e is the same as tau, as we have 2 places to retrieve typ, maybe assert it to a single point of truth is safer*)
+      let (ty, _) as le = to_thunk e in
+      L.Function (ty, name, le)
   | S.SFunction (funty, name, body) ->
-      let body = lazyExpWith (funty, S.SLambda body) in
-      L.Function (name, body)
+      let ((ty, _) as lambda) = lazyExpWith (funty, S.SLambda body) in
+      L.Function (ty, name, lambda)
   | _ -> raise (LAZY_NOT_YET_IMPLEMENTED "Def not implemented")

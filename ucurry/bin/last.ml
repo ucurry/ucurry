@@ -4,7 +4,7 @@ module S = Sast
 type sexpr = A.typ * expr
 
 and expr =
-  | Literal of value
+  | Literal of S.svalue
   | Var of string
   | Assign of string * thunk
   | Apply of sexpr * thunk list
@@ -18,13 +18,12 @@ and expr =
   | At of sexpr * int
   | Noexpr
 
-and value = S.svalue
 and case_expr = S.pattern * sexpr
 and lambda = string list * sexpr
 and thunk = sexpr (* which will be a Lambda (ty, lambda) form *)
 
 and def =
-  | Function of string * sexpr
+  | Function of A.typ * string * sexpr
     (* TODO: lazy-convert would eventually convert all top-level Val to Val(ty, name, slambda) *)
   | Datatype of A.typ * A.constructor list
   | Exp of sexpr
