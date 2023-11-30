@@ -1,0 +1,9 @@
+fun: (unit -> int):
+y (unit_ph) int:0
+fun: ((unit -> int) -> int):
+loop (z) 
+    int:If bool:int:APP{((unit -> int):z) unit:()} > int:0 then 
+	int:APP{((unit -> int):z) unit:()} else 
+	int:APP{
+        ((int -> int):APP{((unit -> (int -> int)):loop) unit:()}) 
+        \(unit -> int) (unit_ph) int:APP{((unit -> int):z) unit:()}}

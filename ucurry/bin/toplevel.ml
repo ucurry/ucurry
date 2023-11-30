@@ -26,7 +26,8 @@ let () =
       let _ = print_string (Ast.string_of_program ast) in
       print_newline ()
   | LAST ->
-      let _ = List.map Lazyconvert.lazyDef sast in
+      let last = List.map Lazyconvert.lazyDef sast in
+      let _ = print_string (Last.string_of_program last) in
       print_newline ()
   | CAST ->
       let last = List.map Lazyconvert.lazyDef sast in

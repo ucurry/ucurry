@@ -59,7 +59,7 @@ and string_of_sexpr (delim: string) ((ty, expr) : sexpr) : string =
             (fun acc thunk -> acc ^ " " ^ string_of_sexpr delim thunk)
             "" tlist
         in
-        "APP(" ^ expr_string ^ args_string ^ ")"
+        "APP{" ^ expr_string ^ args_string ^ "}"
     | If (e1, e2, e3) ->
         "If " ^ string_of_sexpr delim e1 ^ " then \n" ^ delim ^ string_of_sexpr delim e2
         ^ " else \n" ^ delim ^ string_of_sexpr delim e3
@@ -83,7 +83,7 @@ and string_of_sexpr (delim: string) ((ty, expr) : sexpr) : string =
     | At _ -> failwith "String_of_exor Not implemented for at"
     | Noexpr -> ""
   in
-  "(" ^ A.string_of_typ ty ^ "," ^ string_of_expr expr ^ ")"
+  "(" ^ A.string_of_typ ty ^ ":" ^ string_of_expr expr ^ ")"
 
 let string_of_def = function
   | Val (ty, name, e) ->

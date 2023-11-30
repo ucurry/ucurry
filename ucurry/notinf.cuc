@@ -1,0 +1,18 @@
+fun: (unit -> int):
+y 
+(mkClosure (unit_ph, closure)
+	(int:0)
+[])
+fun: ((unit -> int) -> int):
+loop 
+(mkClosure (z, closure)
+	(int:If (bool:(int:APP{((unit -> int):z) (unit:())}) > (int:0)) then 
+	(int:APP{((unit -> int):z) (unit:())}) else 
+	(int:APP{
+        ((int -> int):APP{((unit -> (int -> int)):Captured 0) (unit:())}) --> get an int -> int function
+        ((unit -> int):
+            (mkClosure (unit_ph, closure)
+                (int:APP{((unit -> int):Captured 0) (unit:())})
+            [ ((unit -> int):z)]))
+    }))
+[ ((unit -> (int -> int)):loop)])
