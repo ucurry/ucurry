@@ -32,7 +32,9 @@ let rec free ((t, exp) : SA.sexpr) : S.t =
   | SA.SApply (f, thunks) -> unionFree (f :: thunks)
   | SA.SIf (s1, s2, s3) -> unionFree [ s1; s2; s3 ]
   | SA.SLet (bindings, body) ->
-      let localsWithTypes, thunks = List.split bindings in
+      let names, thunks = List.split bindings in
+      let tau, _ = List.split thunks in 
+      let localsWithTypes = List.combine tau names in 
       let freeXSet = S.of_list localsWithTypes in
       let freeESet = unionFree thunks in
       let freeBody = free body in
@@ -121,6 +123,6 @@ let close (def : SA.sdef) : Cast.def =
   | SA.SDatatype (t, cons) -> C.Datatype (t, cons)
   | SA.SCheckTypeError _ ->
       raise (CLOSURE_NOT_YET_IMPLEMENTED "check type error")
-  | SA.SVal (ty, name, se) -> C.Val (ty, name, closeExpWith [] se)
+  | SA.SVal (name, se) -> C.Val (name, closeExpWith [] se)
 
 let closeProgram (p : SA.sprogram) : C.program = List.map close p

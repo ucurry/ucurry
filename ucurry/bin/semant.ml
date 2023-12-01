@@ -134,7 +134,7 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let newEnv = bindAll names dec_taus type_env in
         let taus, ses = List.split (List.map ty es) in
         let final_taus = List.map2 get_checked_types dec_taus taus in
-        let bind_ses = List.combine vars @@ List.combine final_taus ses in
+        let bind_ses = List.combine names @@ List.combine final_taus ses in
         let body_tau, body_es = typ_of vcon_env vcon_sets newEnv e in
         (body_tau, S.SLet (bind_ses, (body_tau, body_es)))
     | A.Begin [] -> (A.UNIT_TY, S.SBegin [])
@@ -181,7 +181,7 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         | IsNull, LIST_TY _ -> (BOOL_TY, S.SUnop (u, (tau, se)))
         | _ -> raise (TypeError "type error in unary operaion"))
     | A.Lambda (lambda_tau, formals, body) ->
-        let rec check_lambda tau fs env =
+        let check_lambda tau fs env =
           match (tau, fs) with
           | _, [] ->
               let tau', se = typ_of vcon_env vcon_sets env body in
@@ -192,7 +192,7 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
               let tau', se = typ_of vcon_env vcon_sets new_env body in
               let final_tau = get_checked_types tau' tau2 in
               (tau, S.SLambda ([ hd ], (final_tau, se)))
-          | A.FUNCTION_TY (tau1, tau2), hd :: tl ->
+          | A.FUNCTION_TY (_, _), hd :: tl ->
               raise (TypeError ("Expected 1 arg but received " ^ string_of_int @@ List.length (hd :: tl) ))
               (* make nested lambda to conform to one-arg function form *)
               (* ( tau,
@@ -248,7 +248,7 @@ let rec typ_def (def : A.def) (semant_envs : semant_envs) : S.sdef * S.type_env
         let final_tau = get_checked_types tau tau' in
         let match_retrun = function
           | S.SLambda body -> (S.SFunction (final_tau, funname, body), new_env)
-          | _ -> (S.SVal (final_tau, funname, (final_tau, sx)), new_env)
+          | _ -> (S.SVal (funname, (final_tau, sx)), new_env)
         in
         match_retrun sx
     | A.Datatype (tau, val_cons) ->
@@ -260,7 +260,7 @@ let rec typ_def (def : A.def) (semant_envs : semant_envs) : S.sdef * S.type_env
     | A.Variable (tau, name, e) ->
         let tau', se = typ_of vcon_env vcon_sets type_env e in
         let var_tau = get_checked_types tau tau' in
-        (S.SVal (var_tau, name, (var_tau, se)), bindUnique name tau type_env)
+        (S.SVal (name, (var_tau, se)), bindUnique name tau type_env)
     | A.Exp e ->
         let tau, e' = typ_of vcon_env vcon_sets type_env e in
         (S.SExp (tau, e'), type_env)

@@ -105,7 +105,8 @@ let build_main_body defs =
       | C.Let (bindings, exp) ->
           let varmap' =
             List.fold_left
-              (fun vm ((tau, name), e) ->
+              (fun vm (name, e) ->
+                let tau, _ = e in 
                 let e' = expr builder e in
                 let reg = L.build_alloca (ltype_of_type tau) name builder in
                 let vm' = StringMap.add name reg vm in
@@ -264,8 +265,9 @@ let build_main_body defs =
     ignore (add_terminal builder (fun b -> L.build_ret e' b))
   (* varmap is the variable environment that maps (variable : string |---> to reg : llvale) *)
   and stmt builder varmap = function
-    | C.Val (tau, name, e) ->
+    | C.Val (name, e) ->
         (* Handle string -> create a global string pointer and assign the global name to the name *)
+        let tau, _ = e in 
         let reg = L.build_alloca (ltype_of_type tau) name builder in
         let varmap' = StringMap.add name reg varmap in
         let e' = exprWithVarmap builder null_clstruct varmap e in

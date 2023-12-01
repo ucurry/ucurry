@@ -9,7 +9,7 @@ and expr =
   | Assign of string * thunk
   | Apply of sexpr * thunk list
   | If of sexpr * sexpr * sexpr
-  | Let of ((A.typ * string) * thunk) list * sexpr
+  | Let of ( string * thunk) list * sexpr
   | Begin of sexpr list
   | Binop of sexpr * A.binop * sexpr
   | Unop of A.uop * sexpr

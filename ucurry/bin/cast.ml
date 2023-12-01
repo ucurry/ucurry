@@ -10,7 +10,7 @@ and expr =
   | Assign of string * thunk
   | Apply of sexpr * thunk list
   | If of sexpr * sexpr * sexpr
-  | Let of ((A.typ * string) * thunk) list * sexpr
+  | Let of (string * thunk) list * sexpr
   | Begin of sexpr list
   | Binop of sexpr * A.binop * sexpr
   | Unop of A.uop * sexpr
@@ -25,7 +25,7 @@ and closure = (string list * sexpr) * sexpr list (* (lambda, captured list) *)
 and thunk = sexpr (* which will be a Closure form *)
 
 and def =
-  | Val of A.typ * string * sexpr
+  | Val of string * sexpr
   | Function of A.typ * string * closure
   | Datatype of A.typ * A.constructor list
   | Exp of sexpr
@@ -89,8 +89,8 @@ let rec string_of_sexpr ((ty, tope) : sexpr) =
           "let "
           ^ String.concat ", "
               (List.map
-                 (fun ((t, v), e) ->
-                   string_of_typ t ^ " " ^ v ^ " = " ^ string_of_sexpr e)
+                 (fun (v, e) ->
+                    v ^ " = " ^ string_of_sexpr e)
                  vl)
           ^ " in \n" ^ string_of_sexpr e
       | Noexpr -> ""
@@ -102,8 +102,8 @@ let rec string_of_sexpr ((ty, tope) : sexpr) =
 
 let string_of_def = function
   | Exp se -> string_of_sexpr se
-  | Val (ty, name, e) ->
-      Ast.string_of_typ ty ^ " " ^ name ^ " " ^ string_of_sexpr e
+  | Val ( name, e) ->
+       name ^ " " ^ string_of_sexpr e
   | _ -> raise (Failure "String_of_def Not implemented For Most Cases")
 
 let string_of_program defs = String.concat "\n" (List.map string_of_def defs)

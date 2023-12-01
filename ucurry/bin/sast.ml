@@ -15,7 +15,7 @@ and sx =
   | SAssign of string * sexpr
   | SApply of sexpr * sexpr list
   | SIf of sexpr * sexpr * sexpr
-  | SLet of ((typ * string) * sexpr) list * sexpr
+  | SLet of (string * sexpr) list * sexpr
   | SBegin of sexpr list
   | SBinop of sexpr * A.binop * sexpr
   | SUnop of A.uop * sexpr
@@ -51,7 +51,7 @@ and svalue =
 
 type sdef =
   | SDatatype of typ * constructor list
-  | SVal of typ * string * sexpr
+  | SVal of string * sexpr
   | SFunction of typ * string * lambda
   | SExp of sexpr
   | SCheckTypeError of sdef
