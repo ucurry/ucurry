@@ -42,16 +42,19 @@ let rec string_of_closure (((args, body), captured) : closure) : string =
   let args = "(" ^ String.concat ", " args ^ ", closure)" in
   let body_string = string_of_sexpr "\t" body in
   let captured_vars =
-    List.fold_left (fun acc cap -> acc ^ " " ^ string_of_sexpr "" cap) "" captured
+    List.fold_left
+      (fun acc cap -> acc ^ " " ^ string_of_sexpr "" cap)
+      "" captured
   in
-  "\n(mkClosure " ^ args ^ "\n" ^ "\t" ^ body_string ^ "\n" ^ "[" ^ captured_vars ^ "]" ^ ")"
+  "\n(mkClosure " ^ args ^ "\n" ^ "\t" ^ body_string ^ "\n" ^ "["
+  ^ captured_vars ^ "]" ^ ")"
 
-and string_of_sexpr (delim: string) ((ty, expr) : sexpr) : string =
+and string_of_sexpr (delim : string) ((ty, expr) : sexpr) : string =
   let string_of_expr (exp : expr) : string =
     match exp with
     | Literal l -> S.string_of_literal l
     | Var x -> x
-    | Assign (name, thunk) -> name ^ " = " ^ string_of_sexpr delim thunk 
+    | Assign (name, thunk) -> name ^ " = " ^ string_of_sexpr delim thunk
     | Apply (sexpr, tlist) ->
         let expr_string = string_of_sexpr delim sexpr in
         let args_string =
@@ -61,8 +64,9 @@ and string_of_sexpr (delim: string) ((ty, expr) : sexpr) : string =
         in
         "APP{" ^ expr_string ^ args_string ^ "}"
     | If (e1, e2, e3) ->
-        "If " ^ string_of_sexpr delim e1 ^ " then \n" ^ delim ^ string_of_sexpr delim e2
-        ^ " else \n" ^ delim ^ string_of_sexpr delim e3
+        "If " ^ string_of_sexpr delim e1 ^ " then \n" ^ delim
+        ^ string_of_sexpr delim e2 ^ " else \n" ^ delim
+        ^ string_of_sexpr delim e3
     | Let (vl, e) ->
         "let "
         ^ String.concat ", "
@@ -72,7 +76,9 @@ and string_of_sexpr (delim: string) ((ty, expr) : sexpr) : string =
                vl)
         ^ " in \n" ^ delim ^ string_of_sexpr delim e
     | Begin el ->
-        "(begin " ^ String.concat (", " ^ delim) (List.map (string_of_sexpr delim) el) ^ ")"
+        "(begin "
+        ^ String.concat (", " ^ delim) (List.map (string_of_sexpr delim) el)
+        ^ ")"
     | Binop (e1, o, e2) ->
         string_of_sexpr delim e1 ^ " " ^ Ast.string_of_binop o ^ " "
         ^ string_of_sexpr delim e2

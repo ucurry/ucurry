@@ -4,23 +4,31 @@ module L = Last
 
 exception LAZY_NOT_YET_IMPLEMENTED of string
 
-let rec transform_funty (funty : A.typ) : A.typ =
-  match funty with
-  | A.FUNCTION_TY (argty, retty) ->
-      A.FUNCTION_TY (A.FUNCTION_TY (UNIT_TY, argty), transform_funty retty)
-  | _ -> funty
+let transform_type (ty : A.typ) : A.typ =
+  let rec transform_funty funty =
+    match funty with
+    | A.FUNCTION_TY (argty, retty) ->
+        A.FUNCTION_TY (A.FUNCTION_TY (UNIT_TY, argty), transform_funty retty)
+    | _ -> funty
+  in
+  match ty with
+  | A.FUNCTION_TY _ -> A.FUNCTION_TY (UNIT_TY, transform_funty ty)
+  | _ -> A.FUNCTION_TY (UNIT_TY, ty)
 
+let rec to_thunk ((t, _) as sexp : S.sexpr) : L.sexpr =
+  (A.FUNCTION_TY (A.UNIT_TY, t), L.Lambda ([ "unit_ph" ], lazyExpWith sexp))
 
-let rec to_thunk ((t, _) as exp : S.sexpr) : L.sexpr =
-  (A.FUNCTION_TY (A.UNIT_TY, t), L.Lambda ([ "unit_ph" ], lazyExpWith exp))
 and lazyExpWith ((ty, exp) : S.sexpr) : L.sexpr =
   match exp with
   | S.SLiteral l -> (ty, L.Literal l)
-  | S.SVar v ->
-      ( ty,
-        L.Apply
-          ( (A.FUNCTION_TY (A.UNIT_TY, ty), L.Var v),
-            [ (A.UNIT_TY, L.Literal UNIT) ] ) )
+  | S.SVar v -> (
+      let transformed_type = transform_type ty in
+      match transformed_type with
+      | A.FUNCTION_TY (UNIT_TY, funtype) ->
+          ( funtype,
+            L.Apply
+              ((transformed_type, L.Var v), [ (A.UNIT_TY, L.Literal UNIT) ]) )
+      | _ -> failwith "Impossible")
   | S.SAssign (v, e) -> (ty, L.Assign (v, to_thunk e))
   | S.SUnop (unop, e) -> (ty, L.Unop (unop, lazyExpWith e))
   | S.SBinop (e1, binop, e2) ->
@@ -41,9 +49,16 @@ and lazyExpWith ((ty, exp) : S.sexpr) : L.sexpr =
   | S.SApply (e, args) ->
       let lazy_args : L.thunk list = List.map to_thunk args in
       (ty, L.Apply (lazyExpWith e, lazy_args))
-  | S.SLambda (args, e) ->
-      let e' = L.Lambda (args, lazyExpWith e) and ty' = transform_funty ty in
-      (ty', e')
+  | S.SLambda (args, e) -> (
+      let ty' = transform_type ty in
+      match ty' with
+      | A.FUNCTION_TY (UNIT_TY, funtype) ->
+          let e' =
+            L.Lambda ([ "unit_ph" ], (funtype, L.Lambda (args, lazyExpWith e)))
+          in
+          (* let lift_type = A.FUNCTION_TY (A.UNIT_TY, ty') in *)
+          (ty', e')
+      | _ -> failwith "Impossible")
   | S.SNoexpr -> (ty, L.Noexpr)
   | S.SAt (e, i) -> (ty, L.At (lazyExpWith e, i))
 
@@ -51,8 +66,8 @@ let lazyDef (def : S.sdef) : L.def =
   match def with
   | S.SExp e -> L.Exp (lazyExpWith e)
   | S.SVal (_, name, e) ->
-     (*TODO: maybe assert here that the type in e is the same as tau, as we have 2 places to retrieve typ, maybe assert it to a single point of truth is safer*)
-      let (ty, _) as le = to_thunk e in
+      (*TODO: maybe assert here that the type in e is the same as tau, as we have 2 places to retrieve typ, maybe assert it to a single point of truth is safer*)
+      let ((ty, _) as le) = to_thunk e in
       L.Function (ty, name, le)
   | S.SFunction (funty, name, body) ->
       let ((ty, _) as lambda) = lazyExpWith (funty, S.SLambda body) in
