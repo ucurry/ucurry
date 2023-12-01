@@ -1,4 +1,5 @@
 module Se = Semant
+module Cu = Curry
 
 type action = Ast | CAST | LAST | Default | LLVMIR | TRY
 
@@ -20,6 +21,7 @@ let () =
 
   let lexbuf = Lexing.from_channel !channel in
   let ast = Parser.program Scanner.token lexbuf in
+  let curried = Cu.curry ast in 
   let sast, _ = Semant.semant_check ast in
   match !action with
   | Ast ->
