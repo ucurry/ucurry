@@ -103,6 +103,9 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let var_ty = findType x type_env and assign_ty, se = ty e in
         let final_tau = get_checked_types var_ty assign_ty in
         (final_tau, S.SAssign (x, (final_tau, se)))
+    | A.Apply (e, []) ->  
+      let ty, e' = ty e in 
+      ty, S.SApply ((ty, e'),[])
     | A.Apply (e, [ arg ]) ->
         (* base case: type checks *)
         let ft, fe = ty e in
@@ -111,11 +114,12 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let final_arg_tau = get_checked_types formalty argty in
         (retty, S.SApply ((ft, fe), [ (final_arg_tau, arge) ]))
     | A.Apply (e, es) ->
+      raise (U.Impossible ("can only take 1 arg received: " ^ string_of_int  (List.length es) ^ "in expression" ^ A.string_of_expr e ))
         (* make nested apply to conform to the one-arg apply form *)
-        ty
+        (* ty
           (List.fold_left
              (fun acc_apply arg -> A.Apply (acc_apply, [ arg ]))
-             e es)
+             e es) *)
     | A.If (cond, e1, e2) ->
         let cond_tau, cond_e = ty cond
         and e1_tau, se1 = ty e1
@@ -189,10 +193,11 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
               let final_tau = get_checked_types tau' tau2 in
               (tau, S.SLambda ([ hd ], (final_tau, se)))
           | A.FUNCTION_TY (tau1, tau2), hd :: tl ->
+              raise (TypeError ("Expected 1 arg but received " ^ string_of_int @@ List.length (hd :: tl) ))
               (* make nested lambda to conform to one-arg function form *)
-              ( tau,
+              (* ( tau,
                 S.SLambda
-                  ([ hd ], check_lambda tau2 tl (StringMap.add hd tau1 env)) )
+                  ([ hd ], check_lambda tau2 tl (StringMap.add hd tau1 env)) ) *)
           | _ -> raise (TypeError "lambda type unmatch")
         in
         check_lambda lambda_tau formals type_env
