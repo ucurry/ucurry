@@ -232,8 +232,9 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let final_scases =
           List.map (fun (pat, se) -> (pat, (final_tau, se))) scases
         in
-        let default = default_case final_tau in
-        Caseconvert.case_convert final_tau scrutinee_sexp final_scases default
+        (final_tau, S.SCase (scrutinee_sexp, final_scases))
+        (* let default = default_case final_tau in
+        Caseconvert.case_convert final_tau scrutinee_sexp final_scases default *)
   in
   ty exp
 
