@@ -43,7 +43,7 @@ and svalue =
   | INT of int
   | STRING of string
   | BOOL of bool
-  | EMPTYLIST
+  | EMPTYLIST of Ast.typ
   | LIST of svalue * svalue
   | TUPLE of svalue list
   | INF_LIST of int

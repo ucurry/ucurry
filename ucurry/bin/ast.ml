@@ -66,7 +66,7 @@ and value =
   | INT of int
   | STRING of string
   | BOOL of bool
-  | EMPTYLIST
+  | EMPTYLIST of typ
   | LIST of value * value
   | TUPLE of value list
   | INF_LIST of int
@@ -183,11 +183,11 @@ and string_of_literal = function
   | INT l -> string_of_int l
   | STRING l -> "\"" ^ l ^ "\""
   | BOOL l -> string_of_bool l
-  | EMPTYLIST -> "[]"
+  | EMPTYLIST t -> "[" ^ string_of_typ t ^ "]"
   | LIST (x, xs) ->
       let rec listString (x, xs) =
         match (x, xs) with
-        | x, EMPTYLIST -> string_of_literal x
+        | x, EMPTYLIST _ -> string_of_literal x
         | x, LIST (y, ys) -> string_of_literal x ^ "," ^ listString (y, ys)
         | _ -> raise (Invalid_argument "should not be reached")
       in

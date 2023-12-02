@@ -32,13 +32,13 @@ let () =
       let _ = print_string (Ast.string_of_program last) in 
       print_newline ()
   | CAST ->
-      let cast = Clconvert.closeProgram sast in
-      let _ = print_string (Cast.string_of_program cast) in
+      (* let cast = Clconvert.closeProgram sast in
+      let _ = print_string (Cast.string_of_program cast) in *)
       print_newline ()
   | LLVMIR ->
-      let cast = Clconvert.closeProgram sast in
+      (* let cast = Clconvert.closeProgram sast in
       let llvmir = Codegen.build_main_body cast in
-      let _ = print_string (Llvm.string_of_llmodule llvmir) in
+      let _ = print_string (Llvm.string_of_llmodule llvmir) in *)
       print_newline ()
   | TRY ->
       (* let llvmir = CodegenFromSast.build_main_body sast in *)

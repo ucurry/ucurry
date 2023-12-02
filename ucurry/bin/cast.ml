@@ -41,11 +41,11 @@ let rec string_of_literal : Sast.svalue -> string = function
   | Sast.INT l -> string_of_int l
   | Sast.STRING l -> "\"" ^ l ^ "\""
   | Sast.BOOL l -> string_of_bool l
-  | Sast.EMPTYLIST -> "[]"
+  | Sast.EMPTYLIST t -> "[" ^ Ast.string_of_typ t ^ "]"
   | Sast.LIST (x, xs) ->
       let rec listString (x, xs) =
         match (x, xs) with
-        | x, Sast.EMPTYLIST -> string_of_literal x
+        | x, Sast.EMPTYLIST _ -> string_of_literal x
         | x, Sast.LIST (y, ys) -> string_of_literal x ^ "," ^ listString (y, ys)
         | _ -> raise (Invalid_argument "should not be reached")
       in

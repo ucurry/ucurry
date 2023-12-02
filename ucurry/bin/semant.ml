@@ -21,7 +21,7 @@ let default_case tau =
     | A.INT_TY -> S.INT 0
     | A.STRING_TY -> S.STRING "case not matched"
     | A.BOOL_TY -> S.BOOL false
-    | A.LIST_TY tau -> S.LIST (get_value tau, S.EMPTYLIST)
+    | A.LIST_TY tau -> S.LIST (get_value tau, S.EMPTYLIST UNIT_TY) (* TODO: not sure *)
     | A.TUPLE_TY taus -> S.TUPLE (List.map get_value taus)
     | _ -> UNIT (* HACK : when case is unmatched , should thrown exception *)
   in
@@ -79,7 +79,7 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let rec lit_ty = function
           | A.INT i -> (A.INT_TY, S.INT i)
           | A.STRING s -> (A.STRING_TY, S.STRING s)
-          | A.EMPTYLIST -> (A.LIST_TY A.UNIT_TY, S.EMPTYLIST)
+          | A.EMPTYLIST t -> (A.LIST_TY t, S.EMPTYLIST t)
           | A.LIST (hd, tl) ->
               let hd_tau, hd_val = lit_ty hd and tl_tau, tl_val = lit_ty tl in
               let list_tau = get_checked_types (A.LIST_TY hd_tau) tl_tau in
