@@ -1,3 +1,6 @@
+-- lazy evaluation prevents infinite recursion
+-- see notinf3.uc for a detailed description
+
 fun: int -> (int -> int) -> int:
 fst x y = x;
 
