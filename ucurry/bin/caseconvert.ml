@@ -7,7 +7,7 @@ module StringMap = Map.Make (String)
 
 type match_tree =
   | Node of Sast.sexpr * match_tree * match_tree
-  | Leaf of Sast.sexpr 
+  | Leaf of Sast.sexpr
 
 let rec generate_exp : match_tree -> Sast.sexpr = function
   | Leaf e -> e

@@ -46,7 +46,8 @@ let new_binds_from_legal_pat (type_env : S.type_env) (scrutinee_tau : S.typ)
         | _ ->
             raise
               (TypeError ("cannot pattern match on" ^ Ast.string_of_pattern p)))
-    | A.VAR_PAT x -> StringMap.add x (A.FUNCTION_TY (A.UNIT_TY, tau)) StringMap.empty
+    | A.VAR_PAT x ->
+        StringMap.add x (A.FUNCTION_TY (A.UNIT_TY, tau)) StringMap.empty
     | A.CON_PAT (name, p) ->
         let arg_tau, ret_tau = findFunctionType name type_env in
         let _ = get_checked_types tau ret_tau in
@@ -57,7 +58,12 @@ let new_binds_from_legal_pat (type_env : S.type_env) (scrutinee_tau : S.typ)
         StringMap.empty
     | CONCELL (s1, s2) ->
         let subty = subtypeOfList tau in
-        bindAllUnique [ s1; s2 ] [A.FUNCTION_TY  (A.UNIT_TY, subty); A.FUNCTION_TY (A.UNIT_TY, LIST_TY subty)] StringMap.empty
+        bindAllUnique [ s1; s2 ]
+          [
+            A.FUNCTION_TY (A.UNIT_TY, subty);
+            A.FUNCTION_TY (A.UNIT_TY, LIST_TY subty);
+          ]
+          StringMap.empty
   in
   get_binds scrutinee_tau pat
 
@@ -103,9 +109,10 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let var_ty = findType x type_env and assign_ty, se = ty e in
         let final_tau = get_checked_types var_ty assign_ty in
         (final_tau, S.SAssign (x, (final_tau, se)))
-    | A.Apply (_, []) ->  raise (TypeError "apply no-arg function")
-      (* let ty, e' = ty e in 
-      ty, S.SApply ((ty, e'),[]) *)
+    | A.Apply (_, []) ->
+        raise (TypeError "apply no-arg function")
+        (* let ty, e' = ty e in
+           ty, S.SApply ((ty, e'),[]) *)
     | A.Apply (e, [ arg ]) ->
         (* base case: type checks *)
         let ft, fe = ty e in
@@ -114,12 +121,16 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let final_arg_tau = get_checked_types formalty argty in
         (retty, S.SApply ((ft, fe), [ (final_arg_tau, arge) ]))
     | A.Apply (e, es) ->
-      raise (U.Impossible ("can only take 1 arg received: " ^ string_of_int  (List.length es) ^ "in expression" ^ A.string_of_expr e ))
+        raise
+          (U.Impossible
+             ("can only take 1 arg received: "
+             ^ string_of_int (List.length es)
+             ^ "in expression" ^ A.string_of_expr e))
         (* make nested apply to conform to the one-arg apply form *)
         (* ty
-          (List.fold_left
-             (fun acc_apply arg -> A.Apply (acc_apply, [ arg ]))
-             e es) *)
+           (List.fold_left
+              (fun acc_apply arg -> A.Apply (acc_apply, [ arg ]))
+              e es) *)
     | A.If (cond, e1, e2) ->
         let cond_tau, cond_e = ty cond
         and e1_tau, se1 = ty e1
@@ -193,11 +204,14 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
               let final_tau = get_checked_types tau' tau2 in
               (tau, S.SLambda ([ hd ], (final_tau, se)))
           | A.FUNCTION_TY (_, _), hd :: tl ->
-              raise (TypeError ("Expected 1 arg but received " ^ string_of_int @@ List.length (hd :: tl) ))
+              raise
+                (TypeError
+                   ("Expected 1 arg but received " ^ string_of_int
+                   @@ List.length (hd :: tl)))
               (* make nested lambda to conform to one-arg function form *)
               (* ( tau,
-                S.SLambda
-                  ([ hd ], check_lambda tau2 tl (StringMap.add hd tau1 env)) ) *)
+                 S.SLambda
+                   ([ hd ], check_lambda tau2 tl (StringMap.add hd tau1 env)) ) *)
           | _ -> raise (TypeError "lambda type unmatch")
         in
         check_lambda lambda_tau formals type_env
@@ -206,9 +220,9 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         match tau with
         | TUPLE_TY ts -> (nth ts i, S.SAt ((tau, se), i))
         | _ -> raise (TypeError "access field from non-tuple value"))
-    | A.Thunk exp -> 
-        let tau, e = ty exp in 
-        A.FUNCTION_TY (A.UNIT_TY, tau), (S.SLambda (["unit"], (tau, e)))
+    | A.Thunk exp ->
+        let tau, e = ty exp in
+        (A.FUNCTION_TY (A.UNIT_TY, tau), S.SLambda ([ "unit" ], (tau, e)))
     | A.Noexpr -> (A.UNIT_TY, S.SNoexpr)
     | A.Case (scrutinee, cases) ->
         let scrutinee_sexp = ty scrutinee in
@@ -225,8 +239,8 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
           List.map (StringMap.union (fun _ _ v2 -> Some v2) type_env) case_envs
         in
         let taus, case_exps =
-        List.split (List.map2 (typ_of vcon_env vcon_sets) new_envs es)
-      in
+          List.split (List.map2 (typ_of vcon_env vcon_sets) new_envs es)
+        in
         let scases = List.combine spatterns case_exps in
         let final_tau =
           List.fold_left get_checked_types (List.hd taus) (List.tl taus)

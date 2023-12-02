@@ -106,7 +106,7 @@ let build_main_body defs =
           let varmap' =
             List.fold_left
               (fun vm (name, e) ->
-                let tau, _ = e in 
+                let tau, _ = e in
                 let e' = expr builder e in
                 let reg = L.build_alloca (ltype_of_type tau) name builder in
                 let vm' = StringMap.add name reg vm in
@@ -267,7 +267,7 @@ let build_main_body defs =
   and stmt builder varmap = function
     | C.Val (name, e) ->
         (* Handle string -> create a global string pointer and assign the global name to the name *)
-        let tau, _ = e in 
+        let tau, _ = e in
         let reg = L.build_alloca (ltype_of_type tau) name builder in
         let varmap' = StringMap.add name reg varmap in
         let e' = exprWithVarmap builder null_clstruct varmap e in

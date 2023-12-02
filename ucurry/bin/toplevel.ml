@@ -1,7 +1,7 @@
 module Se = Semant
 module Cu = Curry
 
-type action = Ast | CAST | LAST | Default | LLVMIR | TRY
+type action = Ast | CAST | LAST | Default | LLVMIR
 
 let () =
   let action = ref Default in
@@ -12,7 +12,6 @@ let () =
       ("-l", Arg.Unit (set_action LAST), "Print the LAST");
       ("-c", Arg.Unit (set_action CAST), "Print the CAST");
       ("-s", Arg.Unit (set_action LLVMIR), "Print the LLVM");
-      ("-t", Arg.Unit (set_action TRY), "Print the LLVM from SAST");
     ]
   in
   let usage_msg = "usage: ./ucurry [-a|-s|-l|-c] [file.uc]\n" in
@@ -22,26 +21,22 @@ let () =
   let lexbuf = Lexing.from_channel !channel in
   let ast = Parser.program Scanner.token lexbuf in
   let curried = Cu.curry ast in
-  let last = Lazy.lazy_convert curried in 
+  let last = Lazy.lazy_convert curried in
   let sast, _ = Semant.semant_check last in
   match !action with
   | Ast ->
       let _ = print_string (Ast.string_of_program ast) in
       print_newline ()
   | LAST ->
-      let _ = print_string (Ast.string_of_program last) in 
+      let _ = print_string (Ast.string_of_program last) in
       print_newline ()
   | CAST ->
-      let cast = Clconvert.closeProgram sast in
+      let cast = Clconvert.close_program sast in
       let _ = print_string (Cast.string_of_program cast) in
       print_newline ()
   | LLVMIR ->
-      let cast = Clconvert.closeProgram sast in
+      let cast = Clconvert.close_program sast in
       let llvmir = Codegen.build_main_body cast in
       let _ = print_string (Llvm.string_of_llmodule llvmir) in
-      print_newline ()
-  | TRY ->
-      (* let llvmir = CodegenFromSast.build_main_body sast in *)
-      (* let _ = print_string (Llvm.string_of_llmodule llvmir) in *)
       print_newline ()
   | _ -> print_string usage_msg

@@ -88,10 +88,7 @@ let rec string_of_sexpr ((ty, tope) : sexpr) =
       | Let (vl, e) ->
           "let "
           ^ String.concat ", "
-              (List.map
-                 (fun (v, e) ->
-                    v ^ " = " ^ string_of_sexpr e)
-                 vl)
+              (List.map (fun (v, e) -> v ^ " = " ^ string_of_sexpr e) vl)
           ^ " in \n" ^ string_of_sexpr e
       | Noexpr -> ""
       | _ -> raise (Failure "String_of_expr Not implemented For Most Cases")
@@ -102,8 +99,7 @@ let rec string_of_sexpr ((ty, tope) : sexpr) =
 
 let string_of_def = function
   | Exp se -> string_of_sexpr se
-  | Val ( name, e) ->
-       name ^ " " ^ string_of_sexpr e
+  | Val (name, e) -> name ^ " " ^ string_of_sexpr e
   | _ -> raise (Failure "String_of_def Not implemented For Most Cases")
 
 let string_of_program defs = String.concat "\n" (List.map string_of_def defs)

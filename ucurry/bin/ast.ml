@@ -56,7 +56,7 @@ type expr =
   | Binop of expr * binop * expr
   | Unop of uop * expr
   | Lambda of typ * string list * expr
-  | Thunk of expr 
+  | Thunk of expr
   | Case of expr * case_expr list
   | At of expr * int
   | Noexpr
@@ -175,7 +175,7 @@ let rec string_of_expr exp =
         ^ " in " ^ string_of_expr e
     | At (e, i) -> string_of_expr e ^ "." ^ string_of_int i
     | Noexpr -> ""
-    | Thunk e -> "THUNK: " ^ string_of_expr e 
+    | Thunk e -> "THUNK: " ^ string_of_expr e
   in
   match exp with Noexpr -> "" | _ -> "(" ^ flat_string_of_exp exp ^ ")"
 

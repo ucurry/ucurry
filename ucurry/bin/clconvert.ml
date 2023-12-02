@@ -33,8 +33,8 @@ let rec free ((t, exp) : SA.sexpr) : S.t =
   | SA.SIf (s1, s2, s3) -> unionFree [ s1; s2; s3 ]
   | SA.SLet (bindings, body) ->
       let names, thunks = List.split bindings in
-      let tau, _ = List.split thunks in 
-      let localsWithTypes = List.combine tau names in 
+      let tau, _ = List.split thunks in
+      let localsWithTypes = List.combine tau names in
       let freeXSet = S.of_list localsWithTypes in
       let freeESet = unionFree thunks in
       let freeBody = free body in
@@ -70,13 +70,13 @@ let rec asClosure (funty : A.typ) (lambda : SA.lambda) (captured : freevar list)
   let freeVarWithTypes = S.elements (free (funty, SA.SLambda lambda)) in
   let captured' =
     List.map
-      (fun (t, n) -> closeExpWith captured (t, SA.SVar n))
+      (fun (t, n) -> close_exp captured (t, SA.SVar n))
       freeVarWithTypes
   in
-  ((formals, closeExpWith freeVarWithTypes sbody), captured')
+  ((formals, close_exp freeVarWithTypes sbody), captured')
 
 (* close expression *)
-and closeExpWith (captured : freevar list) (le : SA.sexpr) : C.sexpr =
+and close_exp (captured : freevar list) (le : SA.sexpr) : C.sexpr =
   let rec exp ((ty, tope) : SA.sexpr) : C.sexpr =
     ( ty,
       match tope with
@@ -114,7 +114,7 @@ and closeExpWith (captured : freevar list) (le : SA.sexpr) : C.sexpr =
 (* close definition *)
 let close (def : SA.sdef) : Cast.def =
   match def with
-  | SA.SExp e -> C.Exp (closeExpWith [] e)
+  | SA.SExp e -> C.Exp (close_exp [] e)
   (* 106 uses C.Funcode, probably because toplevel function
      can only capture global veriables*)
   | SA.SFunction (t, name, lambda) ->
@@ -123,6 +123,6 @@ let close (def : SA.sdef) : Cast.def =
   | SA.SDatatype (t, cons) -> C.Datatype (t, cons)
   | SA.SCheckTypeError _ ->
       raise (CLOSURE_NOT_YET_IMPLEMENTED "check type error")
-  | SA.SVal (name, se) -> C.Val (name, closeExpWith [] se)
+  | SA.SVal (name, se) -> C.Val (name, close_exp [] se)
 
-let closeProgram (p : SA.sprogram) : C.program = List.map close p
+let close_program (p : SA.sprogram) : C.program = List.map close p
