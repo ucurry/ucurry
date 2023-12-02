@@ -1,11 +1,12 @@
 (* Abstract Syntax Tree and functions for printing it *)
 
 module A = Ast
+module S = Sast
 
 type sexpr = A.typ * expr
 
 and expr =
-  | Literal of Sast.svalue
+  | Literal of S.svalue
   | Var of string
   | Assign of string * thunk
   | Apply of sexpr * thunk list
@@ -20,7 +21,7 @@ and expr =
   | At of sexpr * int
   | Noexpr
 
-and case_expr = Sast.pattern * sexpr
+and case_expr = S.pattern * sexpr
 and closure = (string list * sexpr) * sexpr list (* (lambda, captured list) *)
 and thunk = sexpr (* which will be a Closure form *)
 
@@ -37,69 +38,61 @@ type program = def list
 
 (* Pretty-printing functions *)
 
-let rec string_of_literal : Sast.svalue -> string = function
-  | Sast.INT l -> string_of_int l
-  | Sast.STRING l -> "\"" ^ l ^ "\""
-  | Sast.BOOL l -> string_of_bool l
-  | Sast.EMPTYLIST -> "[]"
-  | Sast.LIST (x, xs) ->
-      let rec listString (x, xs) =
-        match (x, xs) with
-        | x, Sast.EMPTYLIST -> string_of_literal x
-        | x, Sast.LIST (y, ys) -> string_of_literal x ^ "," ^ listString (y, ys)
-        | _ -> raise (Invalid_argument "should not be reached")
-      in
-      "[" ^ listString (x, xs) ^ "]"
-  | Sast.TUPLE l ->
-      "(" ^ String.concat ", " (List.map string_of_literal l) ^ ")"
-  | Sast.UNIT -> "()"
-  | Sast.INF_LIST n -> "[" ^ string_of_int n ^ "..]"
-  | Sast.Construct ((s, _, _), e) -> "(" ^ s ^ " " ^ string_of_literal e ^ ")"
-
-let rec string_of_typ = function
-  | A.INT_TY -> "int"
-  | A.STRING_TY -> "string"
-  | A.BOOL_TY -> "bool"
-  | A.LIST_TY typ -> string_of_typ typ ^ " list"
-  | A.UNIT_TY -> "unit"
-  | A.FUNCTION_TY (t1, t2) ->
-      "(" ^ string_of_typ t1 ^ " -> " ^ string_of_typ t2 ^ ")"
-  | A.CONSTRUCTOR_TY s -> s
-  | A.TUPLE_TY typs ->
-      "(" ^ String.concat " * " (List.map string_of_typ typs) ^ ")"
-
-let rec string_of_sexpr ((ty, tope) : sexpr) =
-  let rec string_of_expr (exp : expr) =
-    let flat_string_of_exp = function
-      | Literal l -> string_of_literal l
-      | Assign _ -> "assign"
-      | Var x -> x
-      | Apply _ -> "apply"
-      | Begin el ->
-          "(begin " ^ String.concat ", " (List.map string_of_sexpr el) ^ ")"
-      | Binop (e1, o, e2) ->
-          string_of_sexpr e1 ^ " " ^ Ast.string_of_binop o ^ " "
-          ^ string_of_sexpr e2
-      | Unop (o, e) -> A.string_of_uop o ^ " " ^ string_of_sexpr e
-      | If (e1, e2, e3) ->
-          "if " ^ string_of_sexpr e1 ^ " then \n" ^ string_of_sexpr e2
-          ^ " else \n" ^ string_of_sexpr e3
-      | Closure ((_, (_, e)), _) -> string_of_expr e
-      | Let (vl, e) ->
-          "let "
-          ^ String.concat ", "
-              (List.map (fun (v, e) -> v ^ " = " ^ string_of_sexpr e) vl)
-          ^ " in \n" ^ string_of_sexpr e
-      | Noexpr -> ""
-      | _ -> raise (Failure "String_of_expr Not implemented For Most Cases")
-    in
-    match exp with Noexpr -> "" | _ -> "(" ^ flat_string_of_exp exp ^ ")"
+let rec string_of_closure (((args, body), captured) : closure) : string =
+  let args = "(" ^ String.concat ", " args ^ ", closure)" in
+  let body_string = string_of_sexpr "\t" body in
+  let captured_vars =
+    List.fold_left (fun acc cap -> acc ^ " " ^ string_of_sexpr "" cap) "" captured
   in
-  string_of_typ ty ^ " " ^ string_of_expr tope
+  "\n(mkClosure " ^ args ^ "\n" ^ "\t" ^ body_string ^ "\n" ^ "[" ^ captured_vars ^ "]" ^ ")"
+
+and string_of_sexpr (delim: string) ((ty, expr) : sexpr) : string =
+  let string_of_expr (exp : expr) : string =
+    match exp with
+    | Literal l -> S.string_of_literal l
+    | Var x -> x
+    | Assign (name, thunk) -> name ^ " = " ^ string_of_sexpr delim thunk 
+    | Apply (sexpr, tlist) ->
+        let expr_string = string_of_sexpr delim sexpr in
+        let args_string =
+          List.fold_left
+            (fun acc thunk -> acc ^ " " ^ string_of_sexpr delim thunk)
+            "" tlist
+        in
+        "APP(" ^ expr_string ^ args_string ^ ")"
+    | If (e1, e2, e3) ->
+        "If " ^ string_of_sexpr delim e1 ^ " then \n" ^ delim ^ string_of_sexpr delim e2
+        ^ " else \n" ^ delim ^ string_of_sexpr delim e3
+    | Let (vl, e) ->
+        "let "
+        ^ String.concat ", "
+            (List.map
+               (fun (name, thunk) ->
+                 name ^ " = " ^ string_of_sexpr delim thunk)
+               vl)
+        ^ " in \n" ^ delim ^ string_of_sexpr delim e
+    | Begin el ->
+        "(begin " ^ String.concat (", " ^ delim) (List.map (string_of_sexpr delim) el) ^ ")"
+    | Binop (e1, o, e2) ->
+        string_of_sexpr delim e1 ^ " " ^ Ast.string_of_binop o ^ " "
+        ^ string_of_sexpr delim e2
+    | Unop (o, e) -> A.string_of_uop o ^ " " ^ string_of_sexpr delim e
+    | Captured i -> "Captured " ^ string_of_int i
+    | Closure cl -> string_of_closure cl
+    | Case _ -> failwith "String_of_expr Not implemented for case"
+    | At _ -> failwith "String_of_exor Not implemented for at"
+    | Noexpr -> ""
+  in
+  "(" ^ A.string_of_typ ty ^ "," ^ string_of_expr expr ^ ")"
 
 let string_of_def = function
-  | Exp se -> string_of_sexpr se
-  | Val (name, e) -> name ^ " " ^ string_of_sexpr e
-  | _ -> raise (Failure "String_of_def Not implemented For Most Cases")
+  | Val (name, e) ->
+      name ^ " " ^ string_of_sexpr "" e
+  | Function (ty, name, body) ->
+      "fun: " ^ Ast.string_of_typ ty ^ ":\n" ^ name ^ " "
+      ^ string_of_closure body
+  | Datatype _ -> failwith "String_of_def Not implemented datatype"
+  | Exp se -> string_of_sexpr "" se
+  | CheckTypeError _ -> failwith "String_of_def Not implemented checktypeerror"
 
 let string_of_program defs = String.concat "\n" (List.map string_of_def defs)
