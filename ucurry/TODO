@@ -1,12 +1,24 @@
 Documentation:
 - Currently the pass goes:
-  --Scan--> AST --Curry--> AST --Lazy--> AST --Semant--> SAST --Clconvert--> CAST --Codegen--> LLVM IR
+  --Scan--> AST 
+  --Curry--> AST 
+  --Lazy--> AST 
+  --Semant--> SAST 
+  --Clconvert--> CAST 
+  --Codegen--> LLVM IR
+
+- Curry Pass:
+    1. curry all lambdas and functions => so that every lambda only has 1 arg
+    2. convert the CASE expr of lists to If-Then-Let format
+          => because Lazy would convert the type of Let expressions, 
+          => ultimately all case conversion need to happen before Lazy pass
 
 - Decision making:
   1. Putting the Lazy before Semant does not require us to carry the type or do type transformation
     - We disccovered that doing Lazy after Semant would need to do a lot of repeated work with types
   2. Separate the Curry pass from Semant
     - Before we will ccurry function in Semant, but this is technically desugaring the so urce code, and will be clear if it is a separate pass.
+  3. Remove the type annotation in Let 
 
 - Hacky thing to pay attention to in the future:
 
