@@ -1,0 +1,26 @@
+Documentation:
+- Currently the pass goes:
+  --Scan--> AST --Curry--> AST --Lazy--> AST --Semant--> SAST --Clconvert--> CAST --Codegen--> LLVM IR
+
+- Decision making:
+  1. Putting the Lazy before Semant does not require us to carry the type or do type transformation
+    - We disccovered that doing Lazy after Semant would need to do a lot of repeated work with types
+  2. Separate the Curry pass from Semant
+    - Before we will ccurry function in Semant, but this is technically desugaring the so urce code, and will be clear if it is a separate pass.
+
+- Hacky thing to pay attention to in the future:
+
+    => LAZY pass will add Ast.Thunk node 
+    => Ast.Thunk e = (S.Lambda (FUNTY (UNIT_TY, ty e)) ["u])
+    => Currently, case expression is not lazy converted 
+
+
+TODO:
+- Debugging: tests/codegen/test.suite.uc => (fact 3) raised "Instruction 4" error??
+  
+- Consider having empty list like [int], [string], [bool], etc.. 
+    => this will free LET expression from carrying the types in the bindings 
+    => which will allow us to do case_convert before LAZY pass (before SEMANT pass)
+
+- Switch gear to pattern matching of Lists and ADT
+    => then come back to implement infinite list 
