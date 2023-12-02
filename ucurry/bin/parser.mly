@@ -117,8 +117,8 @@ lambda:
   LAMBDA LBRACE funtype RBRACE formals_opt ARROW exp { Lambda($3, $5, $7) }
 
 bindings:
-    typ NAME ASN exp          { [(($1, $2), $4)] }
-  | bindings COMMA typ NAME ASN exp { (($3, $4), $6):: $1 }
+    NAME ASN exp          { [($1, $3)] }
+  | bindings COMMA NAME ASN exp { ($3, $5):: $1 }
 
 formals_opt:
   | /* nothing */   { [] }

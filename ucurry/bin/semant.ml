@@ -130,11 +130,9 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
           S.SIf ((cond_tau', cond_e), (branch_tau, se1), (branch_tau, se2)) )
     | A.Let (bindings, e) ->
         let vars, es = List.split bindings in
-        let dec_taus, names = List.split vars in
-        let newEnv = bindAll names dec_taus type_env in
         let taus, ses = List.split (List.map ty es) in
-        let final_taus = List.map2 get_checked_types dec_taus taus in
-        let bind_ses = List.combine names @@ List.combine final_taus ses in
+        let newEnv = bindAll vars taus type_env in
+        let bind_ses = List.combine vars @@ List.combine taus ses in
         let body_tau, body_es = typ_of vcon_env vcon_sets newEnv e in
         (body_tau, S.SLet (bind_ses, (body_tau, body_es)))
     | A.Begin [] -> (A.UNIT_TY, S.SBegin [])

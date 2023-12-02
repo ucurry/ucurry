@@ -5,22 +5,22 @@ and transform_ty ty = match ty with
   | A.FUNCTION_TY (argty, retty) -> A.FUNCTION_TY (to_thunk_ty argty, transform_ty retty)
   | _ -> ty 
 
+
 let unitv = A.Literal A.UNIT
-let rec lazy_expr (exp: A.expr) : A.expr = match exp with 
+let rec lazy_expr (exp: A.expr) : A.expr = 
+  let to_thunk e = A.Thunk (lazy_expr e) in 
+  match exp with 
   | A.Literal _ -> exp 
   | A.Var n -> A.Apply (A.Var n , [unitv])
-  | A.Assign (n, e) -> A.Assign (n, A.Thunk (lazy_expr e))
+  | A.Assign (n, e) -> A.Assign (n, to_thunk e)
   | A.Apply (e, es) -> 
       let lazy_fun = lazy_expr e in 
-      let lazy_args = List.map (fun arg -> A.Thunk (lazy_expr arg)) es in 
+      let lazy_args = List.map to_thunk es in 
       A.Apply (lazy_fun, lazy_args)
   | A.If (e1, e2, e3) -> A.If (lazy_expr e1, lazy_expr e2, lazy_expr e3)
   | A.Let (bindings, body) -> 
-      let to_thunk ((ty, name), e) = 
-        let ty' = to_thunk_ty ty in 
-        ((ty', name), A.Lambda (ty', ["unit"], lazy_expr e))
-      in 
-      A.Let (List.map to_thunk bindings, lazy_expr body) 
+      let thunk_bindings = List.map (fun (n, e) -> (n, to_thunk e)) bindings in 
+      A.Let (thunk_bindings, lazy_expr body) 
   | A.Lambda (typ, args, body) -> 
       let typ' = transform_ty typ in 
       A.Lambda (typ', args, lazy_expr body)

@@ -51,7 +51,7 @@ type expr =
   | Assign of string * expr
   | Apply of expr * expr list
   | If of expr * expr * expr
-  | Let of ((typ * string) * expr) list * expr
+  | Let of (string * expr) list * expr
   | Begin of expr list
   | Binop of expr * binop * expr
   | Unop of uop * expr
@@ -169,8 +169,7 @@ let rec string_of_expr exp =
         "let "
         ^ String.concat ", "
             (List.map
-               (fun ((t, v), e) ->
-                 string_of_typ t ^ " " ^ v ^ " = " ^ string_of_expr e)
+               (fun (v, e) -> v ^ " = " ^ string_of_expr e)
                vl)
         ^ " in " ^ string_of_expr e
     | At (e, i) -> string_of_expr e ^ "." ^ string_of_int i
