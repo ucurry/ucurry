@@ -22,19 +22,20 @@ let () =
   let lexbuf = Lexing.from_channel !channel in
   let ast = Parser.program Scanner.token lexbuf in
   let curried = Cu.curry ast in
-  let sast, _ = Semant.semant_check curried in
+  let last = Lazy.lazy_convert curried in 
+  let sast, _ = Semant.semant_check last in
   match !action with
   | Ast ->
-      let _ = print_string (Ast.string_of_program curried) in
+      let _ = print_string (Ast.string_of_program ast) in
       print_newline ()
   | LAST ->
-      let _ = List.map Lazyconvert.lazyDef sast in
+      (* let _ = List.map Lazyconvert.lazyDef sast in *)
       print_newline ()
   | CAST ->
       (* let last = List.map Lazyconvert.lazyDef sast in *)
-      let cast = Clconvert.closeProgram sast in
-      let renamed_cast = Rename.rename cast in
-      let _ = print_string (Cast.string_of_program renamed_cast) in
+      (* let cast = Clconvert.closeProgram sast in *)
+      (* let renamed_cast = Rename.rename cast in *)
+      (* let _ = print_string (Cast.string_of_program renamed_cast) in *)
       print_newline ()
   | LLVMIR ->
       (* let last = List.map Lazyconvert.lazyDef sast in *)

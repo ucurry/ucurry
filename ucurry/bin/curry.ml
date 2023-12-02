@@ -27,6 +27,7 @@ let rec curry_expr (exp : A.expr) : A.expr =
     A.Case (curry_expr scrutinee, new_cases)
   | A.At (e, idx) -> A.At (curry_expr e, idx)
   | A.Noexpr -> A.Noexpr
+  | _ -> failwith "no match in curry pass"
   
 
 let curry (program : A.program) : A.program =

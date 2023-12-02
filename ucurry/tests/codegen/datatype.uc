@@ -2,6 +2,7 @@
 datatype Color = Gray of int | White of int;
 Color grey = (Gray 0);
 (White 255);
+Color 
 
 -- datatype with zero argument
 datatype RGB = Red | Blue | Green; 

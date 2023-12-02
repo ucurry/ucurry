@@ -17,7 +17,7 @@ let nth (l : 'a list) (n : int) =
 
 let get_ft = function
   | A.FUNCTION_TY (formalty, retty) -> (formalty, retty)
-  | _ -> raise (TypeError "not function type")
+  | ty -> raise (TypeError (A.string_of_typ ty ^ " not function type"))
 
 let findType (name : string) (env : 'a StringMap.t) =
   try StringMap.find name env
