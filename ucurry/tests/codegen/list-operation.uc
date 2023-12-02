@@ -21,7 +21,9 @@ int list cons_list = front :: tl_list;
 println (hd cons_list);
 
 ---- null
-println (null? []);
+println (null? [int]);
+println (null? [string]);
+println (null? [bool]);
 println (null? [1, 2]);
 println (null? (tl [1]));
 println (null? (tl [1, 2, 3]));
