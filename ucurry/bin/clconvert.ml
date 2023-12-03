@@ -69,9 +69,7 @@ let rec asClosure (funty : A.typ) (lambda : SA.lambda) (captured : freevar list)
   let formals, sbody = lambda in
   let freeVarWithTypes = S.elements (free (funty, SA.SLambda lambda)) in
   let captured' =
-    List.map
-      (fun (t, n) -> close_exp captured (t, SA.SVar n))
-      freeVarWithTypes
+    List.map (fun (t, n) -> close_exp captured (t, SA.SVar n)) freeVarWithTypes
   in
   ((formals, close_exp freeVarWithTypes sbody), captured')
 

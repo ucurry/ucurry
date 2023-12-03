@@ -11,6 +11,7 @@ and transform_ty ty =
 
 let unitv = A.Literal A.UNIT
 let unit_string = "unit"
+
 let rec lazy_expr (exp : A.expr) : A.expr =
   match exp with
   | A.Literal _ -> exp
@@ -46,12 +47,16 @@ let rec lazy_def def =
   | A.Function (ty, funname, args, body) ->
       let lazy_tau = to_thunk_ty ty in
       A.Function
-        (lazy_tau, funname, [ unit_string ], lazy_expr (A.Lambda (ty, args, body)))
+        ( lazy_tau,
+          funname,
+          [ unit_string ],
+          lazy_expr (A.Lambda (ty, args, body)) )
   | A.Exp e -> A.Exp (lazy_expr e)
   | A.CheckTypeError e -> A.CheckTypeError (lazy_def e)
   | A.Variable (ty, name, e) ->
       let lazy_tau = to_thunk_ty ty in
-      A.Variable (lazy_tau, name, A.Lambda (lazy_tau, [ unit_string ], lazy_expr e))
+      A.Variable
+        (lazy_tau, name, A.Lambda (lazy_tau, [ unit_string ], lazy_expr e))
   | A.Datatype (_, _) -> def
 
 let lazy_convert (program : A.def list) : A.def list = List.map lazy_def program

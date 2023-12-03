@@ -21,6 +21,7 @@ let ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
     | A.UNIT_TY -> L.i1_type context
     | A.FUNCTION_TY (_, _) as ft ->
         let formal_types = Util.get_formalty ft in
+        let cl_types = L.named_struct_type context "closure" in
         let retty = Util.get_retty ft in
         let formal_lltypes = List.map ltype_of formal_types in
         let fun_type =

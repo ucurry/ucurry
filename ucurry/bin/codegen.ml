@@ -15,6 +15,7 @@ let build_main_body defs =
   let i8_t = L.i8_type context in
   let i1_t = L.i1_type context in
   let void_t = L.void_type context in
+  let void_ptr = L.pointer_type (L.i8_type context) in
   let null_clstruct = L.const_null (L.pointer_type void_t) in
   let main_ftype = L.function_type void_t [| i32_t |] in
   let the_module = L.create_module context "uCurry" in
@@ -28,6 +29,7 @@ let build_main_body defs =
   in
   let datatype_map = CGUtil.build_datatypes context the_module defs in
   let ltype_of_type = CGUtil.ltype_of_type datatype_map the_module context in
+  let lambda_name = "lambda" in
   let get_struct_type typs =
     let field_types = Array.of_list (List.map ltype_of_type typs) in
     L.struct_type context field_types
@@ -53,15 +55,28 @@ let build_main_body defs =
       | C.Literal l ->
           CGUtil.build_literal builder datatype_map context the_module
             string_pool ty l
-      | C.Var name -> L.build_load (lookup name varmap) name builder
+      (* | C.Var name -> lookup name varmap *)
+      | C.Var name -> let _ = print_string ("in var" ^ name )in L.build_load (lookup name varmap) name builder
       | C.Assign (name, e) ->
           let e' = expr builder e in
           let _ = L.build_store e' (lookup name varmap) builder in
           e'
       | C.Apply (((ft, _) as sf), args) ->
+          let fun_closure = expr builder sf in
+
+          let fdef = expr builder sf in
+          let _ = print_string (C.string_of_sexpr "" (ty, top_exp)) in 
+          (* let _ = failwith "reached" in  *)
+
+          (* let fdef = U.get_data_field 0 fun_closure builder "fdef" in
+
+          let cap = U.get_data_field 1 fun_closure builder "cap" in *)
           let fretty = U.get_retty ft in
           let llargs = List.rev (List.map (expr builder) (List.rev args)) in
-          let fdef = expr builder sf in
+          (* let llargs =
+            cap :: List.rev (List.map (expr builder) (List.rev args))
+          in *)
+
           let result =
             match fretty with A.UNIT_TY -> "" | _ -> "apply" ^ "_result"
           in
@@ -108,7 +123,8 @@ let build_main_body defs =
               (fun vm (name, e) ->
                 let tau, _ = e in
                 let e' = expr builder e in
-                let reg = L.build_alloca (ltype_of_type tau) name builder in
+                (*TODO: error here with function types*)
+                let reg = L.build_alloca (ltype_of_type tau) name builder in 
                 let vm' = StringMap.add name reg vm in
                 let _ = L.build_store e' (lookup name vm') builder in
                 vm')
@@ -198,25 +214,61 @@ let build_main_body defs =
               (* if L.is_null list_ptr then L.const_int i1_t 1 else L.const_int i1_t 0  *)
               L.build_is_null list_ptr "null?" builder
           | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "unop"))
+      (* | C.Captured index -> (L.const_int i32_t 1) *)
       | C.Captured index -> U.get_data_field index clstruct builder "capvar"
-      | C.Closure (_, cap) ->
-          let _, the_function = alloc_function "lambda" ty in
-          let clstruct' = build_captured_struct builder varmap clstruct cap in
-          ignore (build_function_body the_function clstruct' (ty, top_exp));
-          the_function
+      | C.Closure ((_, cap) as cl) -> 
+        (* failwith "a" *)
+          (* let _, the_function = alloc_function "lambda" ty in
+             let clstruct' = build_captured_struct builder varmap clstruct cap in
+             ignore (build_function_body the_function (ty, top_exp));
+             the_function *)
+          (* Alloc function *)
+          let funtype, function_ptr = alloc_function lambda_name ty in
+
+          let cl_struct_type =
+            L.struct_type context [| L.pointer_type funtype; void_ptr |]
+          in
+
+          let closure_ptr =
+            L.build_malloc cl_struct_type "fun_closure" builder
+          in
+
+          let closure_pp =
+            L.build_alloca (L.pointer_type cl_struct_type) "closurepp" builder
+          in
+          let _ = L.build_store closure_ptr closure_pp builder in
+          (* let varmap' = StringMap.add lambda_name closure_pp varmap in *)
+
+          let capstruct_type, capstruct_ptr =
+            build_captured_struct builder varmap clstruct cap
+          in
+
+          let casted_capstruct_ptr =
+            L.build_bitcast capstruct_ptr void_ptr "capstruct" builder
+          in
+
+          let _ = U.set_data_field function_ptr 0 closure_ptr builder in
+          let _ = U.set_data_field casted_capstruct_ptr 1 closure_ptr builder in
+
+          let _ =
+            build_function_body function_ptr capstruct_type (ty, top_exp)
+          in
+          closure_pp
       | C.Case _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "case")
       | C.At (e, i) ->
           let tuple_ptr = expr builder e in
           Util.get_data_field i tuple_ptr builder "tuple field"
-      | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "SIFN")
+      | C.Noexpr -> L.build_unreachable builder (*TODO double check*)
     in
     expr builder
   and alloc_function name fun_tau =
     let formaltype, retty = Util.get_ft fun_tau in
-    let formal_lltypes = List.map ltype_of_type [ formaltype ] in
+    (* Add a void ptr as a placeholder for captured variables *)
+    let formal_lltypes = void_ptr :: List.map ltype_of_type [ formaltype ] in
     let ftype =
       L.function_type (ltype_of_type retty) (Array.of_list formal_lltypes)
     in
+    (* Note: ftype and fun_tau are not matched after this point*)
     let the_function = L.define_function name ftype the_module in
     (ftype, the_function)
   and build_captured_struct builder varmap clstruct cap =
@@ -224,44 +276,49 @@ let build_main_body defs =
     let captured_values =
       List.map (exprWithVarmap builder clstruct varmap) cap
     in
-    let captured_types = List.map (fun (t, _) -> t) cap in
-    let captured_lltypes = List.map ltype_of_type captured_types in
-
-    (* Alloc for the captured struct; set each struct field*)
-    let struct_ptr =
-      L.build_alloca (get_struct_type captured_types) "captured_struct" builder
-    in
+    let captured_types = Array.of_list (List.map L.type_of captured_values) in
+    let struct_type = L.struct_type context captured_types in
+    let struct_ptr = L.build_malloc struct_type "captured_struct" builder in
     ignore
       (U.map_i
          (fun v i -> U.set_data_field v i struct_ptr builder)
          0 captured_values);
+    (struct_type, struct_ptr)
+  and build_function_body the_function captured_type closure : unit =
+    let builder = L.builder_at_end context (L.entry_block the_function) in
 
-    (* make the struct pointer global *)
-    let struct_init =
-      L.const_struct context
-        (Array.of_list (List.map L.const_null captured_lltypes))
+    let void_cap_param = L.param the_function 0 in
+    let void_cap_name = L.value_name void_cap_param in
+    let void_local_cap = L.build_alloca void_ptr void_cap_name builder in
+    let _ = L.build_store void_cap_param void_local_cap builder in
+    let void_local_cap' = L.build_load void_local_cap void_cap_name builder in
+    let cap_param =
+      L.build_bitcast void_local_cap'
+        (L.pointer_type captured_type)
+        "cap" builder
     in
-    let global_struct_ptr = L.define_global "captured" struct_init the_module in
-    let e' = L.build_load struct_ptr "tmp" builder in
-    let _ = L.build_store e' global_struct_ptr builder in
-    global_struct_ptr
-  and build_function_body the_function clstruct closure : unit =
+
+    let localvarmap = StringMap.add "cap" cap_param StringMap.empty in (*TODO: dont think this is necessary*)
+
+    (* let localvarmap = StringMap.empty in  *)
     let formaltypes, _, formals, body, _ = deconstructClosure closure in
     let formal_lltypes = List.map ltype_of_type formaltypes in
     let formalsandtypes = List.combine formal_lltypes formals in
     (* build the function body *)
-    let builder = L.builder_at_end context (L.entry_block the_function) in
     let add_formal m (t, n) p =
       let _ = L.set_value_name n p in
       let local = L.build_alloca t n builder in
       let _ = L.build_store p local builder in
       StringMap.add n local m (* return a new local varmap *)
     in
-    let localvarmap =
-      List.fold_left2 add_formal StringMap.empty formalsandtypes
-        (Array.to_list (L.params the_function))
+    let localvars =
+      let l = Array.to_list (L.params the_function) in
+      match l with _ :: rest -> rest | _ -> failwith "Impossible"
     in
-    let e' = exprWithVarmap builder clstruct localvarmap body in
+    let localvarmap' =
+      List.fold_left2 add_formal localvarmap formalsandtypes localvars
+    in
+    let e' = exprWithVarmap builder cap_param localvarmap' body in
     ignore (add_terminal builder (fun b -> L.build_ret e' b))
   (* varmap is the variable environment that maps (variable : string |---> to reg : llvale) *)
   and stmt builder varmap = function
@@ -275,19 +332,30 @@ let build_main_body defs =
         (builder, varmap')
     | C.Function (tau, name, (lambda, cap)) ->
         (* Alloc function *)
-        let ftype, the_function = alloc_function name tau in
+        let funtype, function_ptr = alloc_function name tau in
 
-        (* Bind the function pointer to varmap to allow recursive call *)
-        let reg = L.build_alloca (L.pointer_type ftype) name builder in
-        let _ = L.build_store the_function reg builder in
-        let varmap' = StringMap.add name reg varmap in
+        let cl_struct_type =
+          L.struct_type context [| L.pointer_type funtype; void_ptr |]
+        in
+        let closure_ptr = L.build_malloc cl_struct_type "fun_closure" builder in
+        let closure_pp =
+          L.build_alloca (L.pointer_type cl_struct_type) "closurepp" builder
+        in
+        let _ = L.build_store closure_ptr closure_pp builder in
+        let varmap' = StringMap.add name closure_pp varmap in
 
-        (* Build captured struct and then the functino body *)
-        let clstruct =
+        let capstruct_type, capstruct_ptr =
           build_captured_struct builder varmap' null_clstruct cap
         in
+        let casted_capstruct_ptr =
+          L.build_bitcast capstruct_ptr void_ptr "capstruct" builder
+        in
+
+        let _ = U.set_data_field function_ptr 0 closure_ptr builder in
+        let _ = U.set_data_field casted_capstruct_ptr 1 closure_ptr builder in
+
         ignore
-          (build_function_body the_function clstruct
+          (build_function_body function_ptr capstruct_type
              (tau, C.Closure (lambda, cap)));
         (builder, varmap')
     | C.Exp e ->
