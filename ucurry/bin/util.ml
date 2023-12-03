@@ -55,7 +55,7 @@ let rec map_i (f : 'a -> int -> 'b) (i : int) (l : 'a list) =
 
 let list_to_arr l = Array.init (List.length l) (List.nth l)
 
-let rec typ_of_value = function 
+let rec typ_of_value = function
   | A.INT _ -> A.INT_TY
   | A.STRING _ -> A.STRING_TY
   | A.BOOL _ -> A.BOOL_TY
@@ -65,4 +65,3 @@ let rec typ_of_value = function
   | A.INF_LIST _ -> A.LIST_TY A.INT_TY
   | A.UNIT -> A.UNIT_TY
   | A.Construct _ -> failwith "typ_of_value not yet support constructor type"
-

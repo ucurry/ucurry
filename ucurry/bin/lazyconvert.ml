@@ -52,7 +52,7 @@ let lazyDef (def : S.sdef) : L.def =
   match def with
   | S.SExp e -> L.Exp (lazyExpWith e)
   | S.SVal (name, e) ->
-      let tau,  _ = e in 
+      let tau, _ = e in
       let body =
         lazyExpWith (A.FUNCTION_TY (A.UNIT_TY, tau), S.SLambda ([], e))
       in

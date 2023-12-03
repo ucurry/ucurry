@@ -33,8 +33,8 @@ let rec free ((t, exp) : SA.sexpr) : S.t =
   | SA.SIf (s1, s2, s3) -> unionFree [ s1; s2; s3 ]
   | SA.SLet (bindings, body) ->
       let names, thunks = List.split bindings in
-      let tau, _ = List.split thunks in 
-      let localsWithTypes = List.combine tau names in 
+      let tau, _ = List.split thunks in
+      let localsWithTypes = List.combine tau names in
       let freeXSet = S.of_list localsWithTypes in
       let freeESet = unionFree thunks in
       let freeBody = free body in

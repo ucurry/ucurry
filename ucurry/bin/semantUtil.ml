@@ -59,7 +59,7 @@ let rec get_checked_types tau1 tau2 =
   | A.UNIT_TY, A.UNIT_TY -> tau1
   | A.BOOL_TY, A.BOOL_TY -> tau1
   (* | A.LIST_TY A.UNIT_TY, A.LIST_TY _ -> tau2
-  | A.LIST_TY _, A.LIST_TY A.UNIT_TY -> tau1 *)
+     | A.LIST_TY _, A.LIST_TY A.UNIT_TY -> tau1 *)
   | A.LIST_TY tau1, A.LIST_TY tau2 ->
       let tau = get_checked_types tau1 tau2 in
       A.LIST_TY tau

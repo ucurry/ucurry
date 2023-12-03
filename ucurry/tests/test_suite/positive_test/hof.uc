@@ -11,7 +11,7 @@ println (apply addone 3);
 -- higher order `map` for integer list
 fun: (int -> int) -> int list -> int list:
 map f xs = if (null? xs) 
-           then [] 
+           then [int] 
            else ((f (hd xs)) :: (map f (tl xs)));
 
 
