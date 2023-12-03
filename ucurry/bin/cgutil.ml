@@ -14,20 +14,24 @@ exception UNIMPLEMENTED of string
 (* get the ltype for a corresponding ast type *)
 let ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
     (context : L.llcontext) (ty : Ast.typ) =
+  let void_ptr = L.pointer_type (L.i8_type context) in
   let rec ltype_of = function
     | A.INT_TY -> L.i32_type context
     | A.BOOL_TY -> L.i1_type context
     | A.STRING_TY -> L.pointer_type (L.i8_type context)
     | A.UNIT_TY -> L.i1_type context
     | A.FUNCTION_TY (_, _) as ft ->
+        (* Should return closure ptr type *)
         let formal_types = Util.get_formalty ft in
-        let cl_types = L.named_struct_type context "closure" in
         let retty = Util.get_retty ft in
-        let formal_lltypes = List.map ltype_of formal_types in
-        let fun_type =
+        let formal_lltypes = void_ptr :: List.map ltype_of formal_types in
+        let ftype =
           L.function_type (ltype_of retty) (Array.of_list formal_lltypes)
         in
-        L.pointer_type fun_type
+        let cl_struct_type =
+          L.struct_type context [| L.pointer_type ftype; void_ptr |]
+        in
+        L.pointer_type cl_struct_type
     | A.CONSTRUCTOR_TY name -> L.pointer_type (StringMap.find name ty_map)
     | A.TUPLE_TY taus ->
         let taus = Array.of_list (List.map ltype_of taus) in
