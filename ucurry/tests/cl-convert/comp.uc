@@ -7,5 +7,5 @@ g x = x + 1;
 fun: (int -> int) -> (int -> int) -> int -> int:
 o f g x = (f (g x));
 
-(o f g 1);
+println (o f g 1);
 
