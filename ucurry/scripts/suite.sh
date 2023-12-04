@@ -2,7 +2,7 @@
 
 anyfailed=0
 counter=0
-for f in tests/test_suite/positive_test/*.uc
+for f in ../tests/test_suite/positive_test/*.uc
 do 
     echo "Testing $f"
     ((counter++))
@@ -26,7 +26,7 @@ fi
 
 anyfailed=0
 counter=0
-for f in tests/test_suite/negative_test/*.uc
+for f in ../tests/test_suite/negative_test/*.uc
 do 
     echo "Testing $f"
     ((counter++))

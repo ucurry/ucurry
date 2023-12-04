@@ -14,10 +14,9 @@ let build_main_body defs =
   let i32_t = L.i32_type context in
   let i8_t = L.i8_type context in
   let i1_t = L.i1_type context in
-  let void_t = L.void_type context in
   let void_ptr = L.pointer_type (L.i8_type context) in
   let null_captured_param = L.const_null (L.pointer_type i8_t) in
-  let main_ftype = L.function_type void_t [| i32_t |] in
+  let main_ftype = L.function_type i32_t [| i32_t |] in
   let the_module = L.create_module context "uCurry" in
   let deconstructClosure (ty, se) =
     (* NOTE: didn't check if ty is actually a funty  *)
@@ -360,7 +359,7 @@ let build_main_body defs =
       (builder, StringMap.empty) defs
   in
 
-  (* Add a void return to main *)
-  let _ = add_terminal main_builder L.build_ret_void in
+  (* Add a return 0 to main *)
+  let _ = add_terminal main_builder (L.build_ret (L.const_int i32_t 0)) in
 
   the_module

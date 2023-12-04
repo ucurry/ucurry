@@ -1,6 +1,6 @@
 #! /bin/sh
 echo "Tests for success cases \n"
-for f in tests/type/*.uc
+for f in ../tests/scanparse/*test-*.uc
 do
     echo "Testing $f"
     dune exec ucurry -- -a < $f > $f.trimmed
@@ -17,3 +17,18 @@ do
     fi
 done
 
+echo "Tests for fail cases \n"
+for f in ../tests/scanparse/*fail-*.uc
+do
+    echo "Testing $f which is supposed to fail"
+    dune exec ucurry -- -a < $f 2> /dev/null 1> /dev/null
+    ecode=$?
+    
+    if [ $ecode -eq 0 ]
+    then 
+        echo "Test $f succeeded unexpectedly\n"
+    else 
+        echo "Test $f failed as expected\n"
+    fi
+
+done

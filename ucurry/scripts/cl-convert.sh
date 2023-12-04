@@ -1,10 +1,10 @@
+
 #! /bin/sh 
 make clean
-echo "Running codegen tests"
+echo "Running cl-convert tests"
 
 anyfailed=0
-rm tests/codegen/all.uc
-for f in tests/codegen/*.uc 
+for f in ../tests/cl-convert/*.uc 
 do 
     echo "Testing $f"
     # dune exec ucurry -- -s < $f > $f.ll
@@ -12,6 +12,7 @@ do
     # cc -o $f.exe $f.s
     # ./$f.exe > $f.out
     dune exec ucurry -- -s < $f | lli > $f.out
+    dune exec ucurry -- -s < $f | lli > $f.gold
     diff $f.out $f.gold 
 
     ecode=$? 
