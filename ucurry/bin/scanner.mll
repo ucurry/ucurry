@@ -10,8 +10,8 @@ let simple_char = [' '-'!' '#'-'&' '('-'[' ']'-'~']
 let escape_char = ['t' 'r' 'n' '\'' '\"' '\\']
 
 rule token = parse 
-  [' ' '\t' '\r' '\n']{ token lexbuf }
-| eof        { EOF }
+  [' ' '\t' '\r' '\n'] { token lexbuf }
+| eof                  { EOF }
 
 (* delimiters *)
 | "--"       { comment lexbuf }
@@ -26,6 +26,9 @@ rule token = parse
 | ']'        { RBRACKET }
 | '|'        { BAR }
 | ".."       { DOTS }
+| "."        { DOT }
+
+
 
 (* keyword *)
 | "check_type_error" { CHECK_TYPE_ERROR } 
@@ -73,6 +76,7 @@ rule token = parse
 | "~"        { NEG }
 | "print"    { PRINT }
 | "println"  { PRINTLN }
+| "null?"    { ISNULL }
 
 
 (* literal   *)
@@ -86,5 +90,6 @@ rule token = parse
 | _ as char{ raise (Failure("illegal character " ^ Char.escaped char)) }
 
 and comment = parse 
-    ['\r' '\n'] { token lexbuf }
-| _             { comment lexbuf }
+  ['\r' '\n'] { token lexbuf }
+| eof         { EOF }
+| _           { comment lexbuf }

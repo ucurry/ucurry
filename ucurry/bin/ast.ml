@@ -16,7 +16,16 @@ type binop =
   | Or
   | Cons
 
-type uop = Neg | Not | Hd | Tl | Print | Println
+type uop =
+  | Neg
+  | Not
+  | Hd
+  | Tl
+  | Print
+  | Println
+  | IsNull
+  | GetField
+  | GetPattern
 
 type typ =
   | INT_TY
@@ -29,11 +38,12 @@ type typ =
   | TUPLE_TY of typ list
 
 type pattern =
+  | PATTERNS of pattern list
   | VAR_PAT of string
-  | CON_PAT of string * pattern list option
-  | WILDCARD
+  | CON_PAT of string * pattern
   | CONCELL of string * string
   | NIL
+  | WILDCARD
 
 type expr =
   | Literal of value
@@ -41,12 +51,14 @@ type expr =
   | Assign of string * expr
   | Apply of expr * expr list
   | If of expr * expr * expr
-  | Let of ((typ * string) * expr) list * expr
+  | Let of (string * expr) list * expr
   | Begin of expr list
   | Binop of expr * binop * expr
   | Unop of uop * expr
   | Lambda of typ * string list * expr
+  | Thunk of expr
   | Case of expr * case_expr list
+  | At of expr * int
   | Noexpr
 
 and value =
@@ -54,7 +66,8 @@ and value =
   | INT of int
   | STRING of string
   | BOOL of bool
-  | LIST of value list
+  | EMPTYLIST of typ
+  | LIST of value * value
   | TUPLE of value list
   | INF_LIST of int
   | UNIT
@@ -68,7 +81,7 @@ type def =
   | Exp of expr
   | CheckTypeError of def
 
-and constructor = string * typ option
+and constructor = string * typ
 
 type program = def list
 
@@ -97,17 +110,16 @@ let string_of_uop = function
   | Tl -> "tl"
   | Print -> "print"
   | Println -> "println"
-
-(* | Tuple(l) -> string_of_tupleLiteral l *)
+  | IsNull -> "null?"
+  | _ -> "internal primitive"
 
 let rec string_of_pattern = function
+  | PATTERNS [] -> ""
+  | PATTERNS ps ->
+      "( " ^ String.concat "," (List.map string_of_pattern ps) ^ ")"
   | VAR_PAT s -> s
-  | CON_PAT (c, Some [ p ]) -> c ^ " " ^ string_of_pattern p
-  | CON_PAT (c, Some pl) ->
-      c ^ " (" ^ String.concat ", " (List.map string_of_pattern pl) ^ ")"
-  | CON_PAT (c, None) -> c
+  | CON_PAT (c, p) -> c ^ " " ^ string_of_pattern p
   | WILDCARD -> "_"
-  (* TODO: HACK a temporary way to get away with pattern matching for list *)
   | NIL -> "[]"
   | CONCELL (hd, tl) -> hd ^ "::" ^ tl
 
@@ -156,12 +168,11 @@ let rec string_of_expr exp =
     | Let (vl, e) ->
         "let "
         ^ String.concat ", "
-            (List.map
-               (fun ((t, v), e) ->
-                 string_of_typ t ^ " " ^ v ^ " = " ^ string_of_expr e)
-               vl)
+            (List.map (fun (v, e) -> v ^ " = " ^ string_of_expr e) vl)
         ^ " in " ^ string_of_expr e
+    | At (e, i) -> string_of_expr e ^ "." ^ string_of_int i
     | Noexpr -> ""
+    | Thunk e -> "THUNK: " ^ string_of_expr e
   in
   match exp with Noexpr -> "" | _ -> "(" ^ flat_string_of_exp exp ^ ")"
 
@@ -169,15 +180,23 @@ and string_of_literal = function
   | INT l -> string_of_int l
   | STRING l -> "\"" ^ l ^ "\""
   | BOOL l -> string_of_bool l
-  | LIST l -> "[" ^ String.concat ", " (List.map string_of_literal l) ^ "]"
+  | EMPTYLIST t -> "[" ^ string_of_typ t ^ "]"
+  | LIST (x, xs) ->
+      let rec listString (x, xs) =
+        match (x, xs) with
+        | x, EMPTYLIST _ -> string_of_literal x
+        | x, LIST (y, ys) -> string_of_literal x ^ "," ^ listString (y, ys)
+        | _ -> raise (Invalid_argument "should not be reached")
+      in
+      "[" ^ listString (x, xs) ^ "]"
   | TUPLE l -> "(" ^ String.concat ", " (List.map string_of_literal l) ^ ")"
   | UNIT -> "()"
   | INF_LIST n -> "[" ^ string_of_int n ^ "..]"
   | Construct (c, e) -> "(" ^ c ^ " " ^ string_of_literal e ^ ")"
 
 let string_of_constructor = function
-  | c, None -> c
-  | c, Some t -> c ^ " of " ^ string_of_typ t
+  | c, UNIT_TY -> c
+  | c, t -> c ^ " of " ^ string_of_typ t
 
 let rec string_of_def = function
   | Function (ty, f, args, e) ->

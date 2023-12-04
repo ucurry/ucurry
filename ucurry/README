@@ -19,6 +19,7 @@
     ./sptest.sh                # to run the tests script for scanner and parser 
     ./typetest.sh              # to run the tests for typechecking
     ./codegen.sh               # to run the tests for codegen
+    ./suite.sh                 # to run the integration test suite 
 
     ./testafile.sh <filename>  # generates the executable for the given file 
                                  name and any intermediate representations
@@ -27,7 +28,7 @@
 
 # The µcurry Compiler
 Coded in OCaml, this compiler takes a minimal functional language and compiles 
-it down to LLVM IR. The compiler now only supports scanning and parsing.
+it down to LLVM IR. 
 
 ## How to compile and execute
 
@@ -37,11 +38,50 @@ parser roundtrip, which scans and parse input text (program) to structured AST
 and pretty-prints back to strings.
 Run `dune exec ucurry -- -s` to run the compiler that would produce the 
 Llvm code.
+Run `dune exec ucurry -- -s < {filename} | lli` to compile the program specified 
+by the filename and execute the program.
 
-## Integration Test Suite
+## Positive Integration Test Suite
+auto_curry.uc: Tests if auto-currying works when a function is defined to take 
+               in multiple formals and only partially applied.
 
-There is only one source program in our integration test suite, which is 
-`tests/codgen/print-hello.uc`. 
+hof.uc: Test if a function can be passed in as argument.
+        We also have a map function that operatates on
+        an integer list.
+
+lambda.uc: Define and apply anonymous functions, and bind anonymous functions 
+           to a variable.
+
+let_exp.uc: Refer to global variables in let expressions; Test a nested let 
+            expression; Have multiple let bindings in a single let expression.
+
+tuple.uc : Test expression to create and consume tuple value. 
+
+rec_fun.uc: Test recursive function to calculate factorial and fibonacci numbers. 
+
+list_op.uc: Test expression to create and consume list value. Operator `::` 
+            creates list, and operator `hd` and `tl` access the head and tail of 
+            a list.  Including. two functions that take in list values 
+            `compare` and `copy_list`.
+
+## Negative Integration Test Suite
+negative_assign.uc: Compiler will detect a type error when an assignment 
+                    expression tries to assign an integer variable to a 
+                    boolean value. 
+negative_capture.uc: A function cannot mutate its captured variable, 
+                    x is a captured variable in function f, and the function
+                    body assign x to other value, which is disallowed in 
+                    ucurry semantic.
+negative_func_apply1.uc: A type error is raised when extra arguments are applied. 
+negative_func_apply2.uc:
+                       Type Error. res should be `int -> int` because 
+                       a partial application will return back a function. 
+negative_value_1.uc: list cannot contain elements of different types 
+negative_value_2.uc: case expression on list does not match with the type of the 
+                     scrutinee  
+negative_value_3.uc: value constructor `IntList` expects an int list but receives 
+                     a string list  
+
 
 ## Test Script for scanning and parsing
 
@@ -57,6 +97,12 @@ it should be the same as the output of the second `unparse o parse` pair.
 To validate our codegen, we created the gold standard of the output when 
 executing a program, and compare the gold standard to running the LLVM code 
 produced by our compilation.
+
+## Test Script for integration tests
+
+For integration testing, we have `suite.sh` that would check all the positive
+tests against the golden standard and verify the error messages produced by 
+the negative tests.
 
 ## Syntax to be added
 

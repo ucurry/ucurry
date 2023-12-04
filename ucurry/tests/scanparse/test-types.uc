@@ -9,12 +9,13 @@ string list strings = ["h", "e"];
 int list list matrix = [[1, 2], [3, 4]];
 bool list list grids = [[true, false], [true, false]];
 string list list paragraph = [["h", "e"], ["h", "e"]];
-int list emptyList = [];
-int list list emptyMatrix = [[], [], []];
+int list emptyList = [int];
+int list list emptyMatrix = [[int], [int], [int]];
 
 -- tuples 
 (int * int list * string) t2 = (1, [1 , 2], "hello");
 (int * (int * int)) t3 = (1, (1, 2));
+int g = (1, 2, 3).1;
 
 
 -- datatype 

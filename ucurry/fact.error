@@ -1,0 +1,110 @@
+; ModuleID = 'uCurry'
+source_filename = "uCurry"
+
+apply cl
+-> cl[0](cl[1]....)
+
+@fmt = private unnamed_addr constant [3 x i8] c"%d\00", align 1
+@fmt.1 = private unnamed_addr constant [3 x i8] c"%s\00", align 1
+@fmt.2 = private unnamed_addr constant [4 x i8] c"%d\0A\00", align 1
+@fmt.3 = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
+@captured = global { i32 (i32 (i1)*)* (i1)* } zeroinitializer
+@captured.4 = global { i32 (i32 (i1)*)* (i1)* } zeroinitializer
+@captured.6 = global { i32 (i1)* } zeroinitializer
+@captured.8 = global {} zeroinitializer
+
+define void @main(i32 %0) {
+entry:
+  %fact = alloca i32 (i32 (i1)*)* (i1)*, align 8
+  store i32 (i32 (i1)*)* (i1)* @fact, i32 (i32 (i1)*)* (i1)** %fact, align 8 ! put global fact into local fact
+  %fact1 = load i32 (i32 (i1)*)* (i1)*, i32 (i32 (i1)*)* (i1)** %fact, align 8 
+  %captured_struct = alloca { i32 (i32 (i1)*)* (i1)* }, align 8
+  %struct_field = getelementptr inbounds { i32 (i32 (i1)*)* (i1)* }, { i32 (i32 (i1)*)* (i1)* }* %captured_struct, i32 0, i32 0
+  store i32 (i32 (i1)*)* (i1)* %fact1, i32 (i32 (i1)*)* (i1)** %struct_field, align 8 ! put fact into local closure
+  %tmp = load { i32 (i32 (i1)*)* (i1)* }, { i32 (i32 (i1)*)* (i1)* }* %captured_struct, align 8 ! put local closure in tmp
+  store { i32 (i32 (i1)*)* (i1)* } %tmp, { i32 (i32 (i1)*)* (i1)* }* @captured, align 8 ! put tmp into gloabl closure
+  %captured_struct2 = alloca {}, align 8 ! second local closure 
+  %tmp3 = load {}, {}* %captured_struct2, align 1 ! nothing in the closure 
+  store {} %tmp3, {}* @captured.8, align 1  ! put local closure into global closure 
+  %fact4 = load i32 (i32 (i1)*)* (i1)*, i32 (i32 (i1)*)* (i1)** %fact, align 8 ! put local fact into fact4 
+  %apply_result = call i32 (i32 (i1)*)* %fact4(i1 true) ! call it with unit, get back lambda
+
+  %apply_result5 = call i32 %apply_result(i32 (i1)* @lambda.7)
+  ret void
+}
+
+define i32 (i32 (i1)*)* @fact(i1 %unit) {
+entry:
+  %unit1 = alloca i1, align 1
+  store i1 %unit, i1* %unit1, align 1
+  ! capvar is the captured fact definition
+  %capvar = load i32 (i32 (i1)*)* (i1)*, i32 (i32 (i1)*)* (i1)** getelementptr inbounds ({ i32 (i32 (i1)*)* (i1)* }, { i32 (i32 (i1)*)* (i1)* }* @captured, i32 0, i32 0), align 8
+  ! create another local closure 
+  %captured_struct = alloca { i32 (i32 (i1)*)* (i1)* }, align 8
+  %struct_field = getelementptr inbounds { i32 (i32 (i1)*)* (i1)* }, { i32 (i32 (i1)*)* (i1)* }* %captured_struct, i32 0, i32 0
+  ! put the captured var, which is fact, into the local closure 
+  store i32 (i32 (i1)*)* (i1)* %capvar, i32 (i32 (i1)*)* (i1)** %struct_field, align 8
+  %tmp = load { i32 (i32 (i1)*)* (i1)* }, { i32 (i32 (i1)*)* (i1)* }* %captured_struct, align 8
+  ! put the local closure into a global closure 
+  store { i32 (i32 (i1)*)* (i1)* } %tmp, { i32 (i32 (i1)*)* (i1)* }* @captured.4, align 8
+  ! return lambda
+  ret i32 (i32 (i1)*)* @lambda
+}
+
+define i32 @lambda(i32 (i1)* %n) {
+entry:
+  %n1 = alloca i32 (i1)*, align 8 
+  store i32 (i1)* %n, i32 (i1)** %n1, align 8 
+  %n2 = load i32 (i1)*, i32 (i1)** %n1, align 8 ! lambda7 !2 lambda 5 !3 lambda5
+  %apply_result = call i32 %n2(i1 true) ! call lambda7 get 3 ! call lambda5 get 2
+  %temp = icmp eq i32 %apply_result, 1
+  br i1 %temp, label %then, label %else
+
+then:                                             ; preds = %entry
+  br label %ifcon
+
+else:                                             ; preds = %entry
+  %n3 = load i32 (i1)*, i32 (i1)** %n1, align 8  ! put lambda7 into n3  ! put lambda5 into n3
+  %captured_struct = alloca { i32 (i1)* }, align 8   ! alloc local closure 
+  ! get struct field ptr
+  %struct_field = getelementptr inbounds { i32 (i1)* }, { i32 (i1)* }* %captured_struct, i32 0, i32 0
+  ! store lambda7 into local closure ! store lambda5 into local cl
+  store i32 (i1)* %n3, i32 (i1)** %struct_field, align 8 
+  ! put local closure into tmp reg
+  %tmp = load { i32 (i1)* }, { i32 (i1)* }* %captured_struct, align 8
+  ! put lambda7 into global closure 6  ! put l5 into glcl6
+  store { i32 (i1)* } %tmp, { i32 (i1)* }* @captured.6, align 8
+  ! get fact 
+  %capvar = load i32 (i32 (i1)*)* (i1)*, i32 (i32 (i1)*)* (i1)** getelementptr inbounds ({ i32 (i32 (i1)*)* (i1)* }, { i32 (i32 (i1)*)* (i1)* }* @captured.4, i32 0, i32 0), align 8
+  ! get lambda def by applying unit 
+  %apply_result4 = call i32 (i32 (i1)*)* %capvar(i1 true)
+  ! 
+  %apply_result5 = call i32 %apply_result4(i32 (i1)* @lambda.5) 
+  %n6 = load i32 (i1)*, i32 (i1)** %n1, align 8 
+  %apply_result7 = call i32 %n6(i1 true)
+  %temp8 = mul i32 %apply_result5, %apply_result7
+  br label %ifcon
+
+ifcon:                                            ; preds = %else, %then
+  %iftmp = phi i32 [ 1, %then ], [ %temp8, %else ]
+  ret i32 %iftmp
+}
+
+define i32 @lambda.5(i1 %unit) {
+entry:
+  %unit1 = alloca i1, align 1
+  store i1 %unit, i1* %unit1, align 1
+  ! l5 
+  %capvar = load i32 (i1)*, i32 (i1)** getelementptr inbounds ({ i32 (i1)* }, { i32 (i1)* }* @captured.6, i32 0, i32 0), align 8
+  
+  %apply_result = call i32 %capvar(i1 true)
+  %temp = sub i32 %apply_result, 1
+  ret i32 %temp
+}
+
+define i32 @lambda.7(i1 %unit) { <--- n
+entry:
+  %unit1 = alloca i1, align 1
+  store i1 %unit, i1* %unit1, align 1
+  ret i32 3
+}

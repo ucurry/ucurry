@@ -1,9 +1,10 @@
 %{
-    open Ast 
+    open Ast
+    open Util
 %}
 
 // delimiters
-%token ARROW DOUBLEARROW SEMI COMMA COLON LBRACE RBRACE LBRACKET RBRACKET BAR DOTS
+%token ARROW DOUBLEARROW SEMI COMMA COLON LBRACE RBRACE LBRACKET RBRACKET BAR DOTS DOT ISNULL
 // keyword
 %token FUNCTION LAMBDA DATATYPE IF THEN ELSE LET BEGIN IN CASE OF WILDCARD CHECK_TYPE_ERROR 
 // type
@@ -22,7 +23,8 @@
 %token UNIT
 %token EOF 
 
-
+%nonassoc PRINT PRINTLN
+%nonassoc ISNULL
 %nonassoc IN ELSE 
 %right ARROW
 %right ASN 
@@ -33,6 +35,7 @@
 %left ADD SUB  
 %left TIMES DIVIDE MOD 
 %right HD TL NEG NOT 
+%left DOT
 %left LISTTYPE
 
 
@@ -57,8 +60,8 @@ def:
   | CHECK_TYPE_ERROR def { CheckTypeError $2}
 
 fundef:
-    FUNCTION COLON funtype COLON NAME formals ASN exp
-    { Function ($3, $5, List.rev $6, $8) }
+    FUNCTION COLON funtype COLON NAME formals_opt ASN exp
+    { Function ($3, $5, $6, $8) }
     
 vardef: 
     typ NAME ASN exp { Variable ($1, $2, $4) }
@@ -72,8 +75,8 @@ constructor_list:
   | constructor_list BAR constructor { $3 :: $1 }
 
 constructor:
-    CAPNAME        { ($1, None) }
-  | CAPNAME OF typ { ($1, Some $3) }
+    CAPNAME        { ($1, UNIT_TY) }
+  | CAPNAME OF typ { ($1,  $3) }
 
 exp:
     LBRACE exp RBRACE         { $2 }
@@ -89,6 +92,7 @@ exp:
   | lambda                    { $1 }
   // fix: adding brackets to value constructors avoids shift/reduce conflict
   | LBRACE CASE exp OF case_exp_list RBRACE { Case ($3, List.rev $5) }
+  | exp DOT INTEGER           {At ($1, $3)}
 
 
 
@@ -97,28 +101,31 @@ case_exp_list:
   | case_exp_list BAR pattern DOUBLEARROW exp { ($3, $5) :: $1 }
 
 pattern:
-    NAME                { VAR_PAT $1 }
-  | CAPNAME             { CON_PAT ($1, None) }
-  | CAPNAME pattern     { CON_PAT ($1, Some [$2])}
-  | CAPNAME LBRACE pattern_tuple RBRACE { CON_PAT ($1, Some (List.rev $3)) } // currently our parser doesn't support tuple type, thus a value constructor can at most take in one arg
+    LBRACE pattern_tuple RBRACE { PATTERNS (List.rev $2) } 
+  | NAME                { VAR_PAT $1 }
+  | CAPNAME             { CON_PAT ($1, WILDCARD) }
+  | CAPNAME pattern     { CON_PAT ($1, $2)}
+  | NAME CONS NAME      { CONCELL ($1, $3) }
   | WILDCARD            { WILDCARD }
   | LBRACKET RBRACKET   { NIL }
-  | NAME CONS NAME      { CONCELL ($1, $3) }
 
 pattern_tuple:
     pattern COMMA pattern       { [$3; $1] }
   | pattern_tuple COMMA pattern { $3 :: $1 }
 
 lambda:
-  LAMBDA LBRACE funtype RBRACE formals ARROW exp { Lambda($3, List.rev $5, $7) }
+  LAMBDA LBRACE funtype RBRACE formals_opt ARROW exp { Lambda($3, $5, $7) }
 
 bindings:
-    typ NAME ASN exp          { [(($1, $2), $4)] }
-  | bindings COMMA typ NAME ASN exp { (($3, $4), $6):: $1 }
+    NAME ASN exp          { [($1, $3)] }
+  | bindings COMMA NAME ASN exp { ($3, $5):: $1 }
+
+formals_opt:
+  | /* nothing */   { [] }
+  | formals         { List.rev $1}
 
 
 formals: // functions have to have arguments
-  | UNIT         { [] }
   | NAME         { [$1] }
   | formals NAME { $2 :: $1 }
 
@@ -147,17 +154,17 @@ value:
     STRINGLIT                      { STRING $1 } 
   | INTEGER                        { INT $1 }
   | BOOL                           { BOOL $1 }
-  | LBRACKET literal_list RBRACKET { LIST (List.rev $2) } 
+  | LBRACKET typ RBRACKET          { EMPTYLIST $2 }
+  | LBRACKET literal_list RBRACKET {  $2 } 
   | LBRACE literal_tuple RBRACE    { TUPLE (List.rev $2)}
   | UNIT                           { UNIT }
   | LBRACKET INTEGER DOTS RBRACKET { INF_LIST $2 }
-  | LBRACE CAPNAME value RBRACE    { Construct ($2, $3) }
-  | LBRACE CAPNAME  RBRACE         { Construct ($2, UNIT) } // HACK: since Construct does not take in expression 
+  | LBRACE CAPNAME value  RBRACE   { Construct ($2, $3) }
+  | LBRACE CAPNAME  RBRACE                      { Construct ($2, UNIT) } // HACK: since Construct does not take in expression 
 
 literal_list:
-                               { [] }
-  | value                    { [$1] }
-  | literal_list COMMA value { $3 :: $1}
+  | value  COMMA literal_list   { LIST ($1, $3)}
+  | value                       { LIST ($1, EMPTYLIST (typ_of_value $1)) } // TODO: reconsider this
 
 literal_tuple:
     value  COMMA value     { [$3; $1] }
@@ -194,4 +201,4 @@ unop:
   | NOT  exp            { Unop (Not, $2) }
   | PRINT exp           { Unop (Print, $2) }
   | PRINTLN exp         { Unop (Println, $2) }
-
+  | ISNULL exp          { Unop (IsNull, $2) }

@@ -7,6 +7,8 @@ int list l1 = [1,2,3];
 bool list l2 = [true, false, true, true];
 int list list l3 = [[1,2], [3,4], [5,6]];
 unit u = ();
+int tu  = (1, 2, 3).1;
+bool tb  = (1, true).1;
 
 -- datatype
 datatype Color = Green of int | Red of int | Black | White;
@@ -58,8 +60,8 @@ int negative = ~1;
 bool bf = not true;
 
 -- let expression 
-int z = let int num1 = 1 in num1; 
-bool c2 = let bool b = true in b and b; 
+int z = let num1 = 1 in num1; 
+bool c2 = let b = true in b and b; 
 
 
 -- case expression  
@@ -85,7 +87,7 @@ Color color = (case (Pure (Black))
                 |  Gradient (_ , c) => c);
 
 int list xs = (case [1, 2, 3] 
-                of [] => []
+                of [] => [int]
                 | x :: xs => xs);
 
 int  single = (case [1, 2, 3] 
