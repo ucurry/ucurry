@@ -23,8 +23,7 @@ let rec bind_pat (scrutinee : A.expr) (pat : A.pattern) : (string * A.expr) list
       in
       List.concat bindings
 
-let desugar (scrutinee : A.expr) (cases : A.case_expr list) :
-    A.case_expr list =
+let desugar (scrutinee : A.expr) (cases : A.case_expr list) : A.case_expr list =
   let add_bind case =
     let pat, e = case in
     let binds = bind_pat scrutinee pat in
@@ -41,14 +40,15 @@ let rec generate_exp : match_tree -> A.expr = function
 
 let generate_tree (scrutinee : A.expr) (cases : A.case_expr list)
     (default : A.expr) : match_tree =
-  let cases' = desugar scrutinee cases in 
+  let cases' = desugar scrutinee cases in
   match cases' with
   | [] -> Leaf default
-  | [ (CONCELL _, con_e); (NIL, nil_e) ]
-  | [ (NIL, nil_e); (CONCELL _, con_e) ] ->
+  | [ (CONCELL _, con_e); (NIL, nil_e) ] | [ (NIL, nil_e); (CONCELL _, con_e) ]
+    ->
       let cond = A.Unop (A.IsNull, scrutinee) in
       Node (cond, Leaf nil_e, Leaf con_e)
-  | _ -> Leaf (A.Case (scrutinee, cases)) (* TODO: not yet implement other pattern matching *)
+  | _ -> Leaf (A.Case (scrutinee, cases))
+(* TODO: not yet implement other pattern matching *)
 
 let case_convert (scrutinee : A.expr) (cases : A.case_expr list)
     (default : A.expr) : A.expr =

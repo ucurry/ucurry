@@ -16,7 +16,7 @@ let build_main_body defs =
   let i1_t = L.i1_type context in
   let void_t = L.void_type context in
   let void_ptr = L.pointer_type (L.i8_type context) in
-  let null_clstruct = L.const_null (L.pointer_type void_t) in
+  let null_captured_param = L.const_null (L.pointer_type i8_t) in
   let main_ftype = L.function_type void_t [| i32_t |] in
   let the_module = L.create_module context "uCurry" in
   let deconstructClosure (ty, se) =
@@ -45,7 +45,7 @@ let build_main_body defs =
     | None -> ignore (instr builder)
   in
 
-  let rec exprWithVarmap builder clstruct varmap =
+  let rec exprWithVarmap builder captured_param varmap =
     let rec expr builder (ty, top_exp) =
       match top_exp with
       | C.Literal l ->
@@ -127,7 +127,7 @@ let build_main_body defs =
                 vm')
               varmap bindings
           in
-          exprWithVarmap builder clstruct varmap' exp
+          exprWithVarmap builder captured_param varmap' exp
       | C.Begin sexprs ->
           List.fold_left
             (fun _ sexpr -> expr builder sexpr)
@@ -211,7 +211,8 @@ let build_main_body defs =
               (* if L.is_null list_ptr then L.const_int i1_t 1 else L.const_int i1_t 0  *)
               L.build_is_null list_ptr "null?" builder
           | _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "unop"))
-      | C.Captured index -> U.get_data_field index clstruct builder "capvar"
+      | C.Captured index ->
+          U.get_data_field index captured_param builder "capvar"
       | C.Closure (_, cap) ->
           (* Alloc function *)
           let funtype, function_ptr = alloc_function lambda_name ty in
@@ -223,7 +224,7 @@ let build_main_body defs =
             L.build_malloc cl_struct_type "fun_closure" builder
           in
           let capstruct_type, capstruct_ptr =
-            build_captured_struct builder varmap clstruct cap
+            build_captured_struct builder varmap captured_param cap
           in
           let casted_capstruct_ptr =
             L.build_bitcast capstruct_ptr void_ptr "capstruct" builder
@@ -251,10 +252,10 @@ let build_main_body defs =
     (* Note: ftype and fun_tau are not matched after this point*)
     let the_function = L.define_function name ftype the_module in
     (ftype, the_function)
-  and build_captured_struct builder varmap clstruct cap =
+  and build_captured_struct builder varmap captured_param cap =
     (* Get the values and types of the captured list *)
     let captured_values =
-      List.map (exprWithVarmap builder clstruct varmap) cap
+      List.map (exprWithVarmap builder captured_param varmap) cap
     in
     let captured_types = Array.of_list (List.map L.type_of captured_values) in
     let struct_type = L.struct_type context captured_types in
@@ -282,8 +283,7 @@ let build_main_body defs =
     (* let localvarmap = StringMap.add "cap" cap_param StringMap.empty in *)
 
     (* TODO: dont think this is necessary *)
-
-    let localvarmap = StringMap.empty in 
+    let localvarmap = StringMap.empty in
     let formaltypes, _, formals, body, _ = deconstructClosure closure in
     let formal_lltypes = List.map ltype_of_type formaltypes in
     let formalsandtypes = List.combine formal_lltypes formals in
@@ -310,7 +310,7 @@ let build_main_body defs =
         let tau, _ = e in
         let reg = L.build_alloca (ltype_of_type tau) name builder in
         let varmap' = StringMap.add name reg varmap in
-        let e' = exprWithVarmap builder null_clstruct varmap e in
+        let e' = exprWithVarmap builder null_captured_param varmap e in
         let _ = L.build_store e' reg builder in
         (builder, varmap')
     | C.Function (tau, name, (lambda, cap)) ->
@@ -330,7 +330,7 @@ let build_main_body defs =
 
         (* Populate the capture struct  *)
         let capstruct_type, capstruct_ptr =
-          build_captured_struct builder varmap' null_clstruct cap
+          build_captured_struct builder varmap' null_captured_param cap
         in
         let casted_capstruct_ptr =
           L.build_bitcast capstruct_ptr void_ptr "capstruct" builder
@@ -346,7 +346,7 @@ let build_main_body defs =
              (tau, C.Closure (lambda, cap)));
         (builder, varmap')
     | C.Exp e ->
-        let _ = exprWithVarmap builder null_clstruct varmap e in
+        let _ = exprWithVarmap builder null_captured_param varmap e in
         (builder, varmap)
     | C.Datatype _ -> (builder, varmap)
     | C.CheckTypeError _ ->

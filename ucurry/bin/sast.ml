@@ -65,7 +65,7 @@ let rec string_of_literal : svalue -> string = function
   | INT l -> string_of_int l
   | STRING l -> "\"" ^ l ^ "\""
   | BOOL l -> string_of_bool l
-  | EMPTYLIST t-> "[" ^ Ast.string_of_typ t ^ "]"
+  | EMPTYLIST t -> "[" ^ Ast.string_of_typ t ^ "]"
   | LIST (x, xs) ->
       let rec listString (x, xs) =
         match (x, xs) with
