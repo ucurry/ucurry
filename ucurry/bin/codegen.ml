@@ -267,6 +267,7 @@ let build_main_body defs =
   and build_function_body the_function captured_type closure : unit =
     let builder = L.builder_at_end context (L.entry_block the_function) in
 
+    (* Cast the cap struct param and load its value *)
     let void_cap_param = L.param the_function 0 in
     let void_cap_name = L.value_name void_cap_param in
     let void_local_cap = L.build_alloca void_ptr void_cap_name builder in
@@ -278,11 +279,11 @@ let build_main_body defs =
         "cap" builder
     in
 
-    let localvarmap = StringMap.add "cap" cap_param StringMap.empty in
+    (* let localvarmap = StringMap.add "cap" cap_param StringMap.empty in *)
 
-    (*TODO: dont think this is necessary*)
+    (* TODO: dont think this is necessary *)
 
-    (* let localvarmap = StringMap.empty in  *)
+    let localvarmap = StringMap.empty in 
     let formaltypes, _, formals, body, _ = deconstructClosure closure in
     let formal_lltypes = List.map ltype_of_type formaltypes in
     let formalsandtypes = List.combine formal_lltypes formals in
@@ -316,6 +317,7 @@ let build_main_body defs =
         (* Alloc function *)
         let funtype, function_ptr = alloc_function name tau in
 
+        (* Alloc the closure struct and adds it into varmap *)
         let cl_struct_type =
           L.struct_type context [| L.pointer_type funtype; void_ptr |]
         in
@@ -326,6 +328,7 @@ let build_main_body defs =
         let _ = L.build_store closure_ptr closure_pp builder in
         let varmap' = StringMap.add name closure_pp varmap in
 
+        (* Populate the capture struct  *)
         let capstruct_type, capstruct_ptr =
           build_captured_struct builder varmap' null_clstruct cap
         in
@@ -333,9 +336,11 @@ let build_main_body defs =
           L.build_bitcast capstruct_ptr void_ptr "capstruct" builder
         in
 
+        (* Populate the closure struct *)
         let _ = U.set_data_field function_ptr 0 closure_ptr builder in
         let _ = U.set_data_field casted_capstruct_ptr 1 closure_ptr builder in
 
+        (* Build the function body *)
         ignore
           (build_function_body function_ptr capstruct_type
              (tau, C.Closure (lambda, cap)));
