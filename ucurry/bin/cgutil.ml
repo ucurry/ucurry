@@ -88,7 +88,7 @@ let build_literal builder (ty_map : L.lltype StringMap.t)
     | S.INT i -> L.const_int i32_t i
     | S.STRING s -> StringMap.find s string_pool
     | S.BOOL b -> L.const_int i1_t (if b then 1 else 0)
-    | S.EMPTYLIST ->
+    | S.EMPTYLIST _ ->
         let list_ptr_ty = ltype_of_type ty_map llmodule context ty in
         L.const_null list_ptr_ty
     | S.LIST (hd, tl) ->
@@ -154,7 +154,7 @@ let build_string_pool (program : C.program) (builder : L.llbuilder) :
       | S.Construct (_, v) -> mk_value_string_pool v_pool v
       | S.TUPLE vs -> List.fold_left mk_value_string_pool v_pool vs
       | S.BOOL _ -> v_pool
-      | S.EMPTYLIST -> v_pool
+      | S.EMPTYLIST _ -> v_pool
       | S.INF_LIST _ -> v_pool
       | S.INT _ -> v_pool
       | S.UNIT -> v_pool

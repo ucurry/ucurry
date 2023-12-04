@@ -2,6 +2,8 @@
 1;
 "c";
 [1, 2]; 
+[int];
+[bool];
 check_type_error [1, "c"];
 true;
 false;

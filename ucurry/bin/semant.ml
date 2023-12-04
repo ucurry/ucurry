@@ -21,7 +21,8 @@ let default_case tau =
     | A.INT_TY -> S.INT 0
     | A.STRING_TY -> S.STRING "case not matched"
     | A.BOOL_TY -> S.BOOL false
-    | A.LIST_TY tau -> S.LIST (get_value tau, S.EMPTYLIST)
+    | A.LIST_TY tau ->
+        S.LIST (get_value tau, S.EMPTYLIST UNIT_TY) (* TODO: not sure *)
     | A.TUPLE_TY taus -> S.TUPLE (List.map get_value taus)
     | _ -> UNIT (* HACK : when case is unmatched , should thrown exception *)
   in
@@ -85,7 +86,7 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let rec lit_ty = function
           | A.INT i -> (A.INT_TY, S.INT i)
           | A.STRING s -> (A.STRING_TY, S.STRING s)
-          | A.EMPTYLIST -> (A.LIST_TY A.UNIT_TY, S.EMPTYLIST)
+          | A.EMPTYLIST t -> (A.LIST_TY t, S.EMPTYLIST t)
           | A.LIST (hd, tl) ->
               let hd_tau, hd_val = lit_ty hd and tl_tau, tl_val = lit_ty tl in
               let list_tau = get_checked_types (A.LIST_TY hd_tau) tl_tau in
@@ -141,11 +142,9 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
           S.SIf ((cond_tau', cond_e), (branch_tau, se1), (branch_tau, se2)) )
     | A.Let (bindings, e) ->
         let vars, es = List.split bindings in
-        let dec_taus, names = List.split vars in
-        let newEnv = bindAll names dec_taus type_env in
         let taus, ses = List.split (List.map ty es) in
-        let final_taus = List.map2 get_checked_types dec_taus taus in
-        let bind_ses = List.combine names @@ List.combine final_taus ses in
+        let newEnv = bindAll vars taus type_env in
+        let bind_ses = List.combine vars @@ List.combine taus ses in
         let body_tau, body_es = typ_of vcon_env vcon_sets newEnv e in
         (body_tau, S.SLet (bind_ses, (body_tau, body_es)))
     | A.Begin [] -> (A.UNIT_TY, S.SBegin [])
@@ -248,8 +247,9 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let final_scases =
           List.map (fun (pat, se) -> (pat, (final_tau, se))) scases
         in
-        let default = default_case final_tau in
-        Caseconvert.case_convert final_tau scrutinee_sexp final_scases default
+        (final_tau, S.SCase (scrutinee_sexp, final_scases))
+    (* let default = default_case final_tau in
+       Caseconvert.case_convert final_tau scrutinee_sexp final_scases default *)
   in
   ty exp
 

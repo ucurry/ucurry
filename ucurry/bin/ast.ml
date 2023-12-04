@@ -51,7 +51,7 @@ type expr =
   | Assign of string * expr
   | Apply of expr * expr list
   | If of expr * expr * expr
-  | Let of ((typ * string) * expr) list * expr
+  | Let of (string * expr) list * expr
   | Begin of expr list
   | Binop of expr * binop * expr
   | Unop of uop * expr
@@ -66,7 +66,7 @@ and value =
   | INT of int
   | STRING of string
   | BOOL of bool
-  | EMPTYLIST
+  | EMPTYLIST of typ
   | LIST of value * value
   | TUPLE of value list
   | INF_LIST of int
@@ -168,10 +168,7 @@ let rec string_of_expr exp =
     | Let (vl, e) ->
         "let "
         ^ String.concat ", "
-            (List.map
-               (fun ((t, v), e) ->
-                 string_of_typ t ^ " " ^ v ^ " = " ^ string_of_expr e)
-               vl)
+            (List.map (fun (v, e) -> v ^ " = " ^ string_of_expr e) vl)
         ^ " in " ^ string_of_expr e
     | At (e, i) -> string_of_expr e ^ "." ^ string_of_int i
     | Noexpr -> ""
@@ -183,11 +180,11 @@ and string_of_literal = function
   | INT l -> string_of_int l
   | STRING l -> "\"" ^ l ^ "\""
   | BOOL l -> string_of_bool l
-  | EMPTYLIST -> "[]"
+  | EMPTYLIST t -> "[" ^ string_of_typ t ^ "]"
   | LIST (x, xs) ->
       let rec listString (x, xs) =
         match (x, xs) with
-        | x, EMPTYLIST -> string_of_literal x
+        | x, EMPTYLIST _ -> string_of_literal x
         | x, LIST (y, ys) -> string_of_literal x ^ "," ^ listString (y, ys)
         | _ -> raise (Invalid_argument "should not be reached")
       in

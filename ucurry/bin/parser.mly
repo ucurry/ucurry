@@ -1,5 +1,6 @@
 %{
-    open Ast 
+    open Ast
+    open Util
 %}
 
 // delimiters
@@ -116,8 +117,8 @@ lambda:
   LAMBDA LBRACE funtype RBRACE formals_opt ARROW exp { Lambda($3, $5, $7) }
 
 bindings:
-    typ NAME ASN exp          { [(($1, $2), $4)] }
-  | bindings COMMA typ NAME ASN exp { (($3, $4), $6):: $1 }
+    NAME ASN exp          { [($1, $3)] }
+  | bindings COMMA NAME ASN exp { ($3, $5):: $1 }
 
 formals_opt:
   | /* nothing */   { [] }
@@ -153,6 +154,7 @@ value:
     STRINGLIT                      { STRING $1 } 
   | INTEGER                        { INT $1 }
   | BOOL                           { BOOL $1 }
+  | LBRACKET typ RBRACKET          { EMPTYLIST $2 }
   | LBRACKET literal_list RBRACKET {  $2 } 
   | LBRACE literal_tuple RBRACE    { TUPLE (List.rev $2)}
   | UNIT                           { UNIT }
@@ -161,9 +163,8 @@ value:
   | LBRACE CAPNAME  RBRACE                      { Construct ($2, UNIT) } // HACK: since Construct does not take in expression 
 
 literal_list:
-                                { EMPTYLIST }
   | value  COMMA literal_list   { LIST ($1, $3)}
-  | value                       { LIST ($1, EMPTYLIST) }
+  | value                       { LIST ($1, EMPTYLIST (typ_of_value $1)) } // TODO: reconsider this
 
 literal_tuple:
     value  COMMA value     { [$3; $1] }

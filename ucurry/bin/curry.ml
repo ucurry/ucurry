@@ -25,9 +25,12 @@ let rec curry_expr (exp : A.expr) : A.expr =
       A.Lambda
         (typ, [ a ], curry_expr @@ A.Lambda (retty, args, curry_expr body))
   | A.Case (scrutinee, cases) ->
+      (* If the scrutinee is a list -> convert to if-let format *)
+      (* Otherwise, preserve the case node *)
       let ps, es = List.split cases in
       let new_cases = List.combine ps (List.map curry_expr es) in
-      A.Case (curry_expr scrutinee, new_cases)
+      let new_scrutinee = curry_expr scrutinee in
+      Newcaseconvert.case_convert new_scrutinee new_cases exp
   | A.At (e, idx) -> A.At (curry_expr e, idx)
   | A.Noexpr -> A.Noexpr
   | _ -> failwith "no match in curry pass"
