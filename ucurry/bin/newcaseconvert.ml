@@ -23,7 +23,7 @@ let rec bind_pat (scrutinee : A.expr) (pat : A.pattern) : (string * A.expr) list
       in
       List.concat bindings
 
-let rec desugar (scrutinee : A.expr) (cases : A.case_expr list) :
+let desugar (scrutinee : A.expr) (cases : A.case_expr list) :
     A.case_expr list =
   let add_bind case =
     let pat, e = case in
