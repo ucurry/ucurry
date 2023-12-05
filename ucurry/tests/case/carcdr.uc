@@ -31,4 +31,10 @@ caar xs = (car (cdr xs));
     Cons (a, Cons (b, Nil)) => b
     | Nil => 0);
 
+-- naming
+check_type_error 
+(case ones of 
+    Cons (a, Cons (a, Nil)) => a
+    | Nil => 0);
+
 

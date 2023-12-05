@@ -28,7 +28,7 @@ let default_case tau =
   in
   (tau, S.SLiteral (get_value tau))
 
-let new_binds_from_legal_pat (type_env : S.type_env) (vcon_env : S.vcon_env) (scrutinee_tau : S.typ)
+let new_binds_from_legal_pat (vcon_env : S.vcon_env) (scrutinee_tau : S.typ)
     (pat : A.pattern) : Ast.typ StringMap.t =
   let rec get_binds type_env tau p =
     match p with
@@ -48,7 +48,8 @@ let new_binds_from_legal_pat (type_env : S.type_env) (vcon_env : S.vcon_env) (sc
             raise
               (TypeError ("cannot pattern match on" ^ Ast.string_of_pattern p))) *)
     | A.VAR_PAT x ->
-        StringMap.add x tau type_env
+        (* StringMap.add x tau type_env *)
+        bindUnique x tau type_env
         (* StringMap.add x (A.FUNCTION_TY (A.UNIT_TY, tau)) StringMap.empty *)
     | A.CON_PAT (name, ps) ->
         let (datatype_name, _, formal_taus) = StringMap.find name vcon_env in 
@@ -70,7 +71,7 @@ let new_binds_from_legal_pat (type_env : S.type_env) (vcon_env : S.vcon_env) (sc
           ]
           StringMap.empty *)
   in
-  get_binds type_env scrutinee_tau pat
+  get_binds StringMap.empty scrutinee_tau pat
 
 let rec to_spattern (vcon_env : S.vcon_env) (c : A.pattern) =
   let pattern_of = to_spattern vcon_env in
@@ -237,18 +238,19 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let scrutinee_sexp = ty scrutinee in
         let scrutinee_type, _ = scrutinee_sexp in
         let patterns, es = List.split cases in
+        (* TODO: check if pattern matching is exhaustive *)
         (* let _ =
           Caseconvert.is_exhaustive vcon_sets type_env scrutinee_type patterns
         in *)
         let spatterns = List.map (to_spattern vcon_env) patterns in
         let case_envs =
-          List.map (new_binds_from_legal_pat type_env vcon_env scrutinee_type) patterns
+          List.map (new_binds_from_legal_pat vcon_env scrutinee_type) patterns
         in
-        (* let new_envs =
+        let new_envs =
           List.map (StringMap.union (fun _ _ v2 -> Some v2) type_env) case_envs
-        in *)
+        in
         let taus, case_exps =
-          List.split (List.map2 (typ_of vcon_env vcon_sets) case_envs es)
+          List.split (List.map2 (typ_of vcon_env vcon_sets) new_envs es)
         in
         let scases = List.combine spatterns case_exps in
         let final_tau =
