@@ -6,4 +6,6 @@ clean:
 	cd ../test_suite/positive_test;\
 	rm -f *.out;\
 	cd ../negative_test;\
-	rm -f *.out\
+	rm -f *.out;\
+	cd ../../case;\
+	rm -f *.trimmed *.out;\
