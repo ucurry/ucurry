@@ -38,11 +38,8 @@ type typ =
   | TUPLE_TY of typ list
 
 type pattern =
-  | PATTERNS of pattern list
-  | VAR_PAT of string
-  | CON_PAT of string * pattern
-  | CONCELL of string * string
-  | NIL
+  | VAR_PAT of string 
+  | CON_PAT of string * pattern list (* !! *)
   | WILDCARD
 
 type expr =
@@ -57,12 +54,12 @@ type expr =
   | Unop of uop * expr
   | Lambda of typ * string list * expr
   | Thunk of expr
+  | Construct of string * expr list (* !! *)
   | Case of expr * case_expr list
   | At of expr * int
   | Noexpr
 
 and value =
-  | Construct of string * value
   | INT of int
   | STRING of string
   | BOOL of bool
@@ -76,12 +73,12 @@ and case_expr = pattern * expr
 
 type def =
   | Function of typ * string * string list * expr
-  | Datatype of typ * constructor list
+  | Datatype of typ * constructor list (* !! *)
   | Variable of typ * string * expr
   | Exp of expr
   | CheckTypeError of def
 
-and constructor = string * typ
+and constructor = string * typ list (* !! *)
 
 type program = def list
 
@@ -114,14 +111,14 @@ let string_of_uop = function
   | _ -> "internal primitive"
 
 let rec string_of_pattern = function
-  | PATTERNS [] -> ""
-  | PATTERNS ps ->
-      "( " ^ String.concat "," (List.map string_of_pattern ps) ^ ")"
+  (* | PATTERNS [] -> "" *)
+  (* | PATTERNS ps ->
+      "( " ^ String.concat "," (List.map string_of_pattern ps) ^ ")" *)
   | VAR_PAT s -> s
-  | CON_PAT (c, p) -> c ^ " " ^ string_of_pattern p
+  | CON_PAT (c, ps) -> c ^ " (" ^ String.concat ", " (List.map string_of_pattern ps) ^ ")"
   | WILDCARD -> "_"
-  | NIL -> "[]"
-  | CONCELL (hd, tl) -> hd ^ "::" ^ tl
+  (* | NIL -> "[]"
+  | CONCELL (hd, tl) -> hd ^ "::" ^ tl *)
 
 let rec string_of_typ = function
   | INT_TY -> "int"
@@ -157,6 +154,9 @@ let rec string_of_expr exp =
     | Lambda (t, vl, e) ->
         "\\(" ^ string_of_typ t ^ ")" ^ String.concat " " vl ^ " -> "
         ^ string_of_expr e
+    | Construct (n, []) -> n 
+    | Construct (n, es) ->
+          n ^ "(" ^ String.concat ", " (List.map string_of_expr es) ^ ")"
     | Case (e, cel) ->
         "(case " ^ string_of_expr e ^ " of\n\t" ^ "  "
         ^ String.concat " \n\t| "
@@ -192,11 +192,11 @@ and string_of_literal = function
   | TUPLE l -> "(" ^ String.concat ", " (List.map string_of_literal l) ^ ")"
   | UNIT -> "()"
   | INF_LIST n -> "[" ^ string_of_int n ^ "..]"
-  | Construct (c, e) -> "(" ^ c ^ " " ^ string_of_literal e ^ ")"
+  (* | Construct (c, e) -> "(" ^ c ^ " " ^ string_of_literal e ^ ")" *)
 
 let string_of_constructor = function
-  | c, UNIT_TY -> c
-  | c, t -> c ^ " of " ^ string_of_typ t
+  | c, [] -> c
+  | c, ts -> c ^ " of " ^ String.concat " * " (List.map string_of_typ ts)
 
 let rec string_of_def = function
   | Function (ty, f, args, e) ->

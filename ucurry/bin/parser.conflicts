@@ -1,7 +1,7 @@
 
-** Conflict (shift/reduce) in state 40.
-** Tokens involved: UNIT STRINGLIT LBRACKET LBRACE INTEGER BOOL
-** The following explanations concentrate on token UNIT.
+** Conflict (reduce/reduce) in state 177.
+** Tokens involved: TIMES LBRACE
+** The following explanations concentrate on token TIMES.
 ** This state is reached from program after reading:
 
 defs LBRACE CAPNAME
@@ -12,20 +12,58 @@ defs LBRACE CAPNAME
 program 
 defs EOF 
 defs def SEMI 
-     exp 
      (?)
 
-** In state 40, looking ahead at UNIT, shifting is permitted
-** because of the following sub-derivation:
-
-value 
-LBRACE CAPNAME value RBRACE 
-               . UNIT 
-
-** In state 40, looking ahead at UNIT, reducing production
-** value -> CAPNAME
+** In state 177, looking ahead at TIMES, reducing production
+** opt_exp_list ->
 ** is permitted because of the following sub-derivation:
 
-LBRACE exp args RBRACE // lookahead token appears because args can begin with UNIT
-       value // lookahead token is inherited
+exp 
+LBRACE exp RBRACE 
+       binop 
+       exp TIMES exp // lookahead token appears
+       CAPNAME opt_exp_list // lookahead token is inherited
+               . 
+
+** In state 177, looking ahead at TIMES, reducing production
+** typ -> CAPNAME
+** is permitted because of the following sub-derivation:
+
+vardef 
+typ NAME ASN exp 
+tupletype 
+LBRACE typelist RBRACE 
+       typ TIMES typ // lookahead token appears
        CAPNAME . 
+
+** Conflict (shift/reduce) in state 69.
+** Token involved: LBRACE
+** This state is reached from program after reading:
+
+defs TL LBRACE CAPNAME
+
+** The derivations that appear below have the following common factor:
+** (The question mark symbol (?) represents the spot where the derivations begin to differ.)
+
+program 
+defs EOF 
+defs def SEMI 
+     exp 
+     unop 
+     TL exp 
+        (?)
+
+** In state 69, looking ahead at LBRACE, reducing production
+** opt_exp_list ->
+** is permitted because of the following sub-derivation:
+
+LBRACE exp args RBRACE // lookahead token appears because args can begin with LBRACE
+       CAPNAME opt_exp_list // lookahead token is inherited
+               . 
+
+** In state 69, looking ahead at LBRACE, shifting is permitted
+** because of the following sub-derivation:
+
+LBRACE exp RBRACE 
+       CAPNAME opt_exp_list 
+               . LBRACE exp_list RBRACE 

@@ -70,13 +70,12 @@ datatypedef:
     DATATYPE CAPNAME ASN constructor_list { Datatype (CONSTRUCTOR_TY $2, List.rev $4) }
 
 constructor_list:
-                 { [] }
   | constructor  { [$1] }
   | constructor_list BAR constructor { $3 :: $1 }
 
 constructor:
-    CAPNAME        { ($1, UNIT_TY) }
-  | CAPNAME OF typ { ($1,  $3) }
+    CAPNAME        { ($1, []) }
+  | CAPNAME OF typelist { ($1,  List.rev $3) }
 
 exp:
     LBRACE exp RBRACE         { $2 }
@@ -91,23 +90,23 @@ exp:
   | unop                      { $1 }
   | lambda                    { $1 }
   // fix: adding brackets to value constructors avoids shift/reduce conflict
+  | LBRACE CAPNAME opt_exp_list RBRACE     { Construct ($2, $3) }
   | LBRACE CASE exp OF case_exp_list RBRACE { Case ($3, List.rev $5) }
   | exp DOT INTEGER           {At ($1, $3)}
 
-
+opt_exp_list:
+  | /* Nothing */  {[]}
+  | LBRACE exp_list RBRACE { List.rev $2 }
 
 case_exp_list:
     pattern DOUBLEARROW exp { [($1, $3)] }
   | case_exp_list BAR pattern DOUBLEARROW exp { ($3, $5) :: $1 }
 
 pattern:
-    LBRACE pattern_tuple RBRACE { PATTERNS (List.rev $2) } 
   | NAME                { VAR_PAT $1 }
-  | CAPNAME             { CON_PAT ($1, WILDCARD) }
-  | CAPNAME pattern     { CON_PAT ($1, $2)}
-  | NAME CONS NAME      { CONCELL ($1, $3) }
   | WILDCARD            { WILDCARD }
-  | LBRACKET RBRACKET   { NIL }
+  | CAPNAME                              { CON_PAT ($1, []) }
+  | CAPNAME LBRACE pattern_tuple RBRACE  { CON_PAT ($1, List.rev $3)}
 
 pattern_tuple:
     pattern COMMA pattern       { [$3; $1] }
@@ -159,8 +158,6 @@ value:
   | LBRACE literal_tuple RBRACE    { TUPLE (List.rev $2)}
   | UNIT                           { UNIT }
   | LBRACKET INTEGER DOTS RBRACKET { INF_LIST $2 }
-  | LBRACE CAPNAME value  RBRACE   { Construct ($2, $3) }
-  | LBRACE CAPNAME  RBRACE                      { Construct ($2, UNIT) } // HACK: since Construct does not take in expression 
 
 literal_list:
   | value  COMMA literal_list   { LIST ($1, $3)}
