@@ -111,14 +111,10 @@ let string_of_uop = function
   | _ -> "internal primitive"
 
 let rec string_of_pattern = function
-  (* | PATTERNS [] -> "" *)
-  (* | PATTERNS ps ->
-      "( " ^ String.concat "," (List.map string_of_pattern ps) ^ ")" *)
   | VAR_PAT s -> s
+  | CON_PAT (c, []) -> c
   | CON_PAT (c, ps) -> c ^ " (" ^ String.concat ", " (List.map string_of_pattern ps) ^ ")"
   | WILDCARD -> "_"
-  (* | NIL -> "[]"
-  | CONCELL (hd, tl) -> hd ^ "::" ^ tl *)
 
 let rec string_of_typ = function
   | INT_TY -> "int"

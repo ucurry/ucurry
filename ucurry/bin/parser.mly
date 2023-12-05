@@ -75,6 +75,7 @@ constructor_list:
 
 constructor:
     CAPNAME        { ($1, []) }
+  | CAPNAME OF typ { ($1, [$3])}
   | CAPNAME OF typelist { ($1,  List.rev $3) }
 
 exp:
@@ -106,6 +107,7 @@ pattern:
   | NAME                { VAR_PAT $1 }
   | WILDCARD            { WILDCARD }
   | CAPNAME                              { CON_PAT ($1, []) }
+  | CAPNAME LBRACE pattern RBRACE        { CON_PAT ($1, [$3])}
   | CAPNAME LBRACE pattern_tuple RBRACE  { CON_PAT ($1, List.rev $3)}
 
 pattern_tuple:
