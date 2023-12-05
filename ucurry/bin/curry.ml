@@ -21,16 +21,16 @@ let rec curry_expr (exp : A.expr) : A.expr =
   | A.Lambda (tau, [], body) -> A.Lambda (tau, [], curry_expr body)
   | A.Lambda (tau, [ arg ], body) -> A.Lambda (tau, [ arg ], curry_expr body)
   | A.Lambda (typ, a :: args, body) ->
-      let _, retty = SemantUtil.get_ft typ in
+      let _, retty = Util.get_ft typ in
       A.Lambda
         (typ, [ a ], curry_expr @@ A.Lambda (retty, args, curry_expr body))
+  | A.Construct (con_name, args) ->
+      A.Construct (con_name, List.map curry_expr args)
   | A.Case (scrutinee, cases) ->
-      (* If the scrutinee is a list -> convert to if-let format *)
-      (* Otherwise, preserve the case node *)
       let ps, es = List.split cases in
       let new_cases = List.combine ps (List.map curry_expr es) in
       let new_scrutinee = curry_expr scrutinee in
-      Newcaseconvert.case_convert new_scrutinee new_cases exp
+      A.Case (new_scrutinee, new_cases)
   | A.At (e, idx) -> A.At (curry_expr e, idx)
   | A.Noexpr -> A.Noexpr
   | _ -> failwith "no match in curry pass"
@@ -44,7 +44,7 @@ let curry (program : A.program) : A.program =
     | A.Function (ty, funname, [ arg ], body) ->
         A.Function (ty, funname, [ arg ], curry_expr body)
     | A.Function (ty, funname, a :: args, body) ->
-        let _, retty = SemantUtil.get_ft ty in
+        let _, retty = Util.get_ft ty in
         A.Function
           (ty, funname, [ a ], curry_expr @@ A.Lambda (retty, args, body))
     | A.Variable (ty, name, e) -> A.Variable (ty, name, curry_expr e)

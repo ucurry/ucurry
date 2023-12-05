@@ -1,6 +1,6 @@
 #! /bin/sh
 echo "Tests for success cases \n"
-for f in ../tests/scanparse/*test-*.uc
+for f in ./tests/scanparse/*test-*.uc
 do
     echo "Testing $f"
     dune exec ucurry -- -a < $f > $f.trimmed

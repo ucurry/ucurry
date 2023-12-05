@@ -1,5 +1,4 @@
 (* module Se = Semant *)
-(* module Cu = Curry *)
 
 type action = Ast | CAST | LAST | Default | LLVMIR
 
@@ -20,13 +19,13 @@ let () =
 
   let lexbuf = Lexing.from_channel !channel in
   let ast = Parser.program Scanner.token lexbuf in
-  (* let curried = Cu.curry ast in
-  let last = Lazy.lazy_convert curried in
-  let sast, _ = Semant.semant_check lazy in *)
+  let curried = Curry.curry ast in
+  (* let last = Lazy.lazy_convert curried in *)
+  let sast, _ = Semant.semant_check curried in
   (* commented out path for lazy  *)
   match !action with
   | Ast ->
-      let _ = print_string (Ast.string_of_program ast) in
+      let _ = print_string (Ast.string_of_program curried) in
       print_newline ()
   (* | LAST ->
       let _ = print_string (Ast.string_of_program last) in

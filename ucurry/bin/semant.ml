@@ -28,11 +28,11 @@ let default_case tau =
   in
   (tau, S.SLiteral (get_value tau))
 
-let new_binds_from_legal_pat (type_env : S.type_env) (scrutinee_tau : S.typ)
+let new_binds_from_legal_pat (type_env : S.type_env) (vcon_env : S.vcon_env) (scrutinee_tau : S.typ)
     (pat : A.pattern) : Ast.typ StringMap.t =
-  let rec get_binds tau p =
+  let rec get_binds type_env tau p =
     match p with
-    | A.PATTERNS ps -> (
+    (* | A.PATTERNS ps -> (
         match tau with
         | A.TUPLE_TY taus ->
             let new_envs =
@@ -46,15 +46,19 @@ let new_binds_from_legal_pat (type_env : S.type_env) (scrutinee_tau : S.typ)
             List.fold_left combine_unique_env StringMap.empty new_envs
         | _ ->
             raise
-              (TypeError ("cannot pattern match on" ^ Ast.string_of_pattern p)))
+              (TypeError ("cannot pattern match on" ^ Ast.string_of_pattern p))) *)
     | A.VAR_PAT x ->
-        StringMap.add x (A.FUNCTION_TY (A.UNIT_TY, tau)) StringMap.empty
-    | A.CON_PAT (name, p) ->
-        let arg_tau, ret_tau = findFunctionType name type_env in
+        StringMap.add x tau type_env
+        (* StringMap.add x (A.FUNCTION_TY (A.UNIT_TY, tau)) StringMap.empty *)
+    | A.CON_PAT (name, ps) ->
+        let (datatype_name, _, formal_taus) = StringMap.find name vcon_env in 
+        let _ = get_checked_types tau (CONSTRUCTOR_TY datatype_name) in 
+        List.fold_left2 (fun new_env t p -> get_binds new_env t p) type_env formal_taus ps 
+        (* let arg_tau, ret_tau = findFunctionType name type_env in
         let _ = get_checked_types tau ret_tau in
-        get_binds arg_tau p
-    | A.WILDCARD -> StringMap.empty
-    | NIL ->
+        get_binds arg_tau p *)
+    | A.WILDCARD -> type_env
+    (* | NIL ->
         let _ = subtypeOfList tau in
         StringMap.empty
     | CONCELL (s1, s2) ->
@@ -64,20 +68,20 @@ let new_binds_from_legal_pat (type_env : S.type_env) (scrutinee_tau : S.typ)
             A.FUNCTION_TY (A.UNIT_TY, subty);
             A.FUNCTION_TY (A.UNIT_TY, LIST_TY subty);
           ]
-          StringMap.empty
+          StringMap.empty *)
   in
-  get_binds scrutinee_tau pat
+  get_binds type_env scrutinee_tau pat
 
 let rec to_spattern (vcon_env : S.vcon_env) (c : A.pattern) =
   let pattern_of = to_spattern vcon_env in
   match c with
-  | A.PATTERNS ps -> S.PATTERNS (List.map (to_spattern vcon_env) ps)
+  (* | A.PATTERNS ps -> S.PATTERNS (List.map (to_spattern vcon_env) ps) *)
   | A.VAR_PAT s -> S.VAR_PAT s
   | A.CON_PAT (name, ps) ->
-      S.CON_PAT (U.mid @@ findType name vcon_env, pattern_of ps)
+      S.CON_PAT (U.mid @@ findType name vcon_env, List.map pattern_of ps)
   | A.WILDCARD -> S.WILDCARD
-  | A.CONCELL (x, xs) -> S.CONCELL (x, xs)
-  | A.NIL -> S.NIL
+  (* | A.CONCELL (x, xs) -> S.CONCELL (x, xs)
+  | A.NIL -> S.NIL *)
 
 let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
     (type_env : S.type_env) (exp : Ast.expr) : S.typ * S.sx =
@@ -95,11 +99,11 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
               let taus, vals = List.split (List.map lit_ty xs) in
               (A.TUPLE_TY taus, S.TUPLE vals)
           | A.BOOL b -> (A.BOOL_TY, S.BOOL b)
-          | A.Construct (s, v) ->
+          (* | A.Construct (s, v) ->
               let exp_tau, ret_tau = findFunctionType s type_env in
               let tau, v' = lit_ty v in
               ignore (get_checked_types exp_tau tau);
-              (ret_tau, S.Construct (findType s vcon_env, v'))
+              (ret_tau, S.Construct (findType s vcon_env, v')) *)
           | A.UNIT -> (A.UNIT_TY, S.UNIT)
           | A.INF_LIST i -> (A.LIST_TY A.INT_TY, S.INF_LIST i)
         in
@@ -223,22 +227,28 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let tau, e = ty exp in
         (A.FUNCTION_TY (A.UNIT_TY, tau), S.SLambda ([ "unit" ], (tau, e)))
     | A.Noexpr -> (A.UNIT_TY, S.SNoexpr)
+    | A.Construct (vcon_name, args) ->
+        let (datatype_name, vcon_id, formal_taus) = StringMap.find vcon_name vcon_env in 
+        let sargs = List.map ty args in 
+        let arg_taus, _ = List.split sargs in 
+        let _ = List.map (fun (t1, t2) -> eqType t1 t2) (List.combine formal_taus arg_taus) in 
+        (A.CONSTRUCTOR_TY datatype_name, S.SConstruct ((datatype_name, vcon_id), sargs))
     | A.Case (scrutinee, cases) ->
         let scrutinee_sexp = ty scrutinee in
         let scrutinee_type, _ = scrutinee_sexp in
         let patterns, es = List.split cases in
-        let _ =
+        (* let _ =
           Caseconvert.is_exhaustive vcon_sets type_env scrutinee_type patterns
-        in
+        in *)
         let spatterns = List.map (to_spattern vcon_env) patterns in
         let case_envs =
-          List.map (new_binds_from_legal_pat type_env scrutinee_type) patterns
+          List.map (new_binds_from_legal_pat type_env vcon_env scrutinee_type) patterns
         in
-        let new_envs =
+        (* let new_envs =
           List.map (StringMap.union (fun _ _ v2 -> Some v2) type_env) case_envs
-        in
+        in *)
         let taus, case_exps =
-          List.split (List.map2 (typ_of vcon_env vcon_sets) new_envs es)
+          List.split (List.map2 (typ_of vcon_env vcon_sets) case_envs es)
         in
         let scases = List.combine spatterns case_exps in
         let final_tau =
@@ -269,11 +279,12 @@ let rec typ_def (def : A.def) (semant_envs : semant_envs) : S.sdef * S.type_env
         in
         match_retrun sx
     | A.Datatype (tau, val_cons) ->
-        let vcons, argtaus = List.split val_cons in
+         (S.SDatatype (tau, val_cons), type_env)
+        (* let vcons, argtaus = List.split val_cons in
         let func_taus =
           List.map (fun argtau -> A.FUNCTION_TY (argtau, tau)) argtaus
         in
-        (S.SDatatype (tau, val_cons), bindAllUnique vcons func_taus type_env)
+        (S.SDatatype (tau, val_cons), bindAllUnique vcons func_taus type_env) *)
     | A.Variable (tau, name, e) ->
         let tau', se = typ_of vcon_env vcon_sets type_env e in
         let var_tau = get_checked_types tau tau' in
