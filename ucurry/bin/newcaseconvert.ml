@@ -47,8 +47,9 @@ let generate_tree (scrutinee : A.expr) (cases : A.case_expr list)
     ->
       let cond = A.Unop (A.IsNull, scrutinee) in
       Node (cond, Leaf nil_e, Leaf con_e)
-  | _ -> Leaf (A.Case (scrutinee, cases))
-(* TODO: not yet implement other pattern matching *)
+  | (A.WILDCARD, e) :: _ -> Leaf e
+  | (A.VAR_PAT _, e) :: _ -> Leaf e
+  | _ -> Leaf (A.Case (scrutinee, cases)) (* TODO: not yet implement other pattern matching *)
 
 let case_convert (scrutinee : A.expr) (cases : A.case_expr list)
     (default : A.expr) : A.expr =

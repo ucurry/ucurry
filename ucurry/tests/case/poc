@@ -1,0 +1,83 @@
+fun: unit -> int :
+ones u = (begin (println 1), ones ());
+(ones ());
+
+
+datatype NUM = Zero | Addone of NUM;
+
+case a of 
+    Addone Addone Addone Zero => e1
+|   Addone Addone Zero => e2
+|   Addone Zero => e3
+|   Zero => e4
+|   _ => e5
+
+case (a, b) of 
+    (Addone a, Zero) => 
+|   (Addone Addone b, Zero) => 
+|   (Zero, Addone Addone a) => 
+|   (Zero, Addone b) => 
+
+currycase scrutinee cases default -> A.expr 
+
+
+(Addone { case b of (Addone Addone Zero => e1, Addone Zero => e2, Zero => e3, e5)}, 
+ Zero {e4},
+ _ {e5})
+
+case a of 
+    Addone b => case b of 
+                    Addone c => case c of 
+                                    Addone d => case d of Zero => e1
+                                                    | _ => e5
+                                  | Zero => e2
+                  | Zero => e3 
+  | Zero => e4 
+
+if a.getPattern == Addone 
+    then let b = a.getPattern 
+            if b.getPattern == Addone 
+                then c = b.getPattern 
+                    if c.getPattern == Addone 
+                        then d = c.getPattern 
+                            if d.getPattern == Addone 
+                                then e5 
+                                else e1 
+                        else e2 
+                else e3 
+    else e4 
+
+
+
+
+
+dataytype Color = Green of int | Red of int | Blue of int;
+(Green 2);
+
+
+(Green 2).getField => 2 
+
+struct Color {
+    int tag; 1
+    int i1; // 2 
+    int i2; //  
+    int i3; //  
+}
+
+
+datatype Num = Zero | Addone of Num;
+
+(case a of 
+    Addone Addone Zero => 0
+  | _ => 1
+  | Zero => 2);
+
+if a.getPattern == Addone
+    then let b = a.getPattern.getField in 
+                if b.getPattern == Addone
+                    then let c = b.getPattern.getField in 
+                        if c.getPattern == Zero 
+                            then 0 
+                            else 
+                    else 
+    else 1

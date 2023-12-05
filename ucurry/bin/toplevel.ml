@@ -22,7 +22,7 @@ let () =
   let ast = Parser.program Scanner.token lexbuf in
   let curried = Cu.curry ast in
   let last = Lazy.lazy_convert curried in
-  let sast, _ = Semant.semant_check last in
+  let sast, _ = Semant.semant_check lazy in
   (* commented out path for lazy  *)
   match !action with
   | Ast ->
