@@ -67,16 +67,16 @@ vardef:
     typ NAME ASN exp { Variable ($1, $2, $4) }
 
 datatypedef:
-    DATATYPE CAPNAME ASN constructor_list { Datatype (CONSTRUCTOR_TY $2, List.rev $4) }
+    DATATYPE CAPNAME ASN constructor_list { Datatype (CONSTRUCTOR_TY ($2, ""), List.rev $4) }
 
 constructor_list:
   | constructor  { [$1] }
   | constructor_list BAR constructor { $3 :: $1 }
 
 constructor:
-    CAPNAME        { ($1, []) }
-  | CAPNAME OF typ { ($1, [$3])}
-  | CAPNAME OF typelist { ($1,  List.rev $3) }
+    CAPNAME        { ($1, UNIT_TY) }
+  | CAPNAME OF typ { ($1, $3)}
+  // | CAPNAME OF typelist { ($1, $3) }
 
 exp:
     LBRACE exp RBRACE         { $2 }
@@ -90,7 +90,8 @@ exp:
   | binop                     { $1 }
   | unop                      { $1 }
   | lambda                    { $1 }
-  // | LBRACE CAPNAME opt_exp_list RBRACE     { Construct ($2, $3) }
+  | LBRACE CAPNAME RBRACE         { Construct ($2, Noexpr)} 
+  | LBRACE CAPNAME exp RBRACE     { Construct ($2, $3) }
   | LBRACE CASE exp OF case_exp_list RBRACE { Case ($3, List.rev $5) }
   | LBRACE exp_tuple RBRACE   { Tuple (List.rev $2) }
   | exp DOT INTEGER           { At ($1, $3) }
@@ -115,9 +116,9 @@ case_exp_list:
 pattern:
   | NAME                { VAR_PAT $1 }
   | WILDCARD            { WILDCARD }
-  | CAPNAME                              { CON_PAT ($1, []) }
-  | CAPNAME LBRACE pattern RBRACE        { CON_PAT ($1, [$3])}
-  | CAPNAME LBRACE pattern_tuple RBRACE  { CON_PAT ($1, List.rev $3)}
+  | CAPNAME                              { CON_PAT ($1, PATS []) }
+  | CAPNAME LBRACE pattern RBRACE        { CON_PAT ($1, $3)}
+  | CAPNAME LBRACE pattern_tuple RBRACE  { CON_PAT ($1, PATS (List.rev $3))}
 
 pattern_tuple:
     pattern COMMA pattern       { [$3; $1] }
@@ -155,7 +156,7 @@ typ:
   | STRTYPE             { STRING_TY }  
   | BOOLTYPE            { BOOL_TY }  
   | UNITTYPE            { UNIT_TY }
-  | CAPNAME             { CONSTRUCTOR_TY $1}
+  | CAPNAME             { CONSTRUCTOR_TY ($1, "") }
   | typ LISTTYPE        { LIST_TY $1 }  
   | funtype             { $1 }
   | tupletype           { $1 }

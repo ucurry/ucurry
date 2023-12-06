@@ -1,4 +1,4 @@
-datatype List = Nil | Cons of int * List;
+datatype List = Nil | Cons of (int * List);
 
 List empty = (Nil);
 List singleton = (Cons (1, (Nil)));
@@ -25,18 +25,17 @@ caar xs = (car (cdr xs));
 
 (caar ones);
 
-
--- random pattern matching
+--random pattern matching
 (case ones of 
-    --Cons (a, Cons (b, Nil)) => b
-    Cons (a, Nil) => a
-    --Cons (a, b) => a
+    Cons (a, Cons (b, Nil)) => b
+    | Cons (a, Nil) => a
+    | Cons (a, b) => a
     | Nil => 0);
 
----- naming
---check_type_error 
---(case ones of 
-    --Cons (a, Cons (a, Nil)) => a
-    --| Nil => 0);
+-- naming
+check_type_error 
+(case ones of 
+    Cons (a, Cons (a, Nil)) => a
+    | Nil => 0);
 
 

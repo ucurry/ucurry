@@ -19,13 +19,13 @@ let () =
 
   let lexbuf = Lexing.from_channel !channel in
   let ast = Parser.program Scanner.token lexbuf in
-  let curried = Curry.curry ast in
-  let last = Lazy.lazy_convert curried in
-  let sast, _ = Semant.semant_check last in
+  (* let curried = Curry.curry ast in *)
+  (* let last = Lazy.lazy_convert curried in *)
+  (* let sast, _ = Semant.semant_check last in *)
   (* commented out path for lazy  *)
   match !action with
   | Ast ->
-      let _ = print_string (Ast.string_of_program curried) in
+      let _ = print_string (Ast.string_of_program ast) in
       print_newline ()
   (* | LAST ->
       let _ = print_string (Ast.string_of_program last) in
@@ -34,9 +34,9 @@ let () =
       let cast = Clconvert.close_program sast in
       let _ = print_string (Cast.string_of_program cast) in
       print_newline () *)
-  | LLVMIR ->
+  (* | LLVMIR ->
       let cast = Clconvert.close_program sast in
       let llvmir = Codegen.build_main_body cast in
       let _ = print_string (Llvm.string_of_llmodule llvmir) in
-      print_newline ()
+      print_newline () *)
   | _ -> print_string usage_msg
