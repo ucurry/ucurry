@@ -17,7 +17,7 @@ and expr =
   | Unop of A.uop * sexpr
   | Captured of int
   | Closure of closure
-  | Construct of (string * int) * sexpr list
+  | Construct of (string * int) * sexpr 
   | Case of sexpr * case_expr list
   | Tuple of sexpr list
   | At of sexpr * int
@@ -34,7 +34,7 @@ and def =
   | Exp of sexpr
   | CheckTypeError of def
 
-and constructor = string * A.typ list
+and constructor = string * A.typ 
 
 type program = def list
 

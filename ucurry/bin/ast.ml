@@ -114,10 +114,14 @@ let string_of_uop = function
 
 let rec string_of_pattern = function
   | VAR_PAT s -> s
-  | CON_PAT (c, p) -> c ^ string_of_pattern p
+  (* | CON_PAT (c, p) -> c ^ string_of_pattern p *)
+  | CON_PAT (c, p) -> (match p with 
+    | PATS [] -> c 
+    | _ -> c ^ "(" ^ string_of_pattern p ^ ")")
   | PATS [] -> ""
   | PATS ps -> 
-       " (" ^ String.concat ", " (List.map string_of_pattern ps) ^ ")" 
+       (* " (" ^ String.concat ", " (List.map string_of_pattern ps) ^ ")"  *)
+        String.concat ", " (List.map string_of_pattern ps)
   (* | CON_PAT (c, []) -> c
   | CON_PAT (c, ps) ->
       c ^ " (" ^ String.concat ", " (List.map string_of_pattern ps) ^ ")" *)

@@ -34,9 +34,9 @@ let () =
       let cast = Clconvert.close_program sast in
       let _ = print_string (Cast.string_of_program cast) in
       print_newline () *)
-  (* | LLVMIR ->
+  | LLVMIR ->
       let cast = Clconvert.close_program sast in
       let llvmir = Codegen.build_main_body cast in
       let _ = print_string (Llvm.string_of_llmodule llvmir) in
-      print_newline () *)
+      print_newline ()
   | _ -> print_string usage_msg

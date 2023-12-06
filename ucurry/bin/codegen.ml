@@ -229,7 +229,15 @@ let build_main_body defs =
             build_function_body function_ptr capstruct_type (ty, top_exp)
           in
           closure_ptr
-      | C.Construct ((dt_name, i), sargs) ->
+      | C.Construct ((dt_name, i), arg) -> 
+          let dt_struct_type = StringMap.find dt_name datatype_map in
+          let dt_struct = L.build_malloc dt_struct_type dt_name builder in
+          let tag_v = L.const_int i32_t i in
+          let field_v = expr builder arg in 
+          ignore (U.set_data_field field_v i dt_struct builder);
+          ignore (U.set_data_field tag_v 0 dt_struct builder);
+          dt_struct 
+      (* | C.Construct ((dt_name, i), sargs) ->
           (* Malloc the datatype struct *)
           let dt_struct_type = StringMap.find dt_name datatype_map in
           let dt_struct = L.build_malloc dt_struct_type dt_name builder in
@@ -259,7 +267,7 @@ let build_main_body defs =
           ignore (U.set_data_field tag_v 0 dt_struct builder);
 
           (* return the datatype struct *)
-          dt_struct
+          dt_struct *)
       | C.Case _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "case")
       | C.Tuple ses -> 
           let tuple_ptr_ty = ltype_of_type ty in 
@@ -274,7 +282,9 @@ let build_main_body defs =
       | C.At (e, i) ->
           let tuple_ptr = expr builder e in
           Util.get_data_field i tuple_ptr builder "tuple field"
-      | C.Noexpr -> L.build_unreachable builder (*TODO double check*)
+      | C.Noexpr -> 
+          L.const_int i1_t 0 (* This is for no-arg value construct: TODO double check  *)
+          (* L.build_unreachable builder  *)
     in
     expr builder
   and alloc_function name fun_tau =

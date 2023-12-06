@@ -32,7 +32,7 @@ let ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
           L.struct_type context [| L.pointer_type ftype; void_ptr |]
         in
         L.pointer_type cl_struct_type
-    | A.CONSTRUCTOR_TY name -> L.pointer_type (StringMap.find name ty_map)
+    | A.CONSTRUCTOR_TY (name, _) -> L.pointer_type (StringMap.find name ty_map)
     | A.TUPLE_TY taus ->
         let taus = Array.of_list (List.map ltype_of taus) in
         L.pointer_type (L.struct_type context taus)
@@ -76,7 +76,26 @@ let build_struct (context : L.llcontext) (llmodule : L.llmodule)
 let build_datatypes (context : L.llcontext) (llmodule : L.llmodule)
     (program : def list) : L.lltype StringMap.t =
   let add_datatype map = function
-    | Cast.Datatype (CONSTRUCTOR_TY datatype_name, cons) ->
+    | Cast.Datatype (CONSTRUCTOR_TY (dt_name, _), cons) -> 
+        (* Define dt struct type to allow for recursive adt *)
+        let dt_struct_type = L.named_struct_type context dt_name in 
+        let map' = StringMap.add dt_name dt_struct_type map in 
+
+        (* Get the arg types of each value constructor *)
+        let vcon_names, arg_taus = List.split cons in 
+        let fieldTypes = List.map (ltype_of_type map' llmodule context) arg_taus in 
+        let map'' = StringMap.add_seq 
+                      (List.to_seq @@ (List.combine vcon_names) fieldTypes) 
+                      map' in 
+        
+        (* Fully define the datatype struct type: the first field is a tag *)
+        let _ =
+          L.struct_set_body dt_struct_type
+            (list_to_arr (L.i32_type context :: fieldTypes))
+            false
+        in
+        map'' 
+    (* | Cast.Datatype (CONSTRUCTOR_TY datatype_name, cons) ->
         let datatype_struct_type = L.named_struct_type context datatype_name in
         let map' = StringMap.add datatype_name datatype_struct_type map in
 
@@ -105,7 +124,7 @@ let build_datatypes (context : L.llcontext) (llmodule : L.llmodule)
             false
         in
         (* StringMap.add datatype_name newContype newmap *)
-        newmap
+        newmap *)
     | _ -> map
   in
   List.fold_left add_datatype StringMap.empty program
@@ -168,7 +187,7 @@ let ty_fmt_string ty (builder : L.llbuilder) : L.llvalue =
     | A.LIST_TY subtau -> "[ " ^ string_matcher subtau ^ "..]"
     | A.TUPLE_TY taus ->
         "(" ^ String.concat ", " (List.map string_matcher taus) ^ ")"
-    | A.CONSTRUCTOR_TY s -> s
+    | A.CONSTRUCTOR_TY (s, _) -> s
     | A.UNIT_TY -> " "
     | A.FUNCTION_TY _ -> raise (Impossible "function cannot be printed")
   in
@@ -222,8 +241,8 @@ let build_string_pool (program : C.program) (builder : L.llbuilder) :
         let pool' = mk_expr_string_pool builder pool sexpr in
         let pool'' = List.fold_left (mk_expr_string_pool builder) pool' cap in
         pool''
-    | C.Construct (_, args) ->
-        List.fold_left (mk_expr_string_pool builder) pool args
+    | C.Construct (_, arg) ->
+       mk_expr_string_pool builder pool arg
     | C.Case (scrutinee, patterns) ->
         let _, es = List.split patterns in
         let pool' = mk_expr_string_pool builder pool scrutinee in

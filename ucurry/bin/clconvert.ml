@@ -41,7 +41,7 @@ let rec free ((t, exp) : SA.sexpr) : S.t =
   | SA.SBegin sexprs -> unionFree sexprs
   | SA.SBinop (operand1, _, operand2) -> S.union (free operand1) (free operand2)
   | SA.SUnop (_, operand) -> free operand
-  | SA.SConstruct (_, sargs) -> unionFree sargs
+  | SA.SConstruct (_, arg) -> free arg
   | SA.SCase (scrutinee, cexprs) ->
       let fscrutinee = free scrutinee in
       List.fold_left
@@ -101,9 +101,9 @@ and close_exp (captured : freevar list) (le : SA.sexpr) : C.sexpr =
           (* need to recheck*)
           let e' = exp e in
           C.Let (ls', e')
-      | SA.SConstruct (vcon, sargs) ->
+      | SA.SConstruct (vcon, arg) ->
           (* TODO here *)
-          C.Construct (vcon, List.map exp sargs)
+          C.Construct (vcon, exp arg)
       | SA.SCase (scrutinee, cases) ->
           let scrutinee' = exp scrutinee in
           let cases' = List.map (fun (p, e) -> (p, exp e)) cases in
