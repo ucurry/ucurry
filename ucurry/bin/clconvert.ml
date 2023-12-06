@@ -99,7 +99,7 @@ and close_exp (captured : freevar list) (le : SA.sexpr) : C.sexpr =
           (* need to recheck*)
           let e' = exp e in
           C.Let (ls', e')
-      | SA.SConstruct (vcon, sargs) -> 
+      | SA.SConstruct (vcon, sargs) ->
           (* TODO here *)
           C.Construct (vcon, List.map exp sargs)
       | SA.SCase (scrutinee, cases) ->

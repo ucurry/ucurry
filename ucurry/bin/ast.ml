@@ -38,7 +38,7 @@ type typ =
   | TUPLE_TY of typ list
 
 type pattern =
-  | VAR_PAT of string 
+  | VAR_PAT of string
   | CON_PAT of string * pattern list (* !! *)
   | WILDCARD
 
@@ -113,7 +113,8 @@ let string_of_uop = function
 let rec string_of_pattern = function
   | VAR_PAT s -> s
   | CON_PAT (c, []) -> c
-  | CON_PAT (c, ps) -> c ^ " (" ^ String.concat ", " (List.map string_of_pattern ps) ^ ")"
+  | CON_PAT (c, ps) ->
+      c ^ " (" ^ String.concat ", " (List.map string_of_pattern ps) ^ ")"
   | WILDCARD -> "_"
 
 let rec string_of_typ = function
@@ -150,9 +151,9 @@ let rec string_of_expr exp =
     | Lambda (t, vl, e) ->
         "\\(" ^ string_of_typ t ^ ")" ^ String.concat " " vl ^ " -> "
         ^ string_of_expr e
-    | Construct (n, []) -> n 
+    | Construct (n, []) -> n
     | Construct (n, es) ->
-          n ^ "(" ^ String.concat ", " (List.map string_of_expr es) ^ ")"
+        n ^ "(" ^ String.concat ", " (List.map string_of_expr es) ^ ")"
     | Case (e, cel) ->
         "(case " ^ string_of_expr e ^ " of\n\t" ^ "  "
         ^ String.concat " \n\t| "
@@ -188,7 +189,7 @@ and string_of_literal = function
   | TUPLE l -> "(" ^ String.concat ", " (List.map string_of_literal l) ^ ")"
   | UNIT -> "()"
   | INF_LIST n -> "[" ^ string_of_int n ^ "..]"
-  (* | Construct (c, e) -> "(" ^ c ^ " " ^ string_of_literal e ^ ")" *)
+(* | Construct (c, e) -> "(" ^ c ^ " " ^ string_of_literal e ^ ")" *)
 
 let string_of_constructor = function
   | c, [] -> c

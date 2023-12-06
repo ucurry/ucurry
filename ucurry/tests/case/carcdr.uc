@@ -28,13 +28,15 @@ caar xs = (car (cdr xs));
 
 -- random pattern matching
 (case ones of 
-    Cons (a, Cons (b, Nil)) => b
+    --Cons (a, Cons (b, Nil)) => b
+    Cons (a, Nil) => a
+    --Cons (a, b) => a
     | Nil => 0);
 
--- naming
-check_type_error 
-(case ones of 
-    Cons (a, Cons (a, Nil)) => a
-    | Nil => 0);
+---- naming
+--check_type_error 
+--(case ones of 
+    --Cons (a, Cons (a, Nil)) => a
+    --| Nil => 0);
 
 

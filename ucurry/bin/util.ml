@@ -64,4 +64,4 @@ let rec typ_of_value = function
   | A.TUPLE vs -> A.TUPLE_TY (List.map typ_of_value vs)
   | A.INF_LIST _ -> A.LIST_TY A.INT_TY
   | A.UNIT -> A.UNIT_TY
-  (* | A.Construct _ -> failwith "typ_of_value not yet support constructor type" *)
+(* | A.Construct _ -> failwith "typ_of_value not yet support constructor type" *)

@@ -90,7 +90,6 @@ exp:
   | binop                     { $1 }
   | unop                      { $1 }
   | lambda                    { $1 }
-  // fix: adding brackets to value constructors avoids shift/reduce conflict
   | LBRACE CAPNAME opt_exp_list RBRACE     { Construct ($2, $3) }
   | LBRACE CASE exp OF case_exp_list RBRACE { Case ($3, List.rev $5) }
   | exp DOT INTEGER           {At ($1, $3)}

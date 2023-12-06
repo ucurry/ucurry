@@ -61,14 +61,9 @@ let build_main_body defs =
       | C.Apply (((ft, _) as sf), args) ->
           let fun_closure = expr builder sf in
 
-          (* let fdef = expr builder sf in *)
-          (* let _ = print_string (C.string_of_sexpr "" (ty, top_exp)) in  *)
-          (* let _ = failwith "reached" in  *)
           let fdef = U.get_data_field 0 fun_closure builder "fdef" in
-
           let cap = U.get_data_field 1 fun_closure builder "cap" in
           let fretty = U.get_retty ft in
-          (* let llargs = List.rev (List.map (expr builder) (List.rev args)) in *)
           let llargs =
             cap :: List.rev (List.map (expr builder) (List.rev args))
           in
@@ -234,23 +229,32 @@ let build_main_body defs =
             build_function_body function_ptr capstruct_type (ty, top_exp)
           in
           closure_ptr
-      | C.Construct ((dt_name, i), sargs) -> 
+      | C.Construct ((dt_name, i), sargs) ->
           (* Malloc the datatype struct *)
           let dt_struct_type = StringMap.find dt_name datatype_map in
           let dt_struct = L.build_malloc dt_struct_type dt_name builder in
-          let tag_v = L.const_int i32_t i in 
-          
-          let field_v = match sargs with 
-            | [] -> L.const_int i1_t 0 
-            | [sarg] -> expr builder sarg 
-            | _ -> 
-              (* Malloc the vcon struct when arguments > 1 *)
-              let field_vs = List.map (expr builder) sargs in
-              let field_taus,_ = List.split sargs in
-              let local_struct_ptr = CGUtil.build_struct context the_module builder datatype_map "field" field_taus field_vs in 
-              (* ignore (StringMap.add "field" local_struct_ptr varmap); *)
-              local_struct_ptr
-          in 
+          let tag_v = L.const_int i32_t i in
+
+          let field_v =
+            match sargs with
+            | [] -> L.const_int i1_t 0
+            | [ sarg ] -> expr builder sarg
+            | _ ->
+                (* Malloc the vcon struct when arguments > 1 *)
+                let field_vs = List.map (expr builder) sargs in
+                let field_taus, _ = List.split sargs in
+                let field_lltypes = List.map ltype_of_type field_taus in 
+                let struct_type = L.struct_type context (Array.of_list field_lltypes) in 
+                let str_ptr = L.build_malloc struct_type "dt_field" builder in 
+                ignore (Util.map_i (fun v i -> Util.set_data_field v i str_ptr builder) 0 field_vs);
+                str_ptr
+                (* let local_struct_ptr =
+                  CGUtil.build_struct context the_module builder datatype_map
+                    "dt_field" field_taus field_vs
+                in
+                (* ignore (StringMap.add "field" local_struct_ptr varmap); *)
+                local_struct_ptr *)
+          in
           ignore (U.set_data_field field_v i dt_struct builder);
           ignore (U.set_data_field tag_v 0 dt_struct builder);
 

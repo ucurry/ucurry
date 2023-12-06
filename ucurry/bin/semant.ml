@@ -52,24 +52,26 @@ let new_binds_from_legal_pat (vcon_env : S.vcon_env) (scrutinee_tau : S.typ)
         bindUnique x tau type_env
         (* StringMap.add x (A.FUNCTION_TY (A.UNIT_TY, tau)) StringMap.empty *)
     | A.CON_PAT (name, ps) ->
-        let (datatype_name, _, formal_taus) = StringMap.find name vcon_env in 
-        let _ = get_checked_types tau (CONSTRUCTOR_TY datatype_name) in 
-        List.fold_left2 (fun new_env t p -> get_binds new_env t p) type_env formal_taus ps 
+        let datatype_name, _, formal_taus = StringMap.find name vcon_env in
+        let _ = get_checked_types tau (CONSTRUCTOR_TY datatype_name) in
+        List.fold_left2
+          (fun new_env t p -> get_binds new_env t p)
+          type_env formal_taus ps
         (* let arg_tau, ret_tau = findFunctionType name type_env in
-        let _ = get_checked_types tau ret_tau in
-        get_binds arg_tau p *)
+           let _ = get_checked_types tau ret_tau in
+           get_binds arg_tau p *)
     | A.WILDCARD -> type_env
     (* | NIL ->
-        let _ = subtypeOfList tau in
-        StringMap.empty
-    | CONCELL (s1, s2) ->
-        let subty = subtypeOfList tau in
-        bindAllUnique [ s1; s2 ]
-          [
-            A.FUNCTION_TY (A.UNIT_TY, subty);
-            A.FUNCTION_TY (A.UNIT_TY, LIST_TY subty);
-          ]
-          StringMap.empty *)
+           let _ = subtypeOfList tau in
+           StringMap.empty
+       | CONCELL (s1, s2) ->
+           let subty = subtypeOfList tau in
+           bindAllUnique [ s1; s2 ]
+             [
+               A.FUNCTION_TY (A.UNIT_TY, subty);
+               A.FUNCTION_TY (A.UNIT_TY, LIST_TY subty);
+             ]
+             StringMap.empty *)
   in
   get_binds StringMap.empty scrutinee_tau pat
 
@@ -81,8 +83,8 @@ let rec to_spattern (vcon_env : S.vcon_env) (c : A.pattern) =
   | A.CON_PAT (name, ps) ->
       S.CON_PAT (U.mid @@ findType name vcon_env, List.map pattern_of ps)
   | A.WILDCARD -> S.WILDCARD
-  (* | A.CONCELL (x, xs) -> S.CONCELL (x, xs)
-  | A.NIL -> S.NIL *)
+(* | A.CONCELL (x, xs) -> S.CONCELL (x, xs)
+   | A.NIL -> S.NIL *)
 
 let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
     (type_env : S.type_env) (exp : Ast.expr) : S.typ * S.sx =
@@ -229,19 +231,26 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         (A.FUNCTION_TY (A.UNIT_TY, tau), S.SLambda ([ "unit" ], (tau, e)))
     | A.Noexpr -> (A.UNIT_TY, S.SNoexpr)
     | A.Construct (vcon_name, args) ->
-        let (datatype_name, vcon_id, formal_taus) = StringMap.find vcon_name vcon_env in 
-        let sargs = List.map ty args in 
-        let arg_taus, _ = List.split sargs in 
-        let _ = List.map (fun (t1, t2) -> eqType t1 t2) (List.combine formal_taus arg_taus) in 
-        (A.CONSTRUCTOR_TY datatype_name, S.SConstruct ((datatype_name, vcon_id), sargs))
+        let datatype_name, vcon_id, formal_taus =
+          StringMap.find vcon_name vcon_env
+        in
+        let sargs = List.map ty args in
+        let arg_taus, _ = List.split sargs in
+        let _ =
+          List.map
+            (fun (t1, t2) -> eqType t1 t2)
+            (List.combine formal_taus arg_taus)
+        in
+        ( A.CONSTRUCTOR_TY datatype_name,
+          S.SConstruct ((datatype_name, vcon_id), sargs) )
     | A.Case (scrutinee, cases) ->
         let scrutinee_sexp = ty scrutinee in
         let scrutinee_type, _ = scrutinee_sexp in
         let patterns, es = List.split cases in
         (* TODO: check if pattern matching is exhaustive *)
         (* let _ =
-          Caseconvert.is_exhaustive vcon_sets type_env scrutinee_type patterns
-        in *)
+             Caseconvert.is_exhaustive vcon_sets type_env scrutinee_type patterns
+           in *)
         let spatterns = List.map (to_spattern vcon_env) patterns in
         let case_envs =
           List.map (new_binds_from_legal_pat vcon_env scrutinee_type) patterns
@@ -281,12 +290,12 @@ let rec typ_def (def : A.def) (semant_envs : semant_envs) : S.sdef * S.type_env
         in
         match_retrun sx
     | A.Datatype (tau, val_cons) ->
-         (S.SDatatype (tau, val_cons), type_env)
+        (S.SDatatype (tau, val_cons), type_env)
         (* let vcons, argtaus = List.split val_cons in
-        let func_taus =
-          List.map (fun argtau -> A.FUNCTION_TY (argtau, tau)) argtaus
-        in
-        (S.SDatatype (tau, val_cons), bindAllUnique vcons func_taus type_env) *)
+           let func_taus =
+             List.map (fun argtau -> A.FUNCTION_TY (argtau, tau)) argtaus
+           in
+           (S.SDatatype (tau, val_cons), bindAllUnique vcons func_taus type_env) *)
     | A.Variable (tau, name, e) ->
         let tau', se = typ_of vcon_env vcon_sets type_env e in
         let var_tau = get_checked_types tau tau' in
