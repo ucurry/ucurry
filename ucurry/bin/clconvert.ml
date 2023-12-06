@@ -54,7 +54,9 @@ let rec free ((t, exp) : SA.sexpr) : S.t =
          let _ = failwith "REACHED CL" in *)
       let formalWithTypes = List.combine formalTypes formals in
       S.diff (free sexpr) (S.of_list formalWithTypes)
-  | _ -> S.empty
+  | SA.STuple ses -> unionFree ses
+  | SA.SAt (se, _) -> free se
+  | SA.SNoexpr -> S.empty
 
 let indexOf (x : string) (xs : freevar list) : int option =
   let rec indexOf' (x : string) (xs : freevar list) (i : int) : int option =
@@ -108,6 +110,7 @@ and close_exp (captured : freevar list) (le : SA.sexpr) : C.sexpr =
           C.Case (scrutinee', cases')
       | SA.SLambda lambda -> C.Closure (asClosure ty lambda captured)
       | SA.SNoexpr -> Noexpr
+      | SA.STuple ses -> C.Tuple (List.map exp ses)
       | SA.SAt (se, i) -> C.At (exp se, i) )
   in
   exp le

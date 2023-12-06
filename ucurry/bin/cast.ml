@@ -19,6 +19,7 @@ and expr =
   | Closure of closure
   | Construct of (string * int) * sexpr list
   | Case of sexpr * case_expr list
+  | Tuple of sexpr list
   | At of sexpr * int
   | Noexpr
 
@@ -87,6 +88,7 @@ and string_of_sexpr (delim : string) ((ty, expr) : sexpr) : string =
     | Closure cl -> string_of_closure cl
     | Construct _ -> failwith "String_of_expr not implemented for construct"
     | Case _ -> failwith "String_of_expr Not implemented for case"
+    | Tuple _ -> failwith "String_of_expr Not implemented for Tuple"
     | At _ -> failwith "String_of_exor Not implemented for at"
     | Noexpr -> ""
   in

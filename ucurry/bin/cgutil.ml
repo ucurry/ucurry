@@ -141,7 +141,7 @@ let build_literal builder (ty_map : L.lltype StringMap.t)
         ignore (set_data_field hd_v 0 list_ptr builder);
         ignore (set_data_field tl_ptr 1 list_ptr builder);
         list_ptr
-    | S.TUPLE vs -> (
+    (* | S.TUPLE vs -> (
         match ty with
         | TUPLE_TY taus ->
             let tuple_ptr_ty = ltype_of_type ty_map llmodule context ty in
@@ -153,7 +153,7 @@ let build_literal builder (ty_map : L.lltype StringMap.t)
             in
             ignore (Util.map_i set_feild 0 inner_values);
             tuple_ptr
-        | _ -> raise (Impossible "tuple must have tuple type"))
+        | _ -> raise (Impossible "tuple must have tuple type")) *)
     | S.INF_LIST _ -> raise (UNIMPLEMENTED "inf list")
     | S.UNIT -> L.const_int i1_t 0
   in
@@ -191,7 +191,7 @@ let build_string_pool (program : C.program) (builder : L.llbuilder) :
           let v_pool' = mk_value_string_pool v_pool hd in
           mk_value_string_pool v_pool' tl
       (* | S.Construct (_, v) -> mk_value_string_pool v_pool v *)
-      | S.TUPLE vs -> List.fold_left mk_value_string_pool v_pool vs
+      (* | S.TUPLE vs -> List.fold_left mk_value_string_pool v_pool vs *)
       | S.BOOL _ -> v_pool
       | S.EMPTYLIST _ -> v_pool
       | S.INF_LIST _ -> v_pool
@@ -228,6 +228,8 @@ let build_string_pool (program : C.program) (builder : L.llbuilder) :
         let _, es = List.split patterns in
         let pool' = mk_expr_string_pool builder pool scrutinee in
         List.fold_left (mk_expr_string_pool builder) pool' es
+    | C.Tuple ses -> 
+        List.fold_left (mk_expr_string_pool builder) pool ses
     | C.At (sexpr, _) -> mk_expr_string_pool builder pool sexpr
     | C.Noexpr -> pool
     | C.Captured _ -> pool

@@ -261,6 +261,16 @@ let build_main_body defs =
           (* return the datatype struct *)
           dt_struct
       | C.Case _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "case")
+      | C.Tuple ses -> 
+          let tuple_ptr_ty = ltype_of_type ty in 
+          let tuple_ty = L.element_type tuple_ptr_ty in 
+          let tuple_ptr = L.build_malloc tuple_ty "tuple" builder in 
+          let tuple_vs = List.map (expr builder) ses in 
+          let set_field v i = 
+            U.set_data_field v i tuple_ptr builder 
+          in 
+          ignore (U.map_i set_field 0 tuple_vs);
+          tuple_ptr
       | C.At (e, i) ->
           let tuple_ptr = expr builder e in
           Util.get_data_field i tuple_ptr builder "tuple field"

@@ -31,6 +31,7 @@ let rec curry_expr (exp : A.expr) : A.expr =
       let new_cases = List.combine ps (List.map curry_expr es) in
       let new_scrutinee = curry_expr scrutinee in
       A.Case (new_scrutinee, new_cases)
+  | A.Tuple es -> A.Tuple (List.map curry_expr es)
   | A.At (e, idx) -> A.At (curry_expr e, idx)
   | A.Noexpr -> A.Noexpr
   | _ -> failwith "no match in curry pass"

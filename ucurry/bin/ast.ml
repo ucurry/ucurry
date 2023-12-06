@@ -56,6 +56,7 @@ type expr =
   | Thunk of expr
   | Construct of string * expr list (* !! *)
   | Case of expr * case_expr list
+  | Tuple of expr list (* !! *)
   | At of expr * int
   | Noexpr
 
@@ -65,7 +66,7 @@ and value =
   | BOOL of bool
   | EMPTYLIST of typ
   | LIST of value * value
-  | TUPLE of value list
+  (* | TUPLE of value list *)
   | INF_LIST of int
   | UNIT
 
@@ -167,6 +168,7 @@ let rec string_of_expr exp =
         ^ String.concat ", "
             (List.map (fun (v, e) -> v ^ " = " ^ string_of_expr e) vl)
         ^ " in " ^ string_of_expr e
+    | Tuple es -> "(" ^ String.concat ", " (List.map string_of_expr es) ^ ")"
     | At (e, i) -> string_of_expr e ^ "." ^ string_of_int i
     | Noexpr -> ""
     | Thunk e -> "THUNK: " ^ string_of_expr e
@@ -186,7 +188,7 @@ and string_of_literal = function
         | _ -> raise (Invalid_argument "should not be reached")
       in
       "[" ^ listString (x, xs) ^ "]"
-  | TUPLE l -> "(" ^ String.concat ", " (List.map string_of_literal l) ^ ")"
+  (* | TUPLE l -> "(" ^ String.concat ", " (List.map string_of_literal l) ^ ")" *)
   | UNIT -> "()"
   | INF_LIST n -> "[" ^ string_of_int n ^ "..]"
 (* | Construct (c, e) -> "(" ^ c ^ " " ^ string_of_literal e ^ ")" *)

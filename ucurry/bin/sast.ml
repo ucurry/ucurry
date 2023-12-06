@@ -22,6 +22,7 @@ and sx =
   | SLambda of lambda
   | SConstruct of (string * int) * sexpr list
   | SCase of sexpr * scase_expr list
+  | STuple of sexpr list (* redundant type annotation?? *)
   | SAt of sexpr * int
   | SNoexpr
 
@@ -46,7 +47,7 @@ and svalue =
   | BOOL of bool
   | EMPTYLIST of Ast.typ
   | LIST of svalue * svalue
-  | TUPLE of svalue list
+  (* | TUPLE of svalue list *)
   | INF_LIST of int
   | UNIT
 
@@ -75,7 +76,7 @@ let rec string_of_literal : svalue -> string = function
         | _ -> raise (Invalid_argument "should not be reached")
       in
       "[" ^ listString (x, xs) ^ "]"
-  | TUPLE l -> "(" ^ String.concat ", " (List.map string_of_literal l) ^ ")"
+  (* | TUPLE l -> "(" ^ String.concat ", " (List.map string_of_literal l) ^ ")" *)
   | UNIT -> "()"
   | INF_LIST n -> "[" ^ string_of_int n ^ "..]"
 (* | Construct ((s, _, _), e) -> "(" ^ s ^ " " ^ string_of_literal e ^ ")" *)

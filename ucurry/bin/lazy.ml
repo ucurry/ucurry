@@ -7,6 +7,8 @@ and transform_ty ty =
   match ty with
   | A.FUNCTION_TY (argty, retty) ->
       A.FUNCTION_TY (to_thunk_ty argty, transform_ty retty)
+  | A.TUPLE_TY taus ->
+      A.TUPLE_TY (List.map to_thunk_ty taus)
   | _ -> ty
 
 let unitv = A.Literal A.UNIT
@@ -38,7 +40,8 @@ let rec lazy_expr (exp : A.expr) : A.expr =
       let pat, es = List.split cases in
       let new_cases = List.combine pat (List.map lazy_expr es) in
       A.Case (lazy_expr scrutinee, new_cases)
-  | A.At (e, idx) -> A.At (lazy_expr e, idx)
+  | A.Tuple es -> A.Tuple (List.map to_thunk es)
+  | A.At (e, idx) -> A.Apply (A.At (lazy_expr e, idx), [ unitv ])
   | A.Noexpr -> A.Noexpr
   | A.Thunk _ -> failwith "Illegal thunk"
 

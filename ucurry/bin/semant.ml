@@ -23,7 +23,7 @@ let default_case tau =
     | A.BOOL_TY -> S.BOOL false
     | A.LIST_TY tau ->
         S.LIST (get_value tau, S.EMPTYLIST UNIT_TY) (* TODO: not sure *)
-    | A.TUPLE_TY taus -> S.TUPLE (List.map get_value taus)
+    (* | A.TUPLE_TY taus -> S.TUPLE (List.map get_value taus) *)
     | _ -> UNIT (* HACK : when case is unmatched , should thrown exception *)
   in
   (tau, S.SLiteral (get_value tau))
@@ -98,9 +98,9 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
               let hd_tau, hd_val = lit_ty hd and tl_tau, tl_val = lit_ty tl in
               let list_tau = get_checked_types (A.LIST_TY hd_tau) tl_tau in
               (list_tau, S.LIST (hd_val, tl_val))
-          | A.TUPLE xs ->
+          (* | A.TUPLE xs ->
               let taus, vals = List.split (List.map lit_ty xs) in
-              (A.TUPLE_TY taus, S.TUPLE vals)
+              (A.TUPLE_TY taus, S.TUPLE vals) *)
           | A.BOOL b -> (A.BOOL_TY, S.BOOL b)
           (* | A.Construct (s, v) ->
               let exp_tau, ret_tau = findFunctionType s type_env in
@@ -221,6 +221,10 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
           | _ -> raise (TypeError "lambda type unmatch")
         in
         check_lambda lambda_tau formals type_env
+    | A.Tuple es ->
+        let ses = List.map ty es in 
+        let taus, _ = List.split ses in 
+        (TUPLE_TY taus, S.STuple ses)
     | A.At (e, i) -> (
         let tau, se = ty e in
         match tau with
