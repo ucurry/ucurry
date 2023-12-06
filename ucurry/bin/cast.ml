@@ -17,6 +17,7 @@ and expr =
   | Unop of A.uop * sexpr
   | Captured of int
   | Closure of closure
+  | Construct of (string * int) * sexpr list
   | Case of sexpr * case_expr list
   | At of sexpr * int
   | Noexpr
@@ -32,7 +33,7 @@ and def =
   | Exp of sexpr
   | CheckTypeError of def
 
-and constructor = string * A.typ option
+and constructor = string * A.typ list
 
 type program = def list
 
@@ -84,6 +85,7 @@ and string_of_sexpr (delim : string) ((ty, expr) : sexpr) : string =
     | Unop (o, e) -> A.string_of_uop o ^ " " ^ string_of_sexpr delim e
     | Captured i -> "Captured " ^ string_of_int i
     | Closure cl -> string_of_closure cl
+    | Construct _ -> failwith "String_of_expr not implemented for construct"
     | Case _ -> failwith "String_of_expr Not implemented for case"
     | At _ -> failwith "String_of_exor Not implemented for at"
     | Noexpr -> ""

@@ -97,7 +97,16 @@ exp:
 
 opt_exp_list:
   | /* Nothing */  {[]}
-  | LBRACE exp_list RBRACE { List.rev $2 }
+  | exp            {[$1]}
+  | LBRACE exp_tuple RBRACE { List.rev $2 }
+
+exp_tuple:
+  | exp COMMA exp { [$3;$1] }
+  | exp_tuple COMMA exp {$3::$1}
+
+exp_list: 
+    exp { [$1] }
+  | exp_list COMMA exp  { $3 :: $1 }
 
 case_exp_list:
     pattern DOUBLEARROW exp { [($1, $3)] }
@@ -157,7 +166,7 @@ value:
   | BOOL                           { BOOL $1 }
   | LBRACKET typ RBRACKET          { EMPTYLIST $2 }
   | LBRACKET literal_list RBRACKET {  $2 } 
-  | LBRACE literal_tuple RBRACE    { TUPLE (List.rev $2)}
+  // | LBRACE literal_tuple RBRACE    { TUPLE (List.rev $2)}
   | UNIT                           { UNIT }
   | LBRACKET INTEGER DOTS RBRACKET { INF_LIST $2 }
 
@@ -165,13 +174,10 @@ literal_list:
   | value  COMMA literal_list   { LIST ($1, $3)}
   | value                       { LIST ($1, EMPTYLIST (typ_of_value $1)) } // TODO: reconsider this
 
-literal_tuple:
-    value  COMMA value     { [$3; $1] }
-  | literal_tuple COMMA value { $3 :: $1 }
+// literal_tuple:
+//     value  COMMA value     { [$3; $1] }
+//   | literal_tuple COMMA value { $3 :: $1 }
 
-exp_list: 
-    exp { [$1] }
-  | exp_list COMMA exp  { $3 :: $1 }
 
 args:
   | exp { [$1] }

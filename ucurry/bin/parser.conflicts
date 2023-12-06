@@ -1,7 +1,37 @@
 
-** Conflict (reduce/reduce) in state 177.
-** Tokens involved: TIMES LBRACE
-** The following explanations concentrate on token TIMES.
+** Conflict (shift/reduce) in state 189.
+** Token involved: NAME
+** This state is reached from program after reading:
+
+defs CAPNAME
+
+** The derivations that appear below have the following common factor:
+** (The question mark symbol (?) represents the spot where the derivations begin to differ.)
+
+program 
+defs EOF 
+defs def SEMI 
+     (?)
+
+** In state 189, looking ahead at NAME, shifting is permitted
+** because of the following sub-derivation:
+
+exp 
+CAPNAME opt_exp_list 
+        exp 
+        . NAME 
+
+** In state 189, looking ahead at NAME, reducing production
+** typ -> CAPNAME
+** is permitted because of the following sub-derivation:
+
+vardef 
+typ NAME ASN exp // lookahead token appears
+CAPNAME . 
+
+** Conflict (shift/reduce) in state 167.
+** Tokens involved: UNIT TL TIMES STRINGLIT PRINTLN PRINT NOT NEG NAME LET LBRACKET LBRACE LAMBDA ISNULL INTEGER IF HD CAPNAME BOOL
+** The following explanations concentrate on token UNIT.
 ** This state is reached from program after reading:
 
 defs LBRACE CAPNAME
@@ -12,32 +42,62 @@ defs LBRACE CAPNAME
 program 
 defs EOF 
 defs def SEMI 
+     exp 
      (?)
 
-** In state 177, looking ahead at TIMES, reducing production
+** In state 167, looking ahead at UNIT, reducing production
 ** opt_exp_list ->
 ** is permitted because of the following sub-derivation:
 
-exp 
-LBRACE exp RBRACE 
-       binop 
-       exp TIMES exp // lookahead token appears
+LBRACE exp args RBRACE // lookahead token appears because args can begin with UNIT
        CAPNAME opt_exp_list // lookahead token is inherited
                . 
 
-** In state 177, looking ahead at TIMES, reducing production
-** typ -> CAPNAME
+** In state 167, looking ahead at UNIT, shifting is permitted
+** because of the following sub-derivation:
+
+LBRACE exp RBRACE 
+       CAPNAME opt_exp_list 
+               exp 
+               value 
+               . UNIT 
+
+** Conflict (shift/reduce) in state 139.
+** Tokens involved: TIMES SUB OR NEQ MOD LESS LEQ GREATER GEQ EQUAL DOT DIVIDE CONS AND ADD
+** The following explanations concentrate on token TIMES.
+** This state is reached from program after reading:
+
+defs CAPNAME exp
+
+** The derivations that appear below have the following common factor:
+** (The question mark symbol (?) represents the spot where the derivations begin to differ.)
+
+program 
+defs EOF 
+defs def SEMI 
+     exp 
+     (?)
+
+** In state 139, looking ahead at TIMES, shifting is permitted
+** because of the following sub-derivation:
+
+CAPNAME opt_exp_list 
+        exp 
+        binop 
+        exp . TIMES exp 
+
+** In state 139, looking ahead at TIMES, reducing production
+** opt_exp_list -> exp
 ** is permitted because of the following sub-derivation:
 
-vardef 
-typ NAME ASN exp 
-tupletype 
-LBRACE typelist RBRACE 
-       typ TIMES typ // lookahead token appears
-       CAPNAME . 
+binop 
+exp TIMES exp // lookahead token appears
+CAPNAME opt_exp_list // lookahead token is inherited
+        exp . 
 
-** Conflict (shift/reduce) in state 69.
-** Token involved: LBRACE
+** Conflict (shift/reduce) in state 60.
+** Tokens involved: UNIT TL STRINGLIT PRINTLN PRINT NOT NEG NAME LET LBRACKET LBRACE LAMBDA ISNULL INTEGER IF HD CAPNAME BOOL
+** The following explanations concentrate on token UNIT.
 ** This state is reached from program after reading:
 
 defs TL LBRACE CAPNAME
@@ -53,17 +113,19 @@ defs def SEMI
      TL exp 
         (?)
 
-** In state 69, looking ahead at LBRACE, reducing production
+** In state 60, looking ahead at UNIT, reducing production
 ** opt_exp_list ->
 ** is permitted because of the following sub-derivation:
 
-LBRACE exp args RBRACE // lookahead token appears because args can begin with LBRACE
+LBRACE exp args RBRACE // lookahead token appears because args can begin with UNIT
        CAPNAME opt_exp_list // lookahead token is inherited
                . 
 
-** In state 69, looking ahead at LBRACE, shifting is permitted
+** In state 60, looking ahead at UNIT, shifting is permitted
 ** because of the following sub-derivation:
 
 LBRACE exp RBRACE 
        CAPNAME opt_exp_list 
-               . LBRACE exp_list RBRACE 
+               exp 
+               value 
+               . UNIT 
