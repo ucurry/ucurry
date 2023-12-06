@@ -51,12 +51,28 @@ let new_binds_from_legal_pat (vcon_env : S.vcon_env) (scrutinee_tau : S.typ)
         (* StringMap.add x tau type_env *)
         bindUnique x tau type_env
         (* StringMap.add x (A.FUNCTION_TY (A.UNIT_TY, tau)) StringMap.empty *)
-    | A.CON_PAT (name, ps) ->
+    | A.CON_PAT (name, p) -> 
+        let dt_name, _, formal_tau = StringMap.find name vcon_env in 
+        let _ = SemantUtil.eqType tau (CONSTRUCTOR_TY (dt_name, "")) in 
+        get_binds type_env formal_tau p 
+    | A.PATS [] -> 
+        ignore (eqType UNIT_TY tau);
+        type_env
+    | A.PATS ps -> 
+        (match tau with 
+          | A.TUPLE_TY taus -> 
+              (* try  *)
+                List.fold_left2 
+                  (fun new_env t p -> get_binds new_env t p)
+                  type_env taus ps
+              (* with Invalid_argument _ -> raise (TypeError ("illegal pattern " ^ A.string_of_pattern pat)) *)
+          | _ -> raise (TypeError ("cannot pattern match on" ^ Ast.string_of_pattern p)))
+    (* | A.CON_PAT (name, ps) ->
         let datatype_name, _, formal_taus = StringMap.find name vcon_env in
-        let _ = get_checked_types tau (CONSTRUCTOR_TY datatype_name) in
+        let _ = get_checked_types tau (CONSTRUCTOR_TY (datatype_name, "")) in
         List.fold_left2
           (fun new_env t p -> get_binds new_env t p)
-          type_env formal_taus ps
+          type_env formal_taus ps *)
         (* let arg_tau, ret_tau = findFunctionType name type_env in
            let _ = get_checked_types tau ret_tau in
            get_binds arg_tau p *)
@@ -80,9 +96,10 @@ let rec to_spattern (vcon_env : S.vcon_env) (c : A.pattern) =
   match c with
   (* | A.PATTERNS ps -> S.PATTERNS (List.map (to_spattern vcon_env) ps) *)
   | A.VAR_PAT s -> S.VAR_PAT s
-  | A.CON_PAT (name, ps) ->
-      S.CON_PAT (U.mid @@ findType name vcon_env, List.map pattern_of ps)
+  | A.CON_PAT (name, p) ->
+      S.CON_PAT (U.mid @@ findType name vcon_env, pattern_of p)
   | A.WILDCARD -> S.WILDCARD
+  | A.PATS ps -> S.PATS (List.map (to_spattern vcon_env) ps)
 (* | A.CONCELL (x, xs) -> S.CONCELL (x, xs)
    | A.NIL -> S.NIL *)
 
@@ -234,19 +251,14 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let tau, e = ty exp in
         (A.FUNCTION_TY (A.UNIT_TY, tau), S.SLambda ([ "unit" ], (tau, e)))
     | A.Noexpr -> (A.UNIT_TY, S.SNoexpr)
-    | A.Construct (vcon_name, args) ->
-        let datatype_name, vcon_id, formal_taus =
+    | A.Construct (vcon_name, arg) ->
+        let dt_name, vcon_id, formal_tau =
           StringMap.find vcon_name vcon_env
         in
-        let sargs = List.map ty args in
-        let arg_taus, _ = List.split sargs in
-        let _ =
-          List.map
-            (fun (t1, t2) -> eqType t1 t2)
-            (List.combine formal_taus arg_taus)
-        in
-        ( A.CONSTRUCTOR_TY datatype_name,
-          S.SConstruct ((datatype_name, vcon_id), sargs) )
+        let arg_tau, sarg = ty arg in 
+        let _ = SemantUtil.eqType arg_tau formal_tau in
+        ( A.CONSTRUCTOR_TY (dt_name, vcon_name),
+          S.SConstruct ((dt_name, vcon_id), (arg_tau, sarg)))
     | A.Case (scrutinee, cases) ->
         let scrutinee_sexp = ty scrutinee in
         let scrutinee_type, _ = scrutinee_sexp in
@@ -318,7 +330,7 @@ let rec typ_def (def : A.def) (semant_envs : semant_envs) : S.sdef * S.type_env
 let semant_check (defs : A.def list) : S.sprogram * S.type_env =
   let add_vcons (vcon_env, vcon_sets) (def : Ast.def) =
     match def with
-    | A.Datatype (CONSTRUCTOR_TY con_name, cons) ->
+    | A.Datatype (CONSTRUCTOR_TY (con_name, _), cons) ->
         let con_names, _ = List.split cons in
         let add_vcon (name, typ) idx map =
           StringMap.add name (con_name, idx, typ) map

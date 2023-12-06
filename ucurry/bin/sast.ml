@@ -4,7 +4,7 @@ module StringMap = Map.Make (String)
 
 type typ = A.typ
 type type_env = typ StringMap.t
-type vcon_env = (string * int * typ list) StringMap.t
+type vcon_env = (string * int * typ) StringMap.t
 type vcon_sets = StringSet.t StringMap.t
 
 type sexpr = typ * sx
@@ -20,7 +20,7 @@ and sx =
   | SBinop of sexpr * A.binop * sexpr
   | SUnop of A.uop * sexpr
   | SLambda of lambda
-  | SConstruct of (string * int) * sexpr list
+  | SConstruct of (string * int) * sexpr
   | SCase of sexpr * scase_expr list
   | STuple of sexpr list (* redundant type annotation?? *)
   | SAt of sexpr * int
@@ -31,8 +31,9 @@ and lambda = string list * sexpr
 
 and pattern =
   (* | PATTERNS of pattern list *)
+  | PATS of pattern list
   | VAR_PAT of string
-  | CON_PAT of int * pattern list
+  | CON_PAT of int * pattern
   | WILDCARD
 (* | CONCELL of string * string
    | NIL *)
@@ -58,7 +59,7 @@ type sdef =
   | SExp of sexpr
   | SCheckTypeError of sdef
 
-and constructor = string * typ list
+and constructor = string * typ
 
 type sprogram = sdef list
 
