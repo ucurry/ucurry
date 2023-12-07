@@ -1,4 +1,5 @@
 (* Abstract Syntax Tree and functions for printing it *)
+open Typing 
 
 type binop =
   | Add
@@ -27,40 +28,31 @@ type uop =
   | GetField
   | GetPattern
 
-type typ =
-  | INT_TY
-  | STRING_TY
-  | BOOL_TY
-  | LIST_TY of typ
-  | UNIT_TY
-  | FUNCTION_TY of typ * typ
-  | CONSTRUCTOR_TY of string * string (* (dataype_name, von_name) *)
-  | TUPLE_TY of typ list
 
 type pattern =
-  | VAR_PAT of string
-  | CON_PAT of string * pattern (* !! *)
+  | VAR_PAT of name 
+  | CON_PAT of vcon_name * pattern (* !! *)
   | PATS of pattern list
   | WILDCARD
 
 type expr =
   | Literal of value
-  | Var of string
+  | Var of name
   | Assign of string * expr
   | Apply of expr * expr list
   | If of expr * expr * expr
-  | Let of (string * expr) list * expr
+  | Let of (name * expr) list * expr
   | Begin of expr list
   | Binop of expr * binop * expr
   | Unop of uop * expr
-  | Lambda of typ * string list * expr
+  | Lambda of typ * arg_name list * expr
   | Thunk of expr
-  | Construct of string * expr (* !! *)
+  | Construct of vcon_name * expr (* !! *)
   | Case of expr * case_expr list
   | Tuple of expr list (* !! *)
   | At of expr * int
   | GetTag of expr (* Only for testing - need to be deleted; return a string *)
-  | GetField of expr * string
+  | GetField of expr * vcon_name
     (* Only for testing - need to be deleted; return the field value of the value constructor *)
   | Noexpr
 
@@ -77,13 +69,13 @@ and value =
 and case_expr = pattern * expr
 
 type def =
-  | Function of typ * string * string list * expr
+  | Function of typ * name * arg_name list * expr
   | Datatype of typ * constructor list (* !! *)
-  | Variable of typ * string * expr
+  | Variable of typ * name * expr
   | Exp of expr
   | CheckTypeError of def
 
-and constructor = string * typ (* !! *)
+and constructor = vcon_name * typ (* !! *)
 
 type program = def list
 
@@ -117,16 +109,11 @@ let string_of_uop = function
 
 let rec string_of_pattern = function
   | VAR_PAT s -> s
-  (* | CON_PAT (c, p) -> c ^ string_of_pattern p *)
   | CON_PAT (c, p) -> (
       match p with PATS [] -> c | _ -> c ^ "(" ^ string_of_pattern p ^ ")")
   | PATS [] -> ""
   | PATS ps ->
-      (* " (" ^ String.concat ", " (List.map string_of_pattern ps) ^ ")"  *)
       String.concat ", " (List.map string_of_pattern ps)
-  (* | CON_PAT (c, []) -> c
-     | CON_PAT (c, ps) ->
-         c ^ " (" ^ String.concat ", " (List.map string_of_pattern ps) ^ ")" *)
   | WILDCARD -> "_"
 
 let rec string_of_typ = function

@@ -1,3 +1,4 @@
+open Typing 
 module L = Llvm
 module A = Ast
 module C = Cast
@@ -8,6 +9,10 @@ module StringMap = Map.Make (String)
 exception CODEGEN_NOT_YET_IMPLEMENTED of string
 exception SHOULDNT_RAISED of string
 exception REACHED
+
+let get_dt_vcon_name  = function
+|  CONSTRUCTOR_TY (dt_name, vcon_name) -> dt_name , vcon_name
+| _ -> raise (U.Impossible "not a constructortype")
 
 let build_main_body defs =
   let context = L.global_context () in
@@ -50,7 +55,6 @@ let build_main_body defs =
       | C.Literal l ->
           CGUtil.build_literal builder datatype_map context the_module
             string_pool ty l
-      (* | C.Var name -> lookup name varmap *)
       | C.Var name ->
           (* let _ = print_string ("in var" ^ name )in  *)
           L.build_load (lookup name varmap) name builder
@@ -69,7 +73,7 @@ let build_main_body defs =
           in
 
           let result =
-            match fretty with A.UNIT_TY -> "" | _ -> "apply" ^ "_result"
+            match fretty with UNIT_TY -> "" | _ -> "apply" ^ "_result"
           in
           L.build_call fdef (Array.of_list llargs) result builder
       | C.If (pred, then_expr, else_expr) ->
@@ -170,25 +174,25 @@ let build_main_body defs =
           let e' = expr builder inner_e in
           let tau, _ = inner_e in
           match (unop, tau) with
-          | A.Print, A.INT_TY ->
+          | A.Print, INT_TY ->
               L.build_call printf_func [| int_format_str; e' |] "printf" builder
-          | A.Print, A.STRING_TY ->
+          | A.Print, STRING_TY ->
               L.build_call printf_func
                 [| string_format_str; e' |]
                 "printf" builder
-          | A.Println, A.INT_TY ->
+          | A.Println, INT_TY ->
               L.build_call printf_func
                 [| int_nl_format_str; e' |]
                 "printf" builder
-          | A.Println, A.STRING_TY ->
+          | A.Println, STRING_TY ->
               L.build_call printf_func
                 [| string_nl_format_str; e' |]
                 "printf" builder
-          | A.Println, A.BOOL_TY ->
+          | A.Println, BOOL_TY ->
               L.build_call printf_func
                 [| int_nl_format_str; e' |]
                 "printf" builder
-          | A.Print, A.BOOL_TY ->
+          | A.Print, BOOL_TY ->
               L.build_call printf_func [| int_format_str; e' |] "printf" builder
           | A.Print, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "print")
           | A.Println, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "println")
@@ -230,7 +234,8 @@ let build_main_body defs =
             build_function_body function_ptr capstruct_type (ty, top_exp)
           in
           closure_ptr
-      | C.Construct ((dt_name, i, vcon_name), arg) ->
+      | C.Construct (i , arg) ->
+          let dt_name , vcon_name = get_dt_vcon_name ty in 
           let dt_struct_type = StringMap.find dt_name datatype_map in
           let dt_struct = L.build_malloc dt_struct_type dt_name builder in
           let tag_v = StringMap.find vcon_name string_pool in
@@ -238,37 +243,6 @@ let build_main_body defs =
           ignore (U.set_data_field field_v i dt_struct builder);
           ignore (U.set_data_field tag_v 0 dt_struct builder);
           dt_struct
-      (* | C.Construct ((dt_name, i), sargs) ->
-          (* Malloc the datatype struct *)
-          let dt_struct_type = StringMap.find dt_name datatype_map in
-          let dt_struct = L.build_malloc dt_struct_type dt_name builder in
-          let tag_v = L.const_int i32_t i in
-
-          let field_v =
-            match sargs with
-            | [] -> L.const_int i1_t 0
-            | [ sarg ] -> expr builder sarg
-            | _ ->
-                (* Malloc the vcon struct when arguments > 1 *)
-                let field_vs = List.map (expr builder) sargs in
-                let field_taus, _ = List.split sargs in
-                let field_lltypes = List.map ltype_of_type field_taus in
-                let struct_type = L.struct_type context (Array.of_list field_lltypes) in
-                let str_ptr = L.build_malloc struct_type "dt_field" builder in
-                ignore (Util.map_i (fun v i -> Util.set_data_field v i str_ptr builder) 0 field_vs);
-                str_ptr
-                (* let local_struct_ptr =
-                  CGUtil.build_struct context the_module builder datatype_map
-                    "dt_field" field_taus field_vs
-                in
-                (* ignore (StringMap.add "field" local_struct_ptr varmap); *)
-                local_struct_ptr *)
-          in
-          ignore (U.set_data_field field_v i dt_struct builder);
-          ignore (U.set_data_field tag_v 0 dt_struct builder);
-
-          (* return the datatype struct *)
-          dt_struct *)
       | C.Tuple ses ->
           let tuple_ptr_ty = ltype_of_type ty in
           let tuple_ty = L.element_type tuple_ptr_ty in

@@ -1,9 +1,9 @@
 (* Abstract Syntax Tree and functions for printing it *)
-
+open Typing 
 module A = Ast
 module S = Sast
 
-type sexpr = A.typ * expr
+type sexpr = typ * expr
 
 and expr =
   | Literal of S.svalue
@@ -17,7 +17,7 @@ and expr =
   | Unop of A.uop * sexpr
   | Captured of int
   | Closure of closure
-  | Construct of (string * int * string) * sexpr
+  | Construct of  int * sexpr
   (* | Case of sexpr * case_expr list *)
   | Tuple of sexpr list
   | At of sexpr * int
@@ -31,12 +31,12 @@ and thunk = sexpr (* which will be a Closure form *)
 
 and def =
   | Val of string * sexpr
-  | Function of A.typ * string * closure
-  | Datatype of A.typ * A.constructor list
+  | Function of typ * string * closure
+  | Datatype of typ * A.constructor list
   | Exp of sexpr
   | CheckTypeError of def
 
-and constructor = string * A.typ
+and constructor = string * typ
 
 type program = def list
 
@@ -88,9 +88,9 @@ and string_of_sexpr (delim : string) ((ty, expr) : sexpr) : string =
     | Unop (o, e) -> A.string_of_uop o ^ " " ^ string_of_sexpr delim e
     | Captured i -> "Captured " ^ string_of_int i
     | Closure cl -> string_of_closure cl
-    | Construct ((dt_name, vcon_i, vcon_name), arg) -> 
+    | Construct (i, arg) -> 
         (* "(" ^ dt_name ^ " " ^ string_of_int vcon_i ^ " " ^ vcon_name ^ " " ^ (string_of_sexpr delim arg) ^ ")" *)
-        "(" ^ vcon_name ^ " " ^ (string_of_sexpr delim arg) ^ ")"
+        "(" ^ string_of_int i ^ " " ^ (string_of_sexpr delim arg) ^ ")"
     (* | Case _ -> failwith "String_of_expr Not implemented for case" *)
     | Tuple _ -> failwith "String_of_expr Not implemented for Tuple"
     | At _ -> failwith "String_of_exor Not implemented for at"

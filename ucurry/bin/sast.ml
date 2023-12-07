@@ -1,8 +1,8 @@
+open Typing 
 module A = Ast
 module StringSet = Set.Make (String)
 module StringMap = Map.Make (String)
 
-type typ = A.typ
 type type_env = typ StringMap.t
 type vcon_env = (string * int * typ) StringMap.t
 type vcon_sets = StringSet.t StringMap.t
@@ -11,17 +11,16 @@ type sexpr = typ * sx
 
 and sx =
   | SLiteral of svalue
-  | SVar of string
-  | SAssign of string * sexpr
+  | SVar of name
+  | SAssign of name * sexpr
   | SApply of sexpr * sexpr list
   | SIf of sexpr * sexpr * sexpr
-  | SLet of (string * sexpr) list * sexpr
+  | SLet of (name * sexpr) list * sexpr
   | SBegin of sexpr list
   | SBinop of sexpr * A.binop * sexpr
   | SUnop of A.uop * sexpr
   | SLambda of lambda
-  | SConstruct of (string * int * string) * sexpr
-  (* | SCase of sexpr * scase_expr list *)
+  | SConstruct of int * sexpr
   | STuple of sexpr list (* redundant type annotation?? *)
   | SAt of sexpr * int
   | SGetTag of sexpr
@@ -48,7 +47,7 @@ and svalue =
   | INT of int
   | STRING of string
   | BOOL of bool
-  | EMPTYLIST of Ast.typ
+  | EMPTYLIST of typ
   | LIST of svalue * svalue
   (* | TUPLE of svalue list *)
   | INF_LIST of int

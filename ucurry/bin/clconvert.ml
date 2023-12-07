@@ -1,9 +1,10 @@
 (* module A = Ast *)
+open Typing 
 module A = Ast
 module SA = Sast
 module C = Cast
 
-type freevar = A.typ * string
+type freevar = typ * string
 
 module FreeVar : Set.OrderedType with type t = freevar = struct
   type t = freevar
@@ -68,7 +69,7 @@ let indexOf (x : string) (xs : freevar list) : int option =
   in
   indexOf' x xs 0
 
-let rec asClosure (funty : A.typ) (lambda : SA.lambda) (captured : freevar list)
+let rec asClosure (funty : typ) (lambda : SA.lambda) (captured : freevar list)
     : C.closure =
   let formals, sbody = lambda in
   let freeVarWithTypes = S.elements (free (funty, SA.SLambda lambda)) in
@@ -103,9 +104,9 @@ and close_exp (captured : freevar list) (le : SA.sexpr) : C.sexpr =
           (* need to recheck*)
           let e' = exp e in
           C.Let (ls', e')
-      | SA.SConstruct ((dt_name, i, vcon_name), arg) ->
+      | SA.SConstruct (i, arg) ->
           (* TODO here *)
-          C.Construct ((dt_name, i, vcon_name), exp arg)
+          C.Construct (i, exp arg)
       (* | SA.SCase (scrutinee, cases) ->
           let scrutinee' = exp scrutinee in
           let cases' = List.map (fun (p, e) -> (p, exp e)) cases in

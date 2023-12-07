@@ -1,3 +1,4 @@
+open Typing 
 module L = Llvm
 module A = Ast
 module S = Sast
@@ -7,20 +8,20 @@ open Util
 
 type def = Cast.def
 type literal = Sast.svalue
-type type_env = A.typ StringMap.t
+type type_env = typ StringMap.t
 
 exception UNIMPLEMENTED of string
 
 (* get the ltype for a corresponding ast type *)
 let ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
-    (context : L.llcontext) (ty : Ast.typ) =
+    (context : L.llcontext) (ty : typ) =
   let void_ptr = L.pointer_type (L.i8_type context) in
   let rec ltype_of = function
-    | A.INT_TY -> L.i32_type context
-    | A.BOOL_TY -> L.i1_type context
-    | A.STRING_TY -> L.pointer_type (L.i8_type context)
-    | A.UNIT_TY -> L.i1_type context
-    | A.FUNCTION_TY (_, _) as ft ->
+    | INT_TY -> L.i32_type context
+    | BOOL_TY -> L.i1_type context
+    | STRING_TY -> L.pointer_type (L.i8_type context)
+    | UNIT_TY -> L.i1_type context
+    | FUNCTION_TY (_, _) as ft ->
         (* Should return closure ptr type *)
         let formal_types = Util.get_formalty ft in
         let retty = Util.get_retty ft in
@@ -32,11 +33,11 @@ let ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
           L.struct_type context [| L.pointer_type ftype; void_ptr |]
         in
         L.pointer_type cl_struct_type
-    | A.CONSTRUCTOR_TY (name, _) -> L.pointer_type (StringMap.find name ty_map)
-    | A.TUPLE_TY taus ->
+    | CONSTRUCTOR_TY (name, _) -> L.pointer_type (StringMap.find name ty_map)
+    | TUPLE_TY taus ->
         let taus = Array.of_list (List.map ltype_of taus) in
         L.pointer_type (L.struct_type context taus)
-    | A.LIST_TY subtype as l -> (
+    | LIST_TY subtype as l -> (
         (* the lltype will be a pointer to the struct that stores a cons cell *)
         let ty_name = Ast.string_of_typ l in
         match L.type_by_name llmodule ty_name with
@@ -137,7 +138,7 @@ let build_datatypes (context : L.llcontext) (llmodule : L.llmodule)
 (* build a llvm value from a literal value  *)
 let build_literal builder (ty_map : L.lltype StringMap.t)
     (context : L.llcontext) (llmodule : L.llmodule)
-    (string_pool : L.llvalue StringMap.t) (ty : Ast.typ) (v : literal) =
+    (string_pool : L.llvalue StringMap.t) (ty : typ) (v : literal) =
   let i32_t = L.i32_type context and i1_t = L.i1_type context in
   let rec to_lit ty = function
     (* | S.Construct ((con_name, i, inner_ty), value) ->
@@ -186,15 +187,14 @@ let build_literal builder (ty_map : L.lltype StringMap.t)
 (* return the formating string for a A.typ  *)
 let ty_fmt_string ty (builder : L.llbuilder) : L.llvalue =
   let rec string_matcher = function
-    | A.INT_TY -> "%d"
-    | A.BOOL_TY -> "%d"
-    | A.STRING_TY -> "%s"
-    | A.LIST_TY subtau -> "[ " ^ string_matcher subtau ^ "..]"
-    | A.TUPLE_TY taus ->
-        "(" ^ String.concat ", " (List.map string_matcher taus) ^ ")"
-    | A.CONSTRUCTOR_TY (s, _) -> s
-    | A.UNIT_TY -> " "
-    | A.FUNCTION_TY _ -> raise (Impossible "function cannot be printed")
+    | INT_TY -> "%d"
+    | BOOL_TY -> "%d"
+    | STRING_TY -> "%s"
+    | LIST_TY subtau -> "[ " ^ string_matcher subtau ^ "..]"
+    | TUPLE_TY taus -> "(" ^ String.concat ", " (List.map string_matcher taus) ^ ")"
+    | CONSTRUCTOR_TY (s, _) -> s
+    | UNIT_TY -> " "
+    | FUNCTION_TY _ -> raise (Impossible "function cannot be printed")
   in
   L.build_global_stringptr (string_matcher ty) "fmt" builder
 

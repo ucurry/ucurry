@@ -1,13 +1,14 @@
+open Typing 
 module A = Ast
 module P = Past
 module StringMap = Map.Make (String)
 
 type dt_name = string
-type vcon_env = (dt_name * int * A.typ) StringMap.t
+type vcon_env = (dt_name * int * typ) StringMap.t
 
 let add_vcon (vcon_env : vcon_env) (def : A.def) : vcon_env =
   match def with
-  | A.Datatype (A.CONSTRUCTOR_TY (dt_name, _), cons) ->
+  | A.Datatype (CONSTRUCTOR_TY (dt_name, _), cons) ->
       let add (vcon, arg_tau) i env =
         StringMap.add vcon (dt_name, i, arg_tau) env
       in

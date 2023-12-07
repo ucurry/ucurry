@@ -1,3 +1,4 @@
+open Typing 
 module A = Ast
 module P = Past
 module S = Sast
@@ -107,28 +108,28 @@ let rec to_spattern (vcon_env : S.vcon_env) (c : A.pattern) =
    | A.NIL -> S.NIL *) *)
 
 let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
-    (type_env : S.type_env) (exp : P.expr) : S.typ * S.sx =
+    (type_env : S.type_env) (exp : P.expr) : typ * S.sx =
   let rec ty = function
     | P.Literal l ->
         let rec lit_ty = function
-          | A.INT i -> (A.INT_TY, S.INT i)
-          | A.STRING s -> (A.STRING_TY, S.STRING s)
-          | A.EMPTYLIST t -> (A.LIST_TY t, S.EMPTYLIST t)
+          | A.INT i -> (INT_TY, S.INT i)
+          | A.STRING s -> (STRING_TY, S.STRING s)
+          | A.EMPTYLIST t -> (LIST_TY t, S.EMPTYLIST t)
           | A.LIST (hd, tl) ->
               let hd_tau, hd_val = lit_ty hd and tl_tau, tl_val = lit_ty tl in
-              let list_tau = get_checked_types (A.LIST_TY hd_tau) tl_tau in
+              let list_tau = get_checked_types (LIST_TY hd_tau) tl_tau in
               (list_tau, S.LIST (hd_val, tl_val))
           (* | A.TUPLE xs ->
               let taus, vals = List.split (List.map lit_ty xs) in
               (A.TUPLE_TY taus, S.TUPLE vals) *)
-          | A.BOOL b -> (A.BOOL_TY, S.BOOL b)
+          | A.BOOL b -> (BOOL_TY, S.BOOL b)
           (* | A.Construct (s, v) ->
               let exp_tau, ret_tau = findFunctionType s type_env in
               let tau, v' = lit_ty v in
               ignore (get_checked_types exp_tau tau);
               (ret_tau, S.Construct (findType s vcon_env, v')) *)
-          | A.UNIT -> (A.UNIT_TY, S.UNIT)
-          | A.INF_LIST i -> (A.LIST_TY A.INT_TY, S.INF_LIST i)
+          | A.UNIT -> (UNIT_TY, S.UNIT)
+          | A.INF_LIST i -> (LIST_TY INT_TY, S.INF_LIST i)
         in
         let tau, lit = lit_ty l in
         (tau, S.SLiteral lit)
@@ -165,7 +166,7 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         and e1_tau, se1 = ty e1
         and e2_tau, se2 = ty e2 in
         let branch_tau = get_checked_types e1_tau e2_tau
-        and cond_tau' = get_checked_types cond_tau A.BOOL_TY in
+        and cond_tau' = get_checked_types cond_tau BOOL_TY in
         ( branch_tau,
           S.SIf ((cond_tau', cond_e), (branch_tau, se1), (branch_tau, se2)) )
     | P.Let (bindings, e) ->
@@ -175,7 +176,7 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let bind_ses = List.combine vars @@ List.combine taus ses in
         let body_tau, body_es = typ_of vcon_env vcon_sets newEnv e in
         (body_tau, S.SLet (bind_ses, (body_tau, body_es)))
-    | P.Begin [] -> (A.UNIT_TY, S.SBegin [])
+    | P.Begin [] -> (UNIT_TY, S.SBegin [])
     | P.Begin es ->
         let ses = List.map ty es in
         (U.o U.fst (U.o List.hd List.rev) ses, S.SBegin ses)
@@ -203,8 +204,8 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
     | P.Unop (u, e) -> (
         let tau, se = ty e in
         match (u, tau) with
-        | Neg, A.INT_TY -> (A.INT_TY, S.SUnop (u, (tau, se)))
-        | Not, A.BOOL_TY -> (A.BOOL_TY, S.SUnop (u, (tau, se)))
+        | Neg, INT_TY -> (INT_TY, S.SUnop (u, (tau, se)))
+        | Not, BOOL_TY -> (BOOL_TY, S.SUnop (u, (tau, se)))
         | Hd, LIST_TY tau1 -> (tau1, S.SUnop (u, (tau, se)))
         | Tl, LIST_TY _ -> (tau, S.SUnop (u, (tau, se)))
         | Print, STRING_TY
@@ -230,20 +231,16 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
               let tau', se = typ_of vcon_env vcon_sets env body in
               let final_tau = get_checked_types tau' tau in
               (final_tau, se)
-          | A.FUNCTION_TY (tau1, tau2), hd :: [] ->
+          | FUNCTION_TY (tau1, tau2), hd :: [] ->
               let new_env = StringMap.add hd tau1 env in
               let tau', se = typ_of vcon_env vcon_sets new_env body in
               let final_tau = get_checked_types tau' tau2 in
               (tau, S.SLambda ([ hd ], (final_tau, se)))
-          | A.FUNCTION_TY (_, _), hd :: tl ->
+          | FUNCTION_TY (_, _), hd :: tl ->
               raise
                 (TypeError
                    ("Expected 1 arg but received " ^ string_of_int
                    @@ List.length (hd :: tl)))
-              (* make nested lambda to conform to one-arg function form *)
-              (* ( tau,
-                 S.SLambda
-                   ([ hd ], check_lambda tau2 tl (StringMap.add hd tau1 env)) ) *)
           | _ -> raise (TypeError "lambda type unmatch")
         in
         check_lambda lambda_tau formals type_env
@@ -258,14 +255,14 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         | _ -> raise (TypeError "access field from non-tuple value"))
     | P.Thunk exp ->
         let tau, e = ty exp in
-        (A.FUNCTION_TY (A.UNIT_TY, tau), S.SLambda ([ "unit" ], (tau, e)))
-    | P.Noexpr -> (A.UNIT_TY, S.SNoexpr)
+        (FUNCTION_TY (UNIT_TY, tau), S.SLambda ([ "unit" ], (tau, e)))
+    | P.Noexpr -> (UNIT_TY, S.SNoexpr)
     | P.Construct ((dt_name, vcon_id, vcon_name), arg) ->
         let _,_,formal_tau = StringMap.find vcon_name vcon_env in  (* TODO: feels a little redundant *)
         let arg_tau, sarg = ty arg in
         let _ = SemantUtil.eqType arg_tau formal_tau in
-        ( A.CONSTRUCTOR_TY (dt_name, vcon_name),
-          S.SConstruct ((dt_name, vcon_id, vcon_name), (arg_tau, sarg)) )
+        ( CONSTRUCTOR_TY (dt_name, vcon_name),
+          S.SConstruct (vcon_id, (arg_tau, sarg)) )
     (* | P.Case (scrutinee, cases) ->
         let scrutinee_sexp = ty scrutinee in
         let scrutinee_type, _ = scrutinee_sexp in
@@ -300,7 +297,7 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
           (match tau with
           | CONSTRUCTOR_TY _ -> 1
           | _ -> raise (TypeError "not a datatype"));
-        (A.STRING_TY, S.SGetTag (tau, e'))
+        (STRING_TY, S.SGetTag (tau, e'))
     | P.GetField (e, vcon_name) -> (
         let tau, e' = ty e in
         match tau with

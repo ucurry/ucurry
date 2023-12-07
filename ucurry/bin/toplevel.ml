@@ -1,5 +1,6 @@
 (* module Se = Semant *)
 
+open Typing 
 type action = Ast | CAST | LAST | Default | LLVMIR
 
 let () =

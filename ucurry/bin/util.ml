@@ -1,3 +1,4 @@
+open Typing 
 module L = Llvm
 module A = Ast
 module C = Cast
@@ -6,7 +7,7 @@ exception Impossible of string
 
 (* type utility function *)
 let list_subtype = function
-  | Ast.LIST_TY tau -> tau
+  | LIST_TY tau -> tau
   | _ -> raise (Invalid_argument "not a list type")
 
 (* utility functions for llvm *)
@@ -39,7 +40,7 @@ let rec combine_formal_types taus formals =
   | _ -> failwith "combine formals"
 
 let get_ft = function
-  | A.FUNCTION_TY (formalty, retty) -> (formalty, retty)
+  | FUNCTION_TY (formalty, retty) -> (formalty, retty)
   | _ -> failwith "not function type"
 
 let get_retty t =
@@ -56,12 +57,12 @@ let rec map_i (f : 'a -> int -> 'b) (i : int) (l : 'a list) =
 let list_to_arr l = Array.init (List.length l) (List.nth l)
 
 let rec typ_of_value = function
-  | A.INT _ -> A.INT_TY
-  | A.STRING _ -> A.STRING_TY
-  | A.BOOL _ -> A.BOOL_TY
-  | A.EMPTYLIST t -> A.LIST_TY t
-  | A.LIST (v1, _) -> A.LIST_TY (typ_of_value v1)
+  | A.INT _ -> INT_TY
+  | A.STRING _ -> STRING_TY
+  | A.BOOL _ -> BOOL_TY
+  | A.EMPTYLIST t -> LIST_TY t
+  | A.LIST (v1, _) -> LIST_TY (typ_of_value v1)
   (* | A.TUPLE vs -> A.TUPLE_TY (List.map typ_of_value vs) *)
-  | A.INF_LIST _ -> A.LIST_TY A.INT_TY
-  | A.UNIT -> A.UNIT_TY
+  | A.INF_LIST _ -> LIST_TY INT_TY
+  | A.UNIT -> UNIT_TY
 (* | A.Construct _ -> failwith "typ_of_value not yet support constructor type" *)

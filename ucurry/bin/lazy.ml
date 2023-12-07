@@ -1,13 +1,14 @@
+open Typing 
 module A = Ast
 
-let rec to_thunk_ty (ty : A.typ) : A.typ =
-  A.FUNCTION_TY (A.UNIT_TY, transform_ty ty)
+let rec to_thunk_ty (ty : typ) : typ =
+  FUNCTION_TY (UNIT_TY, transform_ty ty)
 
 and transform_ty ty =
   match ty with
-  | A.FUNCTION_TY (argty, retty) ->
-      A.FUNCTION_TY (to_thunk_ty argty, transform_ty retty)
-  | A.TUPLE_TY taus -> A.TUPLE_TY (List.map to_thunk_ty taus)
+  | FUNCTION_TY (argty, retty) ->
+      FUNCTION_TY (to_thunk_ty argty, transform_ty retty)
+  | TUPLE_TY taus -> TUPLE_TY (List.map to_thunk_ty taus)
   | _ -> ty
 
 let unitv = A.Literal A.UNIT

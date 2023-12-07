@@ -1,38 +1,37 @@
+open Typing 
 module A = Ast
 
 type binop = A.binop
 type uop = A.uop
-type typ = A.typ
 type value = A.value
 
 type expr =
   | Literal of value
-  | Var of string
-  | Assign of string * expr
+  | Var of name
+  | Assign of name * expr
   | Apply of expr * expr list
   | If of expr * expr * expr
-  | Let of (string * expr) list * expr
+  | Let of (name * expr) list * expr
   | Begin of expr list
   | Binop of expr * binop * expr
   | Unop of uop * expr
-  | Lambda of typ * string list * expr
+  | Lambda of typ * arg_name list * expr
   | Thunk of expr
-  | Construct of
-      (string * int * string) * expr (* !! (dtname, vcon_id, vcon_name) *)
+  | Construct of (string * int * string) * expr (* !! (dtname, vcon_id, vcon_name) *)
   | Tuple of expr list (* !! *)
   | At of expr * int
   | GetTag of expr (* return a string *)
-  | GetField of expr * string (* return the field value of the value constructor *)
+  | GetField of expr * vcon_name (* return the field value of the value constructor *)
   | Noexpr
 
 type def =
-  | Function of typ * string * string list * expr
+  | Function of typ * name * arg_name list * expr
   | Datatype of typ * constructor list (* !! *)
-  | Variable of typ * string * expr
+  | Variable of typ * name * expr
   | Exp of expr
   | CheckTypeError of def
 
-and constructor = string * typ (* !! *)
+and constructor = vcon_name * typ (* !! *)
 let rec string_of_expr exp =
   let flat_string_of_exp = function
     | Literal l -> A.string_of_literal l

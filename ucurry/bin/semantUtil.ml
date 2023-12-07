@@ -1,3 +1,4 @@
+open Typing 
 module A = Ast
 module S = Sast
 module U = Util
@@ -16,7 +17,7 @@ let nth (l : 'a list) (n : int) =
     raise (TypeError "access out of the bound")
 
 let get_ft = function
-  | A.FUNCTION_TY (formalty, retty) -> (formalty, retty)
+  | FUNCTION_TY (formalty, retty) -> (formalty, retty)
   | ty -> raise (TypeError (A.string_of_typ ty ^ " not function type"))
 
 let findType (name : string) (env : 'a StringMap.t) =
@@ -48,29 +49,29 @@ let bindAllPairs (map : 'a StringMap.t) (pairs : (string * 'a) list) =
 
 let subtypeOfList tau =
   match tau with
-  | A.LIST_TY tau1 -> tau1
+  | LIST_TY tau1 -> tau1
   | _ -> raise (TypeError ("expected list type but got " ^ A.string_of_typ tau))
 
 (* return the final types if tau1 and tau2 can be the same, else raise TypeError *)
 let rec get_checked_types tau1 tau2 =
   match (tau1, tau2) with
-  | A.INT_TY, A.INT_TY -> tau1
-  | A.STRING_TY, A.STRING_TY -> tau1
-  | A.UNIT_TY, A.UNIT_TY -> tau1
-  | A.BOOL_TY, A.BOOL_TY -> tau1
-  (* | A.LIST_TY A.UNIT_TY, A.LIST_TY _ -> tau2
-     | A.LIST_TY _, A.LIST_TY A.UNIT_TY -> tau1 *)
-  | A.LIST_TY tau1, A.LIST_TY tau2 ->
+  | INT_TY, INT_TY -> tau1
+  | STRING_TY, STRING_TY -> tau1
+  | UNIT_TY, UNIT_TY -> tau1
+  | BOOL_TY, BOOL_TY -> tau1
+  (* | LIST_TY UNIT_TY, LIST_TY _ -> tau2
+     | LIST_TY _, LIST_TY UNIT_TY -> tau1 *)
+  | LIST_TY tau1, LIST_TY tau2 ->
       let tau = get_checked_types tau1 tau2 in
-      A.LIST_TY tau
-  | A.FUNCTION_TY (arg_tau1, ret_tau1), A.FUNCTION_TY (arg_tau2, ret_tau2) ->
+      LIST_TY tau
+  | FUNCTION_TY (arg_tau1, ret_tau1), FUNCTION_TY (arg_tau2, ret_tau2) ->
       let arg_tau = get_checked_types arg_tau1 arg_tau2
       and ret_tau = get_checked_types ret_tau1 ret_tau2 in
-      A.FUNCTION_TY (arg_tau, ret_tau)
-  | A.CONSTRUCTOR_TY (n1, _), A.CONSTRUCTOR_TY (n2, _) ->
+      FUNCTION_TY (arg_tau, ret_tau)
+  | CONSTRUCTOR_TY (n1, _), CONSTRUCTOR_TY (n2, _) ->
       if String.equal n1 n2 then tau1
       else raise (TypeError "failed to check equal type")
-  | A.TUPLE_TY tys1, A.TUPLE_TY tys2 ->
+  | TUPLE_TY tys1, TUPLE_TY tys2 ->
       let tys =
         try List.map2 get_checked_types tys1 tys2
         with Invalid_argument _ ->
@@ -79,7 +80,7 @@ let rec get_checked_types tau1 tau2 =
                ("failed to check equal type between " ^ A.string_of_typ tau1
               ^ " and " ^ A.string_of_typ tau2))
       in
-      A.TUPLE_TY tys
+      TUPLE_TY tys
   | tau1, tau2 ->
       raise
         (TypeError
@@ -88,15 +89,15 @@ let rec get_checked_types tau1 tau2 =
 
 let rec eqType tau1 tau2 =
   match (tau1, tau2) with
-  | A.INT_TY, A.INT_TY -> true
-  | A.STRING_TY, A.STRING_TY -> true
-  | A.UNIT_TY, A.UNIT_TY -> true
-  | A.BOOL_TY, A.BOOL_TY -> true
-  | A.LIST_TY A.UNIT_TY, A.LIST_TY _ -> true
-  | A.LIST_TY _, A.LIST_TY A.UNIT_TY -> true
-  | A.LIST_TY tau1, A.LIST_TY tau2 -> eqType tau1 tau2
-  | A.FUNCTION_TY (tau1, tau2), FUNCTION_TY (tau1', tau2') ->
+  | INT_TY, INT_TY -> true
+  | STRING_TY, STRING_TY -> true
+  | UNIT_TY, UNIT_TY -> true
+  | BOOL_TY, BOOL_TY -> true
+  | LIST_TY UNIT_TY, LIST_TY _ -> true
+  | LIST_TY _, LIST_TY UNIT_TY -> true
+  | LIST_TY tau1, LIST_TY tau2 -> eqType tau1 tau2
+  | FUNCTION_TY (tau1, tau2), FUNCTION_TY (tau1', tau2') ->
       eqType tau1 tau1' && eqType tau2 tau2'
-  | A.CONSTRUCTOR_TY (n1, _), A.CONSTRUCTOR_TY (n2, _) -> String.equal n1 n2
-  | A.TUPLE_TY tys1, A.TUPLE_TY tys2 -> List.for_all2 eqType tys1 tys2
+  | CONSTRUCTOR_TY (n1, _), CONSTRUCTOR_TY (n2, _) -> String.equal n1 n2
+  | TUPLE_TY tys1, TUPLE_TY tys2 -> List.for_all2 eqType tys1 tys2
   | _ -> false
