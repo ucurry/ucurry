@@ -4,6 +4,11 @@ Num zero = (Zero);
 Num one = (Addone zero);
 
 (case (Zero) of 
-    Addone (Addone (Zero)) => 0
-  | _ => 1
-  | Zero => 2);
+    Addone (a) => (println 0)
+  | _ => (println 1));
+
+
+--(case (Zero) of 
+    --Addone (Addone (Zero)) => 0
+  --| _ => 1
+  --| Zero => 2);

@@ -97,7 +97,7 @@ exp:
   | LBRACE exp_tuple RBRACE   { Tuple (List.rev $2) }
   | exp DOT INTEGER           { At ($1, $3) }
   | exp TAG                   { GetTag $1}
-  | exp FIELD INTEGER         { GetField ($1, $3)}
+  | exp FIELD CAPNAME         { GetField ($1, $3)}
 
 // opt_exp_list:
 //   | /* Nothing */  {[]}

@@ -20,17 +20,17 @@ and sx =
   | SBinop of sexpr * A.binop * sexpr
   | SUnop of A.uop * sexpr
   | SLambda of lambda
-  | SConstruct of (string * int) * sexpr
-  | SCase of sexpr * scase_expr list
+  | SConstruct of (string * int * string) * sexpr
+  (* | SCase of sexpr * scase_expr list *)
   | STuple of sexpr list (* redundant type annotation?? *)
   | SAt of sexpr * int
   | SGetTag of sexpr
   | SGetField of sexpr * int
   | SNoexpr
 
-and scase_expr = pattern * sexpr
+(* and scase_expr = pattern * sexpr *)
 and lambda = string list * sexpr
-
+(* 
 and pattern =
   (* | PATTERNS of pattern list *)
   | PATS of pattern list
@@ -38,7 +38,7 @@ and pattern =
   | CON_PAT of int * pattern
   | WILDCARD
 (* | CONCELL of string * string
-   | NIL *)
+   | NIL *) *)
 
 (* data constructor name becomes index *)
 and svalue =

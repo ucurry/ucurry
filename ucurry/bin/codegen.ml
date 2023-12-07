@@ -142,9 +142,9 @@ let build_main_body defs =
               match tau_e with
               | INT_TY | BOOL_TY ->
                   L.build_icmp L.Icmp.Eq e1' e2' "temp" builder
-              | STRING_TY ->
-                    L.build_icmp L.Icmp.Eq e1' e2' "temp" builder
-              | _ -> raise
+              | STRING_TY -> L.build_icmp L.Icmp.Eq e1' e2' "temp" builder
+              | _ ->
+                  raise
                     (CODEGEN_NOT_YET_IMPLEMENTED
                        "other equality type not implemented"))
           | A.Neq -> L.build_icmp L.Icmp.Ne e1' e2' "temp" builder
@@ -230,14 +230,14 @@ let build_main_body defs =
             build_function_body function_ptr capstruct_type (ty, top_exp)
           in
           closure_ptr
-      | C.Construct ((dt_name, i), arg) -> 
+      | C.Construct ((dt_name, i, vcon_name), arg) ->
           let dt_struct_type = StringMap.find dt_name datatype_map in
           let dt_struct = L.build_malloc dt_struct_type dt_name builder in
-          let tag_v = L.const_int i32_t i in
-          let field_v = expr builder arg in 
+          let tag_v = StringMap.find vcon_name string_pool in
+          let field_v = expr builder arg in
           ignore (U.set_data_field field_v i dt_struct builder);
           ignore (U.set_data_field tag_v 0 dt_struct builder);
-          dt_struct 
+          dt_struct
       (* | C.Construct ((dt_name, i), sargs) ->
           (* Malloc the datatype struct *)
           let dt_struct_type = StringMap.find dt_name datatype_map in
@@ -252,9 +252,9 @@ let build_main_body defs =
                 (* Malloc the vcon struct when arguments > 1 *)
                 let field_vs = List.map (expr builder) sargs in
                 let field_taus, _ = List.split sargs in
-                let field_lltypes = List.map ltype_of_type field_taus in 
-                let struct_type = L.struct_type context (Array.of_list field_lltypes) in 
-                let str_ptr = L.build_malloc struct_type "dt_field" builder in 
+                let field_lltypes = List.map ltype_of_type field_taus in
+                let struct_type = L.struct_type context (Array.of_list field_lltypes) in
+                let str_ptr = L.build_malloc struct_type "dt_field" builder in
                 ignore (Util.map_i (fun v i -> Util.set_data_field v i str_ptr builder) 0 field_vs);
                 str_ptr
                 (* let local_struct_ptr =
@@ -269,28 +269,26 @@ let build_main_body defs =
 
           (* return the datatype struct *)
           dt_struct *)
-      | C.Case _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "case")
-      | C.Tuple ses -> 
-          let tuple_ptr_ty = ltype_of_type ty in 
-          let tuple_ty = L.element_type tuple_ptr_ty in 
-          let tuple_ptr = L.build_malloc tuple_ty "tuple" builder in 
-          let tuple_vs = List.map (expr builder) ses in 
-          let set_field v i = 
-            U.set_data_field v i tuple_ptr builder 
-          in 
+      | C.Tuple ses ->
+          let tuple_ptr_ty = ltype_of_type ty in
+          let tuple_ty = L.element_type tuple_ptr_ty in
+          let tuple_ptr = L.build_malloc tuple_ty "tuple" builder in
+          let tuple_vs = List.map (expr builder) ses in
+          let set_field v i = U.set_data_field v i tuple_ptr builder in
           ignore (U.map_i set_field 0 tuple_vs);
           tuple_ptr
       | C.At (e, i) ->
           let tuple_ptr = expr builder e in
           Util.get_data_field i tuple_ptr builder "tuple field"
-      | C.Noexpr -> 
-          L.const_int i1_t 0 (* This is for no-arg value construct: TODO double check  *)
+      | C.Noexpr ->
+          L.const_int i1_t 0
+          (* This is for no-arg value construct: TODO double check  *)
           (* L.build_unreachable builder  *)
-      | C.GetTag e -> 
-          let str_ptr = expr builder e in 
+      | C.GetTag e ->
+          let str_ptr = expr builder e in
           Util.get_data_field 0 str_ptr builder "tag"
-      | C.GetField (e, i) -> 
-          let str_ptr = expr builder e in 
+      | C.GetField (e, i) ->
+          let str_ptr = expr builder e in
           Util.get_data_field i str_ptr builder "fi"
     in
     expr builder

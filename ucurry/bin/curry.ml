@@ -24,8 +24,7 @@ let rec curry_expr (exp : A.expr) : A.expr =
       let _, retty = Util.get_ft typ in
       A.Lambda
         (typ, [ a ], curry_expr @@ A.Lambda (retty, args, curry_expr body))
-  | A.Construct (con_name, arg) ->
-      A.Construct (con_name, curry_expr arg)
+  | A.Construct (con_name, arg) -> A.Construct (con_name, curry_expr arg)
   | A.Case (scrutinee, cases) ->
       let ps, es = List.split cases in
       let new_cases = List.combine ps (List.map curry_expr es) in

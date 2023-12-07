@@ -40,7 +40,7 @@ type typ =
 type pattern =
   | VAR_PAT of string
   | CON_PAT of string * pattern (* !! *)
-  | PATS    of pattern list
+  | PATS of pattern list
   | WILDCARD
 
 type expr =
@@ -60,7 +60,8 @@ type expr =
   | Tuple of expr list (* !! *)
   | At of expr * int
   | GetTag of expr (* Only for testing - need to be deleted; return a string *)
-  | GetField of expr * int (* Only for testing - need to be deleted; return the field value of the value constructor *)
+  | GetField of expr * string
+    (* Only for testing - need to be deleted; return the field value of the value constructor *)
   | Noexpr
 
 and value =
@@ -117,16 +118,15 @@ let string_of_uop = function
 let rec string_of_pattern = function
   | VAR_PAT s -> s
   (* | CON_PAT (c, p) -> c ^ string_of_pattern p *)
-  | CON_PAT (c, p) -> (match p with 
-    | PATS [] -> c 
-    | _ -> c ^ "(" ^ string_of_pattern p ^ ")")
+  | CON_PAT (c, p) -> (
+      match p with PATS [] -> c | _ -> c ^ "(" ^ string_of_pattern p ^ ")")
   | PATS [] -> ""
-  | PATS ps -> 
-       (* " (" ^ String.concat ", " (List.map string_of_pattern ps) ^ ")"  *)
-        String.concat ", " (List.map string_of_pattern ps)
+  | PATS ps ->
+      (* " (" ^ String.concat ", " (List.map string_of_pattern ps) ^ ")"  *)
+      String.concat ", " (List.map string_of_pattern ps)
   (* | CON_PAT (c, []) -> c
-  | CON_PAT (c, ps) ->
-      c ^ " (" ^ String.concat ", " (List.map string_of_pattern ps) ^ ")" *)
+     | CON_PAT (c, ps) ->
+         c ^ " (" ^ String.concat ", " (List.map string_of_pattern ps) ^ ")" *)
   | WILDCARD -> "_"
 
 let rec string_of_typ = function
@@ -165,8 +165,8 @@ let rec string_of_expr exp =
         ^ string_of_expr e
     | Construct (n, e) -> n ^ string_of_expr e
     (* | Construct (n, []) -> n
-    | Construct (n, es) ->
-        n ^ "(" ^ String.concat ", " (List.map string_of_expr es) ^ ")" *)
+       | Construct (n, es) ->
+           n ^ "(" ^ String.concat ", " (List.map string_of_expr es) ^ ")" *)
     | Case (e, cel) ->
         "(case " ^ string_of_expr e ^ " of\n\t" ^ "  "
         ^ String.concat " \n\t| "
@@ -184,10 +184,10 @@ let rec string_of_expr exp =
     | At (e, i) -> string_of_expr e ^ "." ^ string_of_int i
     | Noexpr -> ""
     | Thunk e -> "THUNK: " ^ string_of_expr e
-    | GetField  (e, i) ->  string_of_expr e ^ "@" ^ string_of_int i 
-    |  GetTag e ->  string_of_expr e ^ ".T"
-    
+    | GetField (e, v) -> string_of_expr e ^ "@" ^ v
+    | GetTag e -> string_of_expr e ^ ".T"
   in
+
   match exp with Noexpr -> "" | _ -> "(" ^ flat_string_of_exp exp ^ ")"
 
 and string_of_literal = function
@@ -211,8 +211,8 @@ and string_of_literal = function
 let string_of_constructor = function
   | c, UNIT_TY -> c
   | c, t -> c ^ " of " ^ string_of_typ t
-  (* | c, [] -> c
-  | c, ts -> c ^ " of " ^ String.concat " * " (List.map string_of_typ ts) *)
+(* | c, [] -> c
+   | c, ts -> c ^ " of " ^ String.concat " * " (List.map string_of_typ ts) *)
 
 let rec string_of_def = function
   | Function (ty, f, args, e) ->

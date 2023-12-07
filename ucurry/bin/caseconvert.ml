@@ -1,54 +1,91 @@
-module A = Ast 
+module A = Ast
 module P = Past
 module StringMap = Map.Make (String)
 
-type vcon_env = (string * int * A.typ) StringMap.t
+type dt_name = string
+type vcon_env = (dt_name * int * A.typ) StringMap.t
 
-let add_vcon (vcon_env: vcon_env) (def: A.def) : vcon_env = 
-    match def with 
-        | A.Datatype (A.CONSTRUCTOR_TY (dt_name, _), cons) -> 
-            let add (vcon, arg_tau) i env = 
-                StringMap.add vcon (dt_name, i, arg_tau) env
-            in 
-            Util.fold_left_i add 1 vcon_env cons 
-        | _ -> vcon_env
+let add_vcon (vcon_env : vcon_env) (def : A.def) : vcon_env =
+  match def with
+  | A.Datatype (A.CONSTRUCTOR_TY (dt_name, _), cons) ->
+      let add (vcon, arg_tau) i env =
+        StringMap.add vcon (dt_name, i, arg_tau) env
+      in
+      Util.fold_left_i add 1 vcon_env cons
+  | _ -> vcon_env
 
-let case_convert (program: A.def list) : P.def list = 
-    let vcon_env = List.fold_left add_vcon StringMap.empty program in 
+let case_convert (program : A.def list) : P.def list * vcon_env =
+  let vcon_env = List.fold_left add_vcon StringMap.empty program in
 
-    (* TODO: double check type casting *)
-    let rec gen (scrutinee: A.expr) (ces: A.case_expr list) (resume: P.expr) : P.expr = 
-    ( match ces with 
-        | (hd, e)::rest ->
-            (match hd with 
-                | A.VAR_PAT n -> P.Let ([(n, case_exp scrutinee)], case_exp e)
-                | A.WILDCARD -> case_exp e
-                | A.CON_PAT (vcon, p) ->
-                    let cond_exp = P.Binop (P.GetTag (case_exp scrutinee), A.Equal, P.Literal (A.STRING vcon)) in 
-                    let _, vcon_id, _ = StringMap.find vcon vcon_env in 
-                    let then_exp = gen (A.GetField (scrutinee, vcon_id)) [(p, e)] (gen scrutinee rest resume) in 
-                    let else_exp = (gen scrutinee rest resume) in 
-                    P.If (cond_exp, then_exp, else_exp)
-                | A.PATS _ -> failwith "not yet implemente PATS in Case")
-        | [] -> resume
-        | _ -> failwith "impossible")
-    
-    
-    and case_exp : A.expr -> P.expr = function
-        | A.Case (scrutinee, ces) -> (match ces with 
-            | (p, e)::rest -> gen scrutinee ces (case_exp e) 
-            | _ -> failwith "at least one case in pattern matching should be provided")
-        | _ -> failwith "impossible"
-    in
+  (* TODO: double check type casting *)
+  let rec gen (scrutinee : A.expr) (ces : A.case_expr list) (resume : P.expr) :
+      P.expr =
+    match ces with
+    | (hd, e) :: rest -> (
+        match hd with
+        | A.VAR_PAT n -> P.Let ([ (n, case_exp scrutinee) ], case_exp e)
+        | A.WILDCARD -> case_exp e
+        | A.CON_PAT (vcon, p) ->
+            let cond_exp =
+              P.Binop
+                ( P.GetTag (case_exp scrutinee),
+                  A.Equal,
+                  P.Literal (A.STRING vcon) )
+            in
+            (* let _, vcon_id, _ = StringMap.find vcon vcon_env in *)
+            let then_exp =
+              gen
+                (A.GetField (scrutinee, vcon))
+                [ (p, e) ]
+                (gen scrutinee rest resume)
+            in
+            let else_exp = gen scrutinee rest resume in
+            P.If (cond_exp, then_exp, else_exp)
+        | A.PATS [] -> case_exp e
+        | A.PATS _ -> failwith "not yet implemente PATS in Case")
+    | [] -> resume
 
-    let rec case_def : A.def -> P.def = function
-        | A.Exp e -> P.Exp (case_exp e)
-        | A.Function (t, name, formals, body) -> 
-            P.Function (t, name, formals, case_exp body) 
-        | A.Datatype (t,cs) -> P.Datatype (t,cs)
-        | A.Variable (t, n, e) -> P.Variable (t, n, case_exp e)
-        | A.CheckTypeError d -> P.CheckTypeError (case_def d)
-    in
+  and case_exp : A.expr -> P.expr = function
+    | A.Literal v -> P.Literal v 
+    | A.Construct (vcon_name, arg) ->
+        let dt_name, vcon_id, _ = StringMap.find vcon_name vcon_env in
+        P.Construct ((dt_name, vcon_id, vcon_name), case_exp arg)
+    | A.Case (scrutinee, ces) -> (
+        match ces with
+        | (_, e) :: _ -> gen scrutinee ces (case_exp e)
+        | _ ->
+            failwith "at least one case in pattern matching should be provided")
+    | A.GetTag e -> P.GetTag (case_exp e)
+    | A.GetField (e, vc) -> P.GetField (case_exp e, vc)
+    | A.Unop (u, e) -> P.Unop (u, case_exp e)
+    | A.Binop (e1, binop, e2) -> P.Binop (case_exp e1, binop,case_exp e2)
+    | A.Begin es -> P.Begin (List.map case_exp es)
+    | A.If (e1, e2, e3) -> 
+            P.If (case_exp e1, case_exp e2, case_exp e3)
+    | A.Let (bindings, e) -> 
+        let names, es = List.split bindings in 
+        let es' = List.map case_exp es in 
+        let bindings' = List.combine names es' in 
+        P.Let (bindings', case_exp e)
+    | A.Var n -> P.Var n
+    | A.Assign _ -> failwith " assign impossible "
+    | A.Apply _ -> failwith " apply impossible "
+    | A.Lambda _ -> failwith " lambda impossible "
+    | A.Thunk _ -> failwith " thunk impossible "
+    (* | A.Case _ -> failwith " case impossible " *)
+    | A.Tuple es -> P.Tuple (List.map case_exp es)
+    | A.At _ -> failwith "at impossible"
+    | A.Noexpr -> P.Noexpr
+  in
 
-    let past = List.map case_def program in 
-    past 
+  let rec case_def : A.def -> P.def = function
+    | A.Exp e -> P.Exp (case_exp e)
+    | A.Function (t, name, formals, body) ->
+        P.Function (t, name, formals, case_exp body)
+    | A.Datatype (t, cs) -> P.Datatype (t, cs)
+    | A.Variable (t, n, e) -> P.Variable (t, n, case_exp e)
+    | A.CheckTypeError d -> P.CheckTypeError (case_def d)
+  in
+
+  let past = List.map case_def program in
+  (past, vcon_env)

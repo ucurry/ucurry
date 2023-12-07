@@ -49,6 +49,7 @@ let ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
             L.pointer_type list_ty)
   in
   ltype_of ty
+
 (*
    let get_named_structptr_type
        (context : L.llcontext)
@@ -61,40 +62,44 @@ let ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
        let field_lltypes = List.map (ltype_of_type map' llmodule context) field_types in
        let _ = L.struct_set_body struct_ty (Array.of_list field_lltypes) false in
        (map', L.pointer_type struct_ty) *)
-(* 
-let build_struct (context : L.llcontext) (llmodule : L.llmodule)
-    (builder : L.llbuilder) (map : L.lltype StringMap.t) (name : string)
-    (taus : A.typ list) (elements : L.llvalue list) : L.llvalue =
-  let element_types = List.map (ltype_of_type map llmodule context) taus in
-  let struct_type = L.struct_type context (Array.of_list element_types) in
-  let str = L.build_malloc struct_type name builder in
-  ignore
-    (Util.map_i (fun v i -> Util.set_data_field v i str builder) 0 elements);
-  str *)
+(*
+   let build_struct (context : L.llcontext) (llmodule : L.llmodule)
+       (builder : L.llbuilder) (map : L.lltype StringMap.t) (name : string)
+       (taus : A.typ list) (elements : L.llvalue list) : L.llvalue =
+     let element_types = List.map (ltype_of_type map llmodule context) taus in
+     let struct_type = L.struct_type context (Array.of_list element_types) in
+     let str = L.build_malloc struct_type name builder in
+     ignore
+       (Util.map_i (fun v i -> Util.set_data_field v i str builder) 0 elements);
+     str *)
 
 (* given the program return a map that maps the datatype name to its lltype *)
 let build_datatypes (context : L.llcontext) (llmodule : L.llmodule)
     (program : def list) : L.lltype StringMap.t =
   let add_datatype map = function
-    | Cast.Datatype (CONSTRUCTOR_TY (dt_name, _), cons) -> 
+    | Cast.Datatype (CONSTRUCTOR_TY (dt_name, _), cons) ->
         (* Define dt struct type to allow for recursive adt *)
-        let dt_struct_type = L.named_struct_type context dt_name in 
-        let map' = StringMap.add dt_name dt_struct_type map in 
+        let dt_struct_type = L.named_struct_type context dt_name in
+        let map' = StringMap.add dt_name dt_struct_type map in
 
         (* Get the arg types of each value constructor *)
-        let vcon_names, arg_taus = List.split cons in 
-        let fieldTypes = List.map (ltype_of_type map' llmodule context) arg_taus in 
-        let map'' = StringMap.add_seq 
-                      (List.to_seq @@ (List.combine vcon_names) fieldTypes) 
-                      map' in 
-        
+        let vcon_names, arg_taus = List.split cons in
+        let fieldTypes =
+          List.map (ltype_of_type map' llmodule context) arg_taus
+        in
+        let map'' =
+          StringMap.add_seq
+            (List.to_seq @@ (List.combine vcon_names) fieldTypes)
+            map'
+        in
+
         (* Fully define the datatype struct type: the first field is a tag *)
         let _ =
           L.struct_set_body dt_struct_type
-            (list_to_arr (L.i32_type context :: fieldTypes))
+            (list_to_arr (L.pointer_type (L.i8_type context) :: fieldTypes))
             false
         in
-        map'' 
+        map''
     (* | Cast.Datatype (CONSTRUCTOR_TY datatype_name, cons) ->
         let datatype_struct_type = L.named_struct_type context datatype_name in
         let map' = StringMap.add datatype_name datatype_struct_type map in
@@ -143,9 +148,7 @@ let build_literal builder (ty_map : L.lltype StringMap.t)
         ignore (set_data_field field_v i con_v builder);
         ignore (set_data_field tag_v 0 con_v builder);
         con_v *)
-    | S.INT i -> 
-      L.build_unreachable builder
-      (* L.const_int i32_t i *)
+    | S.INT i ->  L.const_int i32_t i
     | S.STRING s -> StringMap.find s string_pool
     | S.BOOL b -> L.const_int i1_t (if b then 1 else 0)
     | S.EMPTYLIST _ ->
@@ -243,23 +246,28 @@ let build_string_pool (program : C.program) (builder : L.llbuilder) :
         let pool' = mk_expr_string_pool builder pool sexpr in
         let pool'' = List.fold_left (mk_expr_string_pool builder) pool' cap in
         pool''
-    | C.Construct (_, arg) ->
-       mk_expr_string_pool builder pool arg
-    | C.Case (scrutinee, patterns) ->
+    | C.Construct (_, arg) -> mk_expr_string_pool builder pool arg
+    (* | C.Case (scrutinee, patterns) ->
         let _, es = List.split patterns in
         let pool' = mk_expr_string_pool builder pool scrutinee in
-        List.fold_left (mk_expr_string_pool builder) pool' es
-    | C.Tuple ses -> 
-        List.fold_left (mk_expr_string_pool builder) pool ses
+        List.fold_left (mk_expr_string_pool builder) pool' es *)
+    | C.Tuple ses -> List.fold_left (mk_expr_string_pool builder) pool ses
     | C.At (sexpr, _) -> mk_expr_string_pool builder pool sexpr
     | C.GetField (sexpr, _) -> mk_expr_string_pool builder pool sexpr
-    | C.GetTag (sexpr) -> mk_expr_string_pool builder pool sexpr
+    | C.GetTag sexpr -> mk_expr_string_pool builder pool sexpr
     | C.Noexpr -> pool
     | C.Captured _ -> pool
   in
   let mk_defs_string_pool builder pool sdef =
     match sdef with
-    | C.Datatype _ -> pool
+    | C.Datatype (_, vcons) ->
+        let names, _ = List.split vcons in
+        List.fold_left
+          (fun pool' str ->
+            StringMap.add str
+              (L.build_global_stringptr str "vcon_name" builder)
+              pool')
+          pool names
     | C.Val (_, sexpr) -> mk_expr_string_pool builder pool sexpr
     | C.Function (_, _, ((_, se), _)) -> mk_expr_string_pool builder pool se
     | C.Exp sexpr -> mk_expr_string_pool builder pool sexpr

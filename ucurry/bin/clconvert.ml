@@ -42,11 +42,11 @@ let rec free ((t, exp) : SA.sexpr) : S.t =
   | SA.SBinop (operand1, _, operand2) -> S.union (free operand1) (free operand2)
   | SA.SUnop (_, operand) -> free operand
   | SA.SConstruct (_, arg) -> free arg
-  | SA.SCase (scrutinee, cexprs) ->
+  (* | SA.SCase (scrutinee, cexprs) ->
       let fscrutinee = free scrutinee in
       List.fold_left
         (fun freevars (_, sexpr) -> S.union freevars (free sexpr))
-        fscrutinee cexprs
+        fscrutinee cexprs *)
   | SA.SLambda (formals, sexpr) ->
       let formalTypes = Util.get_formalty t in
       (* let _ = Printf.printf "formals: %d\n" (List.length formals) in
@@ -56,7 +56,7 @@ let rec free ((t, exp) : SA.sexpr) : S.t =
       S.diff (free sexpr) (S.of_list formalWithTypes)
   | SA.STuple ses -> unionFree ses
   | SA.SAt (se, _) -> free se
-  | SA.SGetTag  se -> free se
+  | SA.SGetTag se -> free se
   | SA.SGetField (se, _) -> free se
   | SA.SNoexpr -> S.empty
 
@@ -103,20 +103,19 @@ and close_exp (captured : freevar list) (le : SA.sexpr) : C.sexpr =
           (* need to recheck*)
           let e' = exp e in
           C.Let (ls', e')
-      | SA.SConstruct (vcon, arg) ->
+      | SA.SConstruct ((dt_name, i, vcon_name), arg) ->
           (* TODO here *)
-          C.Construct (vcon, exp arg)
-      | SA.SCase (scrutinee, cases) ->
+          C.Construct ((dt_name, i, vcon_name), exp arg)
+      (* | SA.SCase (scrutinee, cases) ->
           let scrutinee' = exp scrutinee in
           let cases' = List.map (fun (p, e) -> (p, exp e)) cases in
-          C.Case (scrutinee', cases')
+          C.Case (scrutinee', cases') *)
       | SA.SLambda lambda -> C.Closure (asClosure ty lambda captured)
       | SA.SNoexpr -> Noexpr
       | SA.STuple ses -> C.Tuple (List.map exp ses)
-      | SA.SAt (se, i) -> C.At (exp se, i) 
+      | SA.SAt (se, i) -> C.At (exp se, i)
       | SA.SGetField (se, i) -> C.GetField (exp se, i)
-      | SA.SGetTag se -> C.GetTag (exp se)
-    )
+      | SA.SGetTag se -> C.GetTag (exp se) )
   in
   exp le
 
