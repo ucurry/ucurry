@@ -59,8 +59,8 @@ type expr =
   | Case of expr * case_expr list
   | Tuple of expr list (* !! *)
   | At of expr * int
-  | GetTag of expr (* return an integer *)
-  | GetField of expr * int (* return the field value of the value constructor *)
+  | GetTag of expr (* Only for testing - need to be deleted; return a string *)
+  | GetField of expr * int (* Only for testing - need to be deleted; return the field value of the value constructor *)
   | Noexpr
 
 and value =

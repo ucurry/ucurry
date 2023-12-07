@@ -20,8 +20,10 @@ let () =
   let lexbuf = Lexing.from_channel !channel in
   let ast = Parser.program Scanner.token lexbuf in
   let curried = Curry.curry ast in
+  let past, vcon_env = Caseconvert.case_convert curried in
   let last = Lazy.lazy_convert curried in
   let sast, _ = Semant.semant_check last in
+  (* let sast, _ = Semant.semant_check last vcon_env in *)
   (* commented out path for lazy  *)
   match !action with
   | Ast ->

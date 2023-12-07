@@ -290,7 +290,7 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
     | A.GetTag e -> 
         let tau, e' = ty e in
         ignore (match tau with CONSTRUCTOR_TY _ -> 1 | _ -> raise (TypeError "not a datatype"));
-        (A.INT_TY, S.SGetTag (tau, e'))
+        (A.STRING_TY, S.SGetTag (tau, e'))
     | A.GetField (e, i) -> 
         let tau, e' = ty e in 
         (match tau with 

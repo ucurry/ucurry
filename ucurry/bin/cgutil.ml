@@ -143,7 +143,9 @@ let build_literal builder (ty_map : L.lltype StringMap.t)
         ignore (set_data_field field_v i con_v builder);
         ignore (set_data_field tag_v 0 con_v builder);
         con_v *)
-    | S.INT i -> L.const_int i32_t i
+    | S.INT i -> 
+      L.build_unreachable builder
+      (* L.const_int i32_t i *)
     | S.STRING s -> StringMap.find s string_pool
     | S.BOOL b -> L.const_int i1_t (if b then 1 else 0)
     | S.EMPTYLIST _ ->
