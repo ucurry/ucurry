@@ -33,6 +33,8 @@ let rec curry_expr (exp : A.expr) : A.expr =
       A.Case (new_scrutinee, new_cases)
   | A.Tuple es -> A.Tuple (List.map curry_expr es)
   | A.At (e, idx) -> A.At (curry_expr e, idx)
+  | A.GetTag e -> A.GetTag (curry_expr e)
+  | A.GetField (e, i) -> A.GetField (curry_expr e, i)
   | A.Noexpr -> A.Noexpr
   | _ -> failwith "no match in curry pass"
 

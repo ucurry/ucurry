@@ -44,6 +44,8 @@ rule token = parse
 | "case"     { CASE }
 | "of"       { OF }
 | '_'        { WILDCARD }
+| ".T"       { TAG }
+| "@"       { FIELD }
 
 (* typ *)  
 | "int"      { INTTYPE }

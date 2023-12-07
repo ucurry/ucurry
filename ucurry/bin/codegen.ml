@@ -142,8 +142,9 @@ let build_main_body defs =
               match tau_e with
               | INT_TY | BOOL_TY ->
                   L.build_icmp L.Icmp.Eq e1' e2' "temp" builder
-              | _ ->
-                  raise
+              | STRING_TY ->
+                    L.build_icmp L.Icmp.Eq e1' e2' "temp" builder
+              | _ -> raise
                     (CODEGEN_NOT_YET_IMPLEMENTED
                        "other equality type not implemented"))
           | A.Neq -> L.build_icmp L.Icmp.Ne e1' e2' "temp" builder
@@ -285,6 +286,12 @@ let build_main_body defs =
       | C.Noexpr -> 
           L.const_int i1_t 0 (* This is for no-arg value construct: TODO double check  *)
           (* L.build_unreachable builder  *)
+      | C.GetTag e -> 
+          let str_ptr = expr builder e in 
+          Util.get_data_field 0 str_ptr builder "tag"
+      | C.GetField (e, i) -> 
+          let str_ptr = expr builder e in 
+          Util.get_data_field i str_ptr builder "fi"
     in
     expr builder
   and alloc_function name fun_tau =

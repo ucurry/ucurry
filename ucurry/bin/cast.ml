@@ -21,6 +21,8 @@ and expr =
   | Case of sexpr * case_expr list
   | Tuple of sexpr list
   | At of sexpr * int
+  | GetTag of sexpr 
+  | GetField of sexpr * int
   | Noexpr
 
 and case_expr = S.pattern * sexpr
@@ -90,6 +92,8 @@ and string_of_sexpr (delim : string) ((ty, expr) : sexpr) : string =
     | Case _ -> failwith "String_of_expr Not implemented for case"
     | Tuple _ -> failwith "String_of_expr Not implemented for Tuple"
     | At _ -> failwith "String_of_exor Not implemented for at"
+    | GetField _ -> failwith "String_of_exor Not implemented for GetField"
+    | GetTag _ -> failwith "String_of_exor Not implemented for GetTag"
     | Noexpr -> ""
   in
   "(" ^ A.string_of_typ ty ^ "," ^ string_of_expr expr ^ ")"

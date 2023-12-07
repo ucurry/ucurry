@@ -56,6 +56,8 @@ let rec free ((t, exp) : SA.sexpr) : S.t =
       S.diff (free sexpr) (S.of_list formalWithTypes)
   | SA.STuple ses -> unionFree ses
   | SA.SAt (se, _) -> free se
+  | SA.SGetTag  se -> free se
+  | SA.SGetField (se, _) -> free se
   | SA.SNoexpr -> S.empty
 
 let indexOf (x : string) (xs : freevar list) : int option =
@@ -111,7 +113,10 @@ and close_exp (captured : freevar list) (le : SA.sexpr) : C.sexpr =
       | SA.SLambda lambda -> C.Closure (asClosure ty lambda captured)
       | SA.SNoexpr -> Noexpr
       | SA.STuple ses -> C.Tuple (List.map exp ses)
-      | SA.SAt (se, i) -> C.At (exp se, i) )
+      | SA.SAt (se, i) -> C.At (exp se, i) 
+      | SA.SGetField (se, i) -> C.GetField (exp se, i)
+      | SA.SGetTag se -> C.GetTag (exp se)
+    )
   in
   exp le
 

@@ -24,6 +24,8 @@ and sx =
   | SCase of sexpr * scase_expr list
   | STuple of sexpr list (* redundant type annotation?? *)
   | SAt of sexpr * int
+  | SGetTag of sexpr
+  | SGetField of sexpr * int
   | SNoexpr
 
 and scase_expr = pattern * sexpr

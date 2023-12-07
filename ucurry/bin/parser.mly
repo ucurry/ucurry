@@ -6,13 +6,13 @@
 // delimiters
 %token ARROW DOUBLEARROW SEMI COMMA COLON LBRACE RBRACE LBRACKET RBRACKET BAR DOTS DOT ISNULL
 // keyword
-%token FUNCTION LAMBDA DATATYPE IF THEN ELSE LET BEGIN IN CASE OF WILDCARD CHECK_TYPE_ERROR 
+%token FUNCTION LAMBDA DATATYPE IF THEN ELSE LET BEGIN IN CASE OF WILDCARD CHECK_TYPE_ERROR TAG FIELD 
 // type
 %token INTTYPE STRTYPE LISTTYPE BOOLTYPE UNITTYPE 
 // binop 
 %token ASN ADD SUB TIMES DIVIDE MOD EQUAL NEQ LESS LEQ GREATER GEQ AND OR CONS 
 // unop 
-%token HD TL NEG NOT PRINT PRINTLN
+%token HD TL NEG NOT PRINT PRINTLN 
 
 // primitive value 
 %token <string> CAPNAME
@@ -37,6 +37,7 @@
 %right HD TL NEG NOT 
 %left DOT
 %left LISTTYPE
+%left TAG FIELD
 
 
 %start program 
@@ -95,6 +96,8 @@ exp:
   | LBRACE CASE exp OF case_exp_list RBRACE { Case ($3, List.rev $5) }
   | LBRACE exp_tuple RBRACE   { Tuple (List.rev $2) }
   | exp DOT INTEGER           { At ($1, $3) }
+  | exp TAG                   { GetTag $1}
+  | exp FIELD INTEGER         { GetField ($1, $3)}
 
 // opt_exp_list:
 //   | /* Nothing */  {[]}

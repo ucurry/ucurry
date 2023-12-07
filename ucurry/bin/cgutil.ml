@@ -250,6 +250,8 @@ let build_string_pool (program : C.program) (builder : L.llbuilder) :
     | C.Tuple ses -> 
         List.fold_left (mk_expr_string_pool builder) pool ses
     | C.At (sexpr, _) -> mk_expr_string_pool builder pool sexpr
+    | C.GetField (sexpr, _) -> mk_expr_string_pool builder pool sexpr
+    | C.GetTag (sexpr) -> mk_expr_string_pool builder pool sexpr
     | C.Noexpr -> pool
     | C.Captured _ -> pool
   in

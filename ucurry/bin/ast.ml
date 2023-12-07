@@ -59,6 +59,8 @@ type expr =
   | Case of expr * case_expr list
   | Tuple of expr list (* !! *)
   | At of expr * int
+  | GetTag of expr (* return an integer *)
+  | GetField of expr * int (* return the field value of the value constructor *)
   | Noexpr
 
 and value =
@@ -182,6 +184,9 @@ let rec string_of_expr exp =
     | At (e, i) -> string_of_expr e ^ "." ^ string_of_int i
     | Noexpr -> ""
     | Thunk e -> "THUNK: " ^ string_of_expr e
+    | GetField  (e, i) ->  string_of_expr e ^ "@" ^ string_of_int i 
+    |  GetTag e ->  string_of_expr e ^ ".T"
+    
   in
   match exp with Noexpr -> "" | _ -> "(" ^ flat_string_of_exp exp ^ ")"
 

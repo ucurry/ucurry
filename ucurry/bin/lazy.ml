@@ -34,8 +34,8 @@ let rec lazy_expr (exp : A.expr) : A.expr =
   | A.Begin es -> A.Begin (List.map lazy_expr es)
   | A.Binop (e1, bp, e2) -> A.Binop (lazy_expr e1, bp, lazy_expr e2)
   | A.Unop (up, e) -> A.Unop (up, lazy_expr e)
-  | A.Construct (vcon_name, args) -> 
-      A.Construct (vcon_name, List.map to_thunk args)
+  | A.Construct (vcon_name, arg) -> 
+      A.Construct (vcon_name, to_thunk arg)
   | A.Case (scrutinee, cases) ->
       let pat, es = List.split cases in
       let new_cases = List.combine pat (List.map lazy_expr es) in
@@ -43,6 +43,8 @@ let rec lazy_expr (exp : A.expr) : A.expr =
   | A.Tuple es -> A.Tuple (List.map to_thunk es)
   | A.At (e, idx) -> A.Apply (A.At (lazy_expr e, idx), [ unitv ])
   | A.Noexpr -> A.Noexpr
+  | A.GetTag e -> A.GetTag (lazy_expr e)
+  | A.GetField (e, i) -> A.Apply (A.GetField (lazy_expr e, i), [unitv ])
   | A.Thunk _ -> failwith "Illegal thunk"
 
 let rec lazy_def def =
@@ -58,7 +60,7 @@ let rec lazy_def def =
       A.Variable (lazy_tau, name, A.Lambda (lazy_tau, [ "unit" ], lazy_expr e))
   | A.Datatype (t, vcon_list) -> 
       let vcon_names, arg_taus = List.split vcon_list in 
-      let new_arg_taus = List.map (List.map to_thunk_ty) arg_taus in 
+      let new_arg_taus = List.map to_thunk_ty arg_taus in 
       let new_vcon_list = List.combine vcon_names new_arg_taus in 
       A.Datatype (t, new_vcon_list)
       

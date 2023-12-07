@@ -213,7 +213,7 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
                    Unop (u, Literal (STRING "true")),
                    Unop (u, Literal (STRING "false")) ))
         | IsNull, LIST_TY _ -> (BOOL_TY, S.SUnop (u, (tau, se)))
-        | _ -> raise (TypeError "type error in unary operaion"))
+        | _ -> raise (TypeError ("type error in unary operaion " ^ (A.string_of_typ tau))))
     | A.Lambda (lambda_tau, formals, body) ->
         let check_lambda tau fs env =
           match (tau, fs) with
@@ -287,6 +287,17 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         (final_tau, S.SCase (scrutinee_sexp, final_scases))
     (* let default = default_case final_tau in
        Caseconvert.case_convert final_tau scrutinee_sexp final_scases default *)
+    | A.GetTag e -> 
+        let tau, e' = ty e in
+        ignore (match tau with CONSTRUCTOR_TY _ -> 1 | _ -> raise (TypeError "not a datatype"));
+        (A.INT_TY, S.SGetTag (tau, e'))
+    | A.GetField (e, i) -> 
+        let tau, e' = ty e in 
+        (match tau with 
+          | CONSTRUCTOR_TY (_, vcon_name) -> 
+              let _, _, formal_tau = StringMap.find vcon_name vcon_env in
+              (formal_tau, S.SGetField ((tau, e'), i))
+          | _ -> raise (TypeError "not a datatype"))
   in
   ty exp
 

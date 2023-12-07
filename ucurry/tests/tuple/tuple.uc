@@ -14,4 +14,6 @@ add x y =(begin (println "no way"), x + y);
 println (d.1);
 
 (int * bool) e = ((add 1 2), false);
-println (e.1);
+println e.1;
+
+
