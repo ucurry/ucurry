@@ -2,6 +2,7 @@ open Typing
 module P = Past
 
 let rec to_thunk_ty (ty : typ) : typ = FUNCTION_TY (UNIT_TY, transform_ty ty)
+
 and transform_ty ty =
   match ty with
   | FUNCTION_TY (argty, retty) ->

@@ -113,18 +113,18 @@ let rec string_of_pattern = function
   | PATS [] -> ""
   | PATS ps -> String.concat ", " (List.map string_of_pattern ps)
   | WILDCARD -> "_"
-(* 
-let rec string_of_typ = function
-  | INT_TY -> "int"
-  | STRING_TY -> "string"
-  | BOOL_TY -> "bool"
-  | LIST_TY typ -> string_of_typ typ ^ " list"
-  | UNIT_TY -> "unit"
-  | FUNCTION_TY (t1, t2) ->
-      "(" ^ string_of_typ t1 ^ " -> " ^ string_of_typ t2 ^ ")"
-  | CONSTRUCTOR_TY dt -> dt
-  | TUPLE_TY typs ->
-      "(" ^ String.concat " * " (List.map string_of_typ typs) ^ ")" *)
+(*
+   let rec string_of_typ = function
+     | INT_TY -> "int"
+     | STRING_TY -> "string"
+     | BOOL_TY -> "bool"
+     | LIST_TY typ -> string_of_typ typ ^ " list"
+     | UNIT_TY -> "unit"
+     | FUNCTION_TY (t1, t2) ->
+         "(" ^ string_of_typ t1 ^ " -> " ^ string_of_typ t2 ^ ")"
+     | CONSTRUCTOR_TY dt -> dt
+     | TUPLE_TY typs ->
+         "(" ^ String.concat " * " (List.map string_of_typ typs) ^ ")" *)
 
 let string_of_variable (t, s) = string_of_typ t ^ " " ^ s
 

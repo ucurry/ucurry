@@ -86,8 +86,8 @@ let rec get_checked_types tau1 tau2 =
   | tau1, tau2 ->
       raise
         (TypeError
-           ("failed to check eqaul type between " ^ string_of_typ tau1
-          ^ " and " ^ string_of_typ tau2))
+           ("failed to check eqaul type between " ^ string_of_typ tau1 ^ " and "
+          ^ string_of_typ tau2))
 
 let rec eqType tau1 tau2 =
   match (tau1, tau2) with
@@ -102,6 +102,6 @@ let rec eqType tau1 tau2 =
       eqType tau1 tau1' && eqType tau2 tau2'
   | CONSTRUCTOR_TY n1, CONSTRUCTOR_TY n2 -> String.equal n1 n2
   | TUPLE_TY tys1, TUPLE_TY tys2 -> List.for_all2 eqType tys1 tys2
-  | ANY_TY, _ -> true 
+  | ANY_TY, _ -> true
   | _, ANY_TY -> true
   | _ -> false

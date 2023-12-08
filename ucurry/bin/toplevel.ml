@@ -1,4 +1,5 @@
 (* module Se = Semant *)
+module PC = Patconvert
 
 type action = Ast | PAST | CAST | LAST | Default | LLVMIR
 
@@ -22,6 +23,7 @@ let () =
   let ast = Parser.program Scanner.token lexbuf in
   let curried = Curry.curry ast in
   let past = Caseconvert.case_convert curried in
+  let _ = print_string (Past.string_of_program past) in
   let last = Lazy.lazy_convert past in
   let sast, _ = Semant.semant_check last in
   (* commented out path for lazy  *)
@@ -29,8 +31,8 @@ let () =
   | Ast ->
       let _ = print_string (Ast.string_of_program curried) in
       print_newline ()
-  | PAST -> 
-      let _ = print_string (Past.string_of_program past) in 
+  | PAST ->
+      let _ = print_string (Past.string_of_program past) in
       print_newline ()
   (* | LAST ->
       let _ = print_string (Ast.string_of_program last) in

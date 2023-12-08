@@ -33,11 +33,13 @@ let rec fold_left_i (f : 'a -> int -> 'c -> 'c) (i : int) (acc : 'c)
     (l : 'a list) =
   match l with [] -> acc | x :: xs -> fold_left_i f (i + 1) (f x i acc) xs
 
-let rec fold_right_di (f : 'c -> int -> 'a -> 'c) (acc : 'c) (i : int) (l : 'a list) = 
+let rec fold_right_di (f : 'c -> int -> 'a -> 'c) (acc : 'c) (i : int)
+    (l : 'a list) =
   match l with [] -> acc | x :: xs -> f (fold_right_di f acc (i - 1) xs) i x
 
-let rec fold_right_i (f : 'c -> int -> 'a -> 'c) (acc : 'c) (i : int) (l : 'a list) = 
-  match l with [] -> acc | x :: xs -> f (fold_right_di f acc (i + 1) xs) i x
+let rec fold_right_i (f : 'c -> int -> 'a -> 'c) (acc : 'c) (i : int)
+    (l : 'a list) =
+  match l with [] -> acc | x :: xs -> f (fold_right_i f acc (i + 1) xs) i x
 
 let rec combine_formal_types taus formals =
   match (taus, formals) with

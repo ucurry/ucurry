@@ -15,7 +15,6 @@ type typ =
   | TUPLE_TY of typ list
   | ANY_TY
 
-
 let rec string_of_typ = function
   | INT_TY -> "int"
   | STRING_TY -> "string"

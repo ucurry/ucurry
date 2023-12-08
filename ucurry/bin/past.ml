@@ -76,7 +76,7 @@ let string_of_constructor = function
   | c, UNIT_TY -> c
   | c, t -> c ^ " of " ^ string_of_typ t
 
-let rec string_of_def = function 
+let rec string_of_def = function
   | Function (ty, f, args, e) ->
       "fun : " ^ string_of_typ ty ^ ":\n" ^ f ^ " " ^ String.concat " " args
       ^ " = " ^ string_of_expr e ^ ";"
@@ -89,5 +89,4 @@ let rec string_of_def = function
       string_of_typ ty ^ " " ^ name ^ " = " ^ string_of_expr e ^ ";"
   | CheckTypeError e -> "check_type_error " ^ string_of_def e
 
-let string_of_program defs =
-    String.concat "\n" (List.map string_of_def defs)
+let string_of_program defs = String.concat "\n" (List.map string_of_def defs)

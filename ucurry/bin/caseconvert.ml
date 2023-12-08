@@ -29,15 +29,12 @@ let case_convert (program : A.def list) : P.def list =
             let else_exp = gen scrutinee rest resume in
             P.If (cond_exp, then_exp, else_exp)
         | A.PATS [] -> case_exp e
-        | A.PATS ps -> 
-            let new_case acc_e i p = 
-                A.Case (A.At (scrutinee, i), (p,acc_e)::rest)
+        | A.PATS ps ->
+            let new_case acc_e i p =
+              A.Case (A.At (scrutinee, i), (p, acc_e) :: rest)
             in
-            let new_e =  
-              Util.fold_right_i new_case e 0 ps 
-            in 
-            case_exp new_e
-    )
+            let new_e = Util.fold_right_i new_case e 0 ps in
+            case_exp new_e)
   and case_exp : A.expr -> P.expr = function
     | A.Literal v -> P.Literal v
     | A.Construct (vcon_name, arg) -> P.Construct (vcon_name, case_exp arg)
@@ -57,8 +54,8 @@ let case_convert (program : A.def list) : P.def list =
         P.Let (bindings', case_exp e)
     | A.Var n -> P.Var n
     | A.Assign _ -> failwith " assign impossible "
-    | A.Apply (e, es) ->  P.Apply (case_exp e, List.map case_exp es)
-    | A.Lambda (tau, arg_names,body) -> P.Lambda (tau, arg_names, case_exp body)
+    | A.Apply (e, es) -> P.Apply (case_exp e, List.map case_exp es)
+    | A.Lambda (tau, arg_names, body) -> P.Lambda (tau, arg_names, case_exp body)
     | A.Thunk _ -> failwith " thunk impossible "
     (* | A.Case _ -> failwith " case impossible " *)
     | A.Tuple es -> P.Tuple (List.map case_exp es)

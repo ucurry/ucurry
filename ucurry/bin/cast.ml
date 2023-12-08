@@ -105,8 +105,7 @@ and string_of_sexpr (delim : string) ((ty, expr) : sexpr) : string =
 let string_of_def = function
   | Val (name, e) -> name ^ " " ^ string_of_sexpr "" e
   | Function (ty, name, body) ->
-      "fun: " ^ string_of_typ ty ^ ":\n" ^ name ^ " "
-      ^ string_of_closure body
+      "fun: " ^ string_of_typ ty ^ ":\n" ^ name ^ " " ^ string_of_closure body
   | Datatype (ty, cls) ->
       "datatype " ^ string_of_typ ty ^ " = "
       ^ String.concat " | " (List.map A.string_of_constructor cls)

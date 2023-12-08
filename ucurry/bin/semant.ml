@@ -224,8 +224,7 @@ let rec typ_of (vcon_env : S.vcon_env) (type_env : S.type_env) (exp : P.expr) :
         | IsNull, LIST_TY _ -> (BOOL_TY, S.SUnop (u, (tau, se)))
         | _ ->
             raise
-              (TypeError ("type error in unary operaion " ^ string_of_typ tau))
-        )
+              (TypeError ("type error in unary operaion " ^ string_of_typ tau)))
     | P.Lambda (lambda_tau, formals, body) ->
         let check_lambda tau fs env =
           match (tau, fs) with
