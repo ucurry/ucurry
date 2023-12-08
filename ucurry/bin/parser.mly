@@ -119,9 +119,9 @@ case_exp_list:
 pattern:
   | NAME                { VAR_PAT $1 }
   | WILDCARD            { WILDCARD }
+  | LBRACE pattern_tuple RBRACE          {PATS (List.rev $2)}
   | CAPNAME                              { CON_PAT ($1, PATS []) }
-  | CAPNAME LBRACE pattern RBRACE        { CON_PAT ($1, $3)}
-  | CAPNAME LBRACE pattern_tuple RBRACE  { CON_PAT ($1, PATS (List.rev $3))}
+  | CAPNAME  pattern                     { CON_PAT ($1, $2)}
 
 pattern_tuple:
     pattern COMMA pattern       { [$3; $1] }

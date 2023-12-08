@@ -37,11 +37,6 @@ let case_convert (program : A.def list) : P.def list =
               Util.fold_right_i new_case e 0 ps 
             in 
             case_exp new_e
-            (* let re' = gen scrutinee rest resume in 
-            let compute_new_e acc_e i p = 
-              gen (A.At (scrutinee, i)) [(p, acc_e)] re' 
-            in 
-            Util.fold_right_di compute_new_e e (List.length ps) ps *)
     )
   and case_exp : A.expr -> P.expr = function
     | A.Literal v -> P.Literal v
