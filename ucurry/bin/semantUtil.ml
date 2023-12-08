@@ -1,4 +1,4 @@
-open Typing 
+open Typing
 module A = Ast
 module S = Sast
 module U = Util
@@ -68,7 +68,7 @@ let rec get_checked_types tau1 tau2 =
       let arg_tau = get_checked_types arg_tau1 arg_tau2
       and ret_tau = get_checked_types ret_tau1 ret_tau2 in
       FUNCTION_TY (arg_tau, ret_tau)
-  | CONSTRUCTOR_TY (n1, _), CONSTRUCTOR_TY (n2, _) ->
+  | CONSTRUCTOR_TY n1, CONSTRUCTOR_TY n2 ->
       if String.equal n1 n2 then tau1
       else raise (TypeError "failed to check equal type")
   | TUPLE_TY tys1, TUPLE_TY tys2 ->
@@ -98,6 +98,6 @@ let rec eqType tau1 tau2 =
   | LIST_TY tau1, LIST_TY tau2 -> eqType tau1 tau2
   | FUNCTION_TY (tau1, tau2), FUNCTION_TY (tau1', tau2') ->
       eqType tau1 tau1' && eqType tau2 tau2'
-  | CONSTRUCTOR_TY (n1, _), CONSTRUCTOR_TY (n2, _) -> String.equal n1 n2
+  | CONSTRUCTOR_TY n1, CONSTRUCTOR_TY n2 -> String.equal n1 n2
   | TUPLE_TY tys1, TUPLE_TY tys2 -> List.for_all2 eqType tys1 tys2
   | _ -> false

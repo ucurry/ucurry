@@ -1,5 +1,5 @@
 (* module A = Ast *)
-open Typing 
+open Typing
 module A = Ast
 module SA = Sast
 module C = Cast
@@ -60,6 +60,7 @@ let rec free ((t, exp) : SA.sexpr) : S.t =
   | SA.SGetTag se -> free se
   | SA.SGetField (se, _) -> free se
   | SA.SNoexpr -> S.empty
+  | SA.SNomatch -> S.empty
 
 let indexOf (x : string) (xs : freevar list) : int option =
   let rec indexOf' (x : string) (xs : freevar list) (i : int) : int option =
@@ -69,8 +70,8 @@ let indexOf (x : string) (xs : freevar list) : int option =
   in
   indexOf' x xs 0
 
-let rec asClosure (funty : typ) (lambda : SA.lambda) (captured : freevar list)
-    : C.closure =
+let rec asClosure (funty : typ) (lambda : SA.lambda) (captured : freevar list) :
+    C.closure =
   let formals, sbody = lambda in
   let freeVarWithTypes = S.elements (free (funty, SA.SLambda lambda)) in
   let captured' =
@@ -116,7 +117,8 @@ and close_exp (captured : freevar list) (le : SA.sexpr) : C.sexpr =
       | SA.STuple ses -> C.Tuple (List.map exp ses)
       | SA.SAt (se, i) -> C.At (exp se, i)
       | SA.SGetField (se, i) -> C.GetField (exp se, i)
-      | SA.SGetTag se -> C.GetTag (exp se) )
+      | SA.SGetTag se -> C.GetTag (exp se)
+      | SA.SNomatch -> C.Nomatch )
   in
   exp le
 

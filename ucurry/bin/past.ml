@@ -1,4 +1,4 @@
-open Typing 
+open Typing
 module A = Ast
 
 type binop = A.binop
@@ -17,12 +17,14 @@ type expr =
   | Unop of uop * expr
   | Lambda of typ * arg_name list * expr
   | Thunk of expr
-  | Construct of vcon_name * expr 
+  | Construct of vcon_name * expr
   | Tuple of expr list (* !! *)
   | At of expr * int
   | GetTag of expr (* return a string *)
-  | GetField of expr * vcon_name (* return the field value of the value constructor *)
+  | GetField of
+      expr * vcon_name (* return the field value of the value constructor *)
   | Noexpr
+  | Nomatch
 
 type def =
   | Function of typ * name * arg_name list * expr
@@ -32,6 +34,7 @@ type def =
   | CheckTypeError of def
 
 and constructor = vcon_name * typ (* !! *)
+
 let rec string_of_expr exp =
   let flat_string_of_exp = function
     | Literal l -> A.string_of_literal l
@@ -61,6 +64,7 @@ let rec string_of_expr exp =
     | Tuple es -> "(" ^ String.concat ", " (List.map string_of_expr es) ^ ")"
     | At (e, i) -> string_of_expr e ^ "." ^ string_of_int i
     | Noexpr -> ""
+    | Nomatch -> "No match"
     | Thunk e -> "THUNK: " ^ string_of_expr e
     | GetField (e, name) -> string_of_expr e ^ "@" ^ name
     | GetTag e -> string_of_expr e ^ ".T"

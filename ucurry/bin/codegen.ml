@@ -1,4 +1,4 @@
-open Typing 
+open Typing
 module L = Llvm
 module A = Ast
 module C = Cast
@@ -8,11 +8,11 @@ module StringMap = Map.Make (String)
 
 exception CODEGEN_NOT_YET_IMPLEMENTED of string
 exception SHOULDNT_RAISED of string
-exception REACHED
+exception REACHED of string
 
-let get_dt_vcon_name  = function
-|  CONSTRUCTOR_TY (dt_name, vcon_name) -> dt_name , vcon_name
-| _ -> raise (U.Impossible "not a constructortype")
+let get_dt_name = function
+  | CONSTRUCTOR_TY dt_name -> dt_name
+  | _ -> raise (U.Impossible "not a constructortype")
 
 let build_main_body defs =
   let context = L.global_context () in
@@ -234,8 +234,8 @@ let build_main_body defs =
             build_function_body function_ptr capstruct_type (ty, top_exp)
           in
           closure_ptr
-      | C.Construct (i , arg) ->
-          let dt_name , vcon_name = get_dt_vcon_name ty in 
+      | C.Construct ((i, vcon_name), arg) ->
+          let dt_name = get_dt_name ty in
           let dt_struct_type = StringMap.find dt_name datatype_map in
           let dt_struct = L.build_malloc dt_struct_type dt_name builder in
           let tag_v = StringMap.find vcon_name string_pool in
@@ -264,6 +264,12 @@ let build_main_body defs =
       | C.GetField (e, i) ->
           let str_ptr = expr builder e in
           Util.get_data_field i str_ptr builder "fi"
+      | C.Nomatch ->
+          let nomatch_func_ty = L.function_type i32_t [||] in
+          let nomatch_func =
+            L.declare_function "nomatch" nomatch_func_ty the_module
+          in
+          L.build_call nomatch_func [||] "nomatch" builder
     in
     expr builder
   and alloc_function name fun_tau =

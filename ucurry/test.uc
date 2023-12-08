@@ -1,2 +1,0 @@
-println false;
-0;

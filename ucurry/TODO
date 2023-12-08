@@ -2,10 +2,14 @@ Documentation:
 - Currently the pass goes:
   --Scan--> AST 
   --Curry--> AST 
-  --Lazy--> AST 
+  --CaseConvert--> PAST
+  (LAZY not yet added)
   --Semant--> SAST 
   --Clconvert--> CAST 
   --Codegen--> LLVM IR
+
+
+- Case Convert:
 
 - Curry Pass:
     1. curry all lambdas and functions => so that every lambda only has 1 arg
@@ -29,10 +33,13 @@ Documentation:
 
 TODO:
 - Debugging: tests/codegen/test.suite.uc => (fact 3) raised "Instruction 4" error??
+- SOLVED! cl convert error
   
 - Consider having empty list like [int], [string], [bool], etc.. 
     => this will free LET expression from carrying the types in the bindings 
     => which will allow us to do case_convert before LAZY pass (before SEMANT pass)
+- IMPLEMENTED 
 
 - Switch gear to pattern matching of Lists and ADT
     => then come back to implement infinite list 
+- IN PROGRESS

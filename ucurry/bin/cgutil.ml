@@ -1,4 +1,4 @@
-open Typing 
+open Typing
 module L = Llvm
 module A = Ast
 module S = Sast
@@ -33,7 +33,7 @@ let ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
           L.struct_type context [| L.pointer_type ftype; void_ptr |]
         in
         L.pointer_type cl_struct_type
-    | CONSTRUCTOR_TY (name, _) -> L.pointer_type (StringMap.find name ty_map)
+    | CONSTRUCTOR_TY name -> L.pointer_type (StringMap.find name ty_map)
     | TUPLE_TY taus ->
         let taus = Array.of_list (List.map ltype_of taus) in
         L.pointer_type (L.struct_type context taus)
@@ -78,7 +78,7 @@ let ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
 let build_datatypes (context : L.llcontext) (llmodule : L.llmodule)
     (program : def list) : L.lltype StringMap.t =
   let add_datatype map = function
-    | Cast.Datatype (CONSTRUCTOR_TY (dt_name, _), cons) ->
+    | Cast.Datatype (CONSTRUCTOR_TY dt_name, cons) ->
         (* Define dt struct type to allow for recursive adt *)
         let dt_struct_type = L.named_struct_type context dt_name in
         let map' = StringMap.add dt_name dt_struct_type map in
@@ -149,7 +149,7 @@ let build_literal builder (ty_map : L.lltype StringMap.t)
         ignore (set_data_field field_v i con_v builder);
         ignore (set_data_field tag_v 0 con_v builder);
         con_v *)
-    | S.INT i ->  L.const_int i32_t i
+    | S.INT i -> L.const_int i32_t i
     | S.STRING s -> StringMap.find s string_pool
     | S.BOOL b -> L.const_int i1_t (if b then 1 else 0)
     | S.EMPTYLIST _ ->
@@ -191,8 +191,9 @@ let ty_fmt_string ty (builder : L.llbuilder) : L.llvalue =
     | BOOL_TY -> "%d"
     | STRING_TY -> "%s"
     | LIST_TY subtau -> "[ " ^ string_matcher subtau ^ "..]"
-    | TUPLE_TY taus -> "(" ^ String.concat ", " (List.map string_matcher taus) ^ ")"
-    | CONSTRUCTOR_TY (s, _) -> s
+    | TUPLE_TY taus ->
+        "(" ^ String.concat ", " (List.map string_matcher taus) ^ ")"
+    | CONSTRUCTOR_TY s -> s
     | UNIT_TY -> " "
     | FUNCTION_TY _ -> raise (Impossible "function cannot be printed")
   in
@@ -257,6 +258,7 @@ let build_string_pool (program : C.program) (builder : L.llbuilder) :
     | C.GetTag sexpr -> mk_expr_string_pool builder pool sexpr
     | C.Noexpr -> pool
     | C.Captured _ -> pool
+    | C.Nomatch -> pool
   in
   let mk_defs_string_pool builder pool sdef =
     match sdef with

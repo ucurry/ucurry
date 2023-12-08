@@ -3,7 +3,7 @@ module A = Ast
 module P = Past
 module StringMap = Map.Make (String)
 
-let case_convert (program : A.def list) : P.def list  =
+let case_convert (program : A.def list) : P.def list =
   (* TODO: double check type casting *)
   let rec gen (scrutinee : A.expr) (ces : A.case_expr list) (resume : P.expr) :
       P.expr =
@@ -30,27 +30,22 @@ let case_convert (program : A.def list) : P.def list  =
         | A.PATS [] -> case_exp e
         | A.PATS _ -> failwith "not yet implemente PATS in Case")
     | [] -> resume
-
   and case_exp : A.expr -> P.expr = function
-    | A.Literal v -> P.Literal v 
-    | A.Construct (vcon_name, arg) ->
-        P.Construct (vcon_name, case_exp arg)
-    | A.Case (scrutinee, ces) -> (
-        match ces with
-        | (_, e) :: _ -> gen scrutinee ces (case_exp e)
-        | _ ->
-            failwith "at least one case in pattern matching should be provided")
+    | A.Literal v -> P.Literal v
+    | A.Construct (vcon_name, arg) -> P.Construct (vcon_name, case_exp arg)
+    | A.Case (_, []) ->
+        failwith "at least one case in pattern matching should be provided"
+    | A.Case (scrutinee, ces) -> gen scrutinee ces P.Nomatch
     | A.GetTag e -> P.GetTag (case_exp e)
     | A.GetField (e, vc) -> P.GetField (case_exp e, vc)
     | A.Unop (u, e) -> P.Unop (u, case_exp e)
-    | A.Binop (e1, binop, e2) -> P.Binop (case_exp e1, binop,case_exp e2)
+    | A.Binop (e1, binop, e2) -> P.Binop (case_exp e1, binop, case_exp e2)
     | A.Begin es -> P.Begin (List.map case_exp es)
-    | A.If (e1, e2, e3) -> 
-            P.If (case_exp e1, case_exp e2, case_exp e3)
-    | A.Let (bindings, e) -> 
-        let names, es = List.split bindings in 
-        let es' = List.map case_exp es in 
-        let bindings' = List.combine names es' in 
+    | A.If (e1, e2, e3) -> P.If (case_exp e1, case_exp e2, case_exp e3)
+    | A.Let (bindings, e) ->
+        let names, es = List.split bindings in
+        let es' = List.map case_exp es in
+        let bindings' = List.combine names es' in
         P.Let (bindings', case_exp e)
     | A.Var n -> P.Var n
     | A.Assign _ -> failwith " assign impossible "

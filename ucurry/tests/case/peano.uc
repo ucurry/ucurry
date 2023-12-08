@@ -7,8 +7,20 @@ Num one = (Addone zero);
     Addone (a) => (println 0)
   | _ => (println 1));
 
+(println
+  (case (Addone (Zero)) of 
+      Addone (Zero) => 2
+    | _ => 10
+    | Zero => 20));
 
---(case (Zero) of 
-    --Addone (Addone (Zero)) => 0
-  --| _ => 1
-  --| Zero => 2);
+(println
+  (case (Addone (Addone (Zero))) of 
+      Zero => 2
+    | Addone (Addone (Zero)) => 3));
+
+(println
+  (case (Addone (Addone (Zero))) of 
+      _ => 4
+    | Zero => 2
+    | Addone (Addone (Zero)) => 3));
+

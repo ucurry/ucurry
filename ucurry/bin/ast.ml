@@ -1,5 +1,5 @@
 (* Abstract Syntax Tree and functions for printing it *)
-open Typing 
+open Typing
 
 type binop =
   | Add
@@ -28,9 +28,8 @@ type uop =
   | GetField
   | GetPattern
 
-
 type pattern =
-  | VAR_PAT of name 
+  | VAR_PAT of name
   | CON_PAT of vcon_name * pattern (* !! *)
   | PATS of pattern list
   | WILDCARD
@@ -112,8 +111,7 @@ let rec string_of_pattern = function
   | CON_PAT (c, p) -> (
       match p with PATS [] -> c | _ -> c ^ "(" ^ string_of_pattern p ^ ")")
   | PATS [] -> ""
-  | PATS ps ->
-      String.concat ", " (List.map string_of_pattern ps)
+  | PATS ps -> String.concat ", " (List.map string_of_pattern ps)
   | WILDCARD -> "_"
 
 let rec string_of_typ = function
@@ -124,7 +122,7 @@ let rec string_of_typ = function
   | UNIT_TY -> "unit"
   | FUNCTION_TY (t1, t2) ->
       "(" ^ string_of_typ t1 ^ " -> " ^ string_of_typ t2 ^ ")"
-  | CONSTRUCTOR_TY (dt, vcon) -> dt ^ " " ^ vcon
+  | CONSTRUCTOR_TY dt -> dt
   | TUPLE_TY typs ->
       "(" ^ String.concat " * " (List.map string_of_typ typs) ^ ")"
 

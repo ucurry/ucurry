@@ -1,4 +1,4 @@
-open Typing 
+open Typing
 module L = Llvm
 module A = Ast
 module C = Cast

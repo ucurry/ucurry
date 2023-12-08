@@ -1,4 +1,4 @@
-open Typing 
+open Typing
 module A = Ast
 module StringSet = Set.Make (String)
 module StringMap = Map.Make (String)
@@ -20,24 +20,25 @@ and sx =
   | SBinop of sexpr * A.binop * sexpr
   | SUnop of A.uop * sexpr
   | SLambda of lambda
-  | SConstruct of vcon_id * sexpr
+  | SConstruct of (vcon_id * vcon_name) * sexpr
   | STuple of sexpr list (* TODO: redundant type annotation?? *)
   | SAt of sexpr * int
   | SGetTag of sexpr
   | SGetField of sexpr * int
   | SNoexpr
+  | SNomatch
 
 (* and scase_expr = pattern * sexpr *)
 and lambda = string list * sexpr
-(* 
-and pattern =
-  (* | PATTERNS of pattern list *)
-  | PATS of pattern list
-  | VAR_PAT of string
-  | CON_PAT of int * pattern
-  | WILDCARD
-(* | CONCELL of string * string
-   | NIL *) *)
+(*
+   and pattern =
+     (* | PATTERNS of pattern list *)
+     | PATS of pattern list
+     | VAR_PAT of string
+     | CON_PAT of int * pattern
+     | WILDCARD
+   (* | CONCELL of string * string
+      | NIL *) *)
 
 (* data constructor name becomes index *)
 and svalue =

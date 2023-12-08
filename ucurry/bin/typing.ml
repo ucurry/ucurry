@@ -1,7 +1,6 @@
-
-type name = string 
-type dt_name = string 
-type vcon_name = string 
+type name = string
+type dt_name = string
+type vcon_name = string
 type vcon_id = int
 type arg_name = string
 
@@ -12,5 +11,5 @@ type typ =
   | LIST_TY of typ
   | UNIT_TY
   | FUNCTION_TY of typ * typ
-  | CONSTRUCTOR_TY of dt_name * vcon_name 
+  | CONSTRUCTOR_TY of dt_name
   | TUPLE_TY of typ list

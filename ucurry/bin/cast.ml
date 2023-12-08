@@ -1,5 +1,5 @@
 (* Abstract Syntax Tree and functions for printing it *)
-open Typing 
+open Typing
 module A = Ast
 module S = Sast
 
@@ -17,13 +17,14 @@ and expr =
   | Unop of A.uop * sexpr
   | Captured of int
   | Closure of closure
-  | Construct of  int * sexpr
+  | Construct of (vcon_id * vcon_name) * sexpr
   (* | Case of sexpr * case_expr list *)
   | Tuple of sexpr list
   | At of sexpr * int
   | GetTag of sexpr
   | GetField of sexpr * int
   | Noexpr
+  | Nomatch
 
 (* and case_expr = S.pattern * sexpr *)
 and closure = (string list * sexpr) * sexpr list (* (lambda, captured list) *)
@@ -88,16 +89,16 @@ and string_of_sexpr (delim : string) ((ty, expr) : sexpr) : string =
     | Unop (o, e) -> A.string_of_uop o ^ " " ^ string_of_sexpr delim e
     | Captured i -> "Captured " ^ string_of_int i
     | Closure cl -> string_of_closure cl
-    | Construct (i, arg) -> 
+    | Construct ((_, vcon_name), arg) ->
         (* "(" ^ dt_name ^ " " ^ string_of_int vcon_i ^ " " ^ vcon_name ^ " " ^ (string_of_sexpr delim arg) ^ ")" *)
-        "(" ^ string_of_int i ^ " " ^ (string_of_sexpr delim arg) ^ ")"
+        "(" ^ vcon_name ^ " " ^ string_of_sexpr delim arg ^ ")"
     (* | Case _ -> failwith "String_of_expr Not implemented for case" *)
     | Tuple _ -> failwith "String_of_expr Not implemented for Tuple"
     | At _ -> failwith "String_of_exor Not implemented for at"
-    | GetField (e, i) -> 
-        string_of_sexpr delim e ^ "@" ^ string_of_int i 
-    | GetTag e ->  A.string_of_typ ty ^ " " ^ string_of_sexpr delim e 
+    | GetField (e, i) -> string_of_sexpr delim e ^ "@" ^ string_of_int i
+    | GetTag e -> A.string_of_typ ty ^ " " ^ string_of_sexpr delim e
     | Noexpr -> ""
+    | Nomatch -> "No match"
   in
   "(" ^ A.string_of_typ ty ^ "," ^ string_of_expr expr ^ ")"
 
@@ -106,7 +107,7 @@ let string_of_def = function
   | Function (ty, name, body) ->
       "fun: " ^ Ast.string_of_typ ty ^ ":\n" ^ name ^ " "
       ^ string_of_closure body
-  | Datatype (ty, cls) ->  
+  | Datatype (ty, cls) ->
       "datatype " ^ A.string_of_typ ty ^ " = "
       ^ String.concat " | " (List.map A.string_of_constructor cls)
       ^ ";"
