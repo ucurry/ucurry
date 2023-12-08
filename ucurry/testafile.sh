@@ -10,8 +10,7 @@ f=$1
 # dune exec ucurry -- -c < $f > $f.cast 
 
 
-
-# gcc -c nomatch.c
+gcc -c nomatch.c
 
 echo "Generating LLVM code to $f.ll"
 dune exec ucurry -- -s < $f > $f.ll 
