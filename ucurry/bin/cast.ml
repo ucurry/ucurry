@@ -96,19 +96,19 @@ and string_of_sexpr (delim : string) ((ty, expr) : sexpr) : string =
     | Tuple _ -> failwith "String_of_expr Not implemented for Tuple"
     | At _ -> failwith "String_of_exor Not implemented for at"
     | GetField (e, i) -> string_of_sexpr delim e ^ "@" ^ string_of_int i
-    | GetTag e -> A.string_of_typ ty ^ " " ^ string_of_sexpr delim e
+    | GetTag e -> string_of_typ ty ^ " " ^ string_of_sexpr delim e
     | Noexpr -> ""
     | Nomatch -> "No match"
   in
-  "(" ^ A.string_of_typ ty ^ "," ^ string_of_expr expr ^ ")"
+  "(" ^ string_of_typ ty ^ "," ^ string_of_expr expr ^ ")"
 
 let string_of_def = function
   | Val (name, e) -> name ^ " " ^ string_of_sexpr "" e
   | Function (ty, name, body) ->
-      "fun: " ^ Ast.string_of_typ ty ^ ":\n" ^ name ^ " "
+      "fun: " ^ string_of_typ ty ^ ":\n" ^ name ^ " "
       ^ string_of_closure body
   | Datatype (ty, cls) ->
-      "datatype " ^ A.string_of_typ ty ^ " = "
+      "datatype " ^ string_of_typ ty ^ " = "
       ^ String.concat " | " (List.map A.string_of_constructor cls)
       ^ ";"
   | Exp se -> string_of_sexpr "" se

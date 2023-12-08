@@ -39,7 +39,7 @@ let ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
         L.pointer_type (L.struct_type context taus)
     | LIST_TY subtype as l -> (
         (* the lltype will be a pointer to the struct that stores a cons cell *)
-        let ty_name = Ast.string_of_typ l in
+        let ty_name = string_of_typ l in
         match L.type_by_name llmodule ty_name with
         | Some ty -> L.pointer_type ty
         | None ->
@@ -48,6 +48,7 @@ let ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
             let tl_ty = L.pointer_type list_ty in
             let _ = L.struct_set_body list_ty [| hd_ty; tl_ty |] false in
             L.pointer_type list_ty)
+    | ANY_TY -> L.i32_type context
   in
   ltype_of ty
 
@@ -196,6 +197,7 @@ let ty_fmt_string ty (builder : L.llbuilder) : L.llvalue =
     | CONSTRUCTOR_TY s -> s
     | UNIT_TY -> " "
     | FUNCTION_TY _ -> raise (Impossible "function cannot be printed")
+    | ANY_TY -> "%d"
   in
   L.build_global_stringptr (string_matcher ty) "fmt" builder
 

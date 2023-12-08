@@ -1,6 +1,6 @@
 (* module Se = Semant *)
 
-type action = Ast | CAST | LAST | Default | LLVMIR
+type action = Ast | PAST | CAST | LAST | Default | LLVMIR
 
 let () =
   let action = ref Default in
@@ -8,6 +8,7 @@ let () =
   let speclist =
     [
       ("-a", Arg.Unit (set_action Ast), "Print the AST");
+      ("-p", Arg.Unit (set_action PAST), "Print the PAST");
       ("-l", Arg.Unit (set_action LAST), "Print the LAST");
       ("-c", Arg.Unit (set_action CAST), "Print the CAST");
       ("-s", Arg.Unit (set_action LLVMIR), "Print the LLVM");
@@ -27,6 +28,9 @@ let () =
   match !action with
   | Ast ->
       let _ = print_string (Ast.string_of_program curried) in
+      print_newline ()
+  | PAST -> 
+      let _ = print_string (Past.string_of_program past) in 
       print_newline ()
   (* | LAST ->
       let _ = print_string (Ast.string_of_program last) in

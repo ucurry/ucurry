@@ -8,6 +8,7 @@ let case_convert (program : A.def list) : P.def list =
   let rec gen (scrutinee : A.expr) (ces : A.case_expr list) (resume : P.expr) :
       P.expr =
     match ces with
+    | [] -> resume
     | (hd, e) :: rest -> (
         match hd with
         | A.VAR_PAT n -> P.Let ([ (n, case_exp scrutinee) ], case_exp e)
@@ -28,8 +29,20 @@ let case_convert (program : A.def list) : P.def list =
             let else_exp = gen scrutinee rest resume in
             P.If (cond_exp, then_exp, else_exp)
         | A.PATS [] -> case_exp e
-        | A.PATS _ -> failwith "not yet implemente PATS in Case")
-    | [] -> resume
+        | A.PATS ps -> 
+            let new_case acc_e i p = 
+                A.Case (A.At (scrutinee, i), (p,acc_e)::rest)
+            in
+            let new_e =  
+              Util.fold_right_i new_case e 0 ps 
+            in 
+            case_exp new_e
+            (* let re' = gen scrutinee rest resume in 
+            let compute_new_e acc_e i p = 
+              gen (A.At (scrutinee, i)) [(p, acc_e)] re' 
+            in 
+            Util.fold_right_di compute_new_e e (List.length ps) ps *)
+    )
   and case_exp : A.expr -> P.expr = function
     | A.Literal v -> P.Literal v
     | A.Construct (vcon_name, arg) -> P.Construct (vcon_name, case_exp arg)

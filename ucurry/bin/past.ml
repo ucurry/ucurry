@@ -53,7 +53,7 @@ let rec string_of_expr exp =
         string_of_expr e1 ^ " " ^ A.string_of_binop o ^ " " ^ string_of_expr e2
     | Unop (o, e) -> A.string_of_uop o ^ string_of_expr e
     | Lambda (t, vl, e) ->
-        "\\(" ^ A.string_of_typ t ^ ")" ^ String.concat " " vl ^ " -> "
+        "\\(" ^ string_of_typ t ^ ")" ^ String.concat " " vl ^ " -> "
         ^ string_of_expr e
     | Construct (n, e) -> n ^ string_of_expr e
     | Let (vl, e) ->
@@ -71,3 +71,23 @@ let rec string_of_expr exp =
   in
 
   match exp with Noexpr -> "" | _ -> "(" ^ flat_string_of_exp exp ^ ")"
+
+let string_of_constructor = function
+  | c, UNIT_TY -> c
+  | c, t -> c ^ " of " ^ string_of_typ t
+
+let rec string_of_def = function 
+  | Function (ty, f, args, e) ->
+      "fun : " ^ string_of_typ ty ^ ":\n" ^ f ^ " " ^ String.concat " " args
+      ^ " = " ^ string_of_expr e ^ ";"
+  | Datatype (ty, cls) ->
+      "datatype " ^ string_of_typ ty ^ " = "
+      ^ String.concat " | " (List.map string_of_constructor cls)
+      ^ ";"
+  | Exp e -> string_of_expr e ^ ";"
+  | Variable (ty, name, e) ->
+      string_of_typ ty ^ " " ^ name ^ " = " ^ string_of_expr e ^ ";"
+  | CheckTypeError e -> "check_type_error " ^ string_of_def e
+
+let string_of_program defs =
+    String.concat "\n" (List.map string_of_def defs)

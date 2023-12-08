@@ -224,7 +224,7 @@ let rec typ_of (vcon_env : S.vcon_env) (type_env : S.type_env) (exp : P.expr) :
         | IsNull, LIST_TY _ -> (BOOL_TY, S.SUnop (u, (tau, se)))
         | _ ->
             raise
-              (TypeError ("type error in unary operaion " ^ A.string_of_typ tau))
+              (TypeError ("type error in unary operaion " ^ string_of_typ tau))
         )
     | P.Lambda (lambda_tau, formals, body) ->
         let check_lambda tau fs env =
@@ -308,7 +308,7 @@ let rec typ_of (vcon_env : S.vcon_env) (type_env : S.type_env) (exp : P.expr) :
             let _, vcon_id, formal_tau = StringMap.find vcon_name vcon_env in
             (formal_tau, S.SGetField ((tau, e'), vcon_id))
         | _ -> raise (TypeError "not a datatype"))
-    | P.Nomatch -> (INT_TY, S.SNomatch)
+    | P.Nomatch -> (ANY_TY, S.SNomatch)
     (* evaluating this will result in exiting with non-zero code at runtime *)
   in
   ty exp
