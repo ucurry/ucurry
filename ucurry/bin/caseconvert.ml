@@ -5,14 +5,14 @@ module StringMap = Map.Make (String)
 
 let case_convert (program : A.def list) : P.def list =
   (* TODO: double check type casting *)
-  let rec gen (scrutinee : A.expr) (ces : A.case_expr list) (resume : P.expr) :
+  let rec gen (scrutinee : A.expr) (ces : P.case_expr list) (resume : P.expr) :
       P.expr =
     match ces with
     | [] -> resume
     | (hd, e) :: rest -> (
         match hd with
-        | A.VAR_PAT n -> P.Let ([ (n, case_exp scrutinee) ], case_exp e)
-        | A.WILDCARD -> case_exp e
+        | A.VAR_PAT n -> P.Let ([ (n, case_exp scrutinee) ], e)
+        | A.WILDCARD -> e
         | A.CON_PAT (vcon, p) ->
             let cond_exp =
               P.Binop
@@ -28,19 +28,32 @@ let case_convert (program : A.def list) : P.def list =
             in
             let else_exp = gen scrutinee rest resume in
             P.If (cond_exp, then_exp, else_exp)
-        | A.PATS [] -> case_exp e
-        | A.PATS ps ->
-            let new_case acc_e i p =
-              A.Case (A.At (scrutinee, i), (p, acc_e) :: rest)
+        | A.PATS [] -> e
+        | A.PATS ps -> 
+            let re' = gen scrutinee rest resume in 
+            let compute_new_e acc_e i p = 
+              gen (A.At (scrutinee, i)) [(p, acc_e)] re' 
+            in 
+            Util.fold_right_i compute_new_e e 0 ps
+            (* let rest_ces = [(A.WILDCARD, A.Case (scrutinee, rest))] in 
+            let new_case acc_e i p = 
+                A.Case (A.At (scrutinee, i), (p,acc_e)::rest_ces)
             in
-            let new_e = Util.fold_right_i new_case e 0 ps in
-            case_exp new_e)
+            let new_e =  
+              Util.fold_right_i new_case e 0 ps 
+            in 
+            case_exp new_e *)
+    )
   and case_exp : A.expr -> P.expr = function
     | A.Literal v -> P.Literal v
     | A.Construct (vcon_name, arg) -> P.Construct (vcon_name, case_exp arg)
     | A.Case (_, []) ->
         failwith "at least one case in pattern matching should be provided"
-    | A.Case (scrutinee, ces) -> gen scrutinee ces P.Nomatch
+    | A.Case (scrutinee, ces) -> 
+        let ps, es = List.split ces in 
+        let es' = List.map case_exp es in 
+        let ces' = List.combine ps es' in 
+        gen scrutinee ces' P.Nomatch
     | A.GetTag e -> P.GetTag (case_exp e)
     | A.GetField (e, vc) -> P.GetField (case_exp e, vc)
     | A.Unop (u, e) -> P.Unop (u, case_exp e)

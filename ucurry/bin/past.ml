@@ -26,6 +26,8 @@ type expr =
   | Noexpr
   | Nomatch
 
+type case_expr = A.pattern * expr 
+
 type def =
   | Function of typ * name * arg_name list * expr
   | Datatype of typ * constructor list (* !! *)
