@@ -49,12 +49,12 @@ let case_convert (program : A.def list) : P.def list =
         P.Let (bindings', case_exp e)
     | A.Var n -> P.Var n
     | A.Assign _ -> failwith " assign impossible "
-    | A.Apply _ -> failwith " apply impossible "
-    | A.Lambda _ -> failwith " lambda impossible "
+    | A.Apply (e, es) ->  P.Apply (case_exp e, List.map case_exp es)
+    | A.Lambda (tau, arg_names,body) -> P.Lambda (tau, arg_names, case_exp body)
     | A.Thunk _ -> failwith " thunk impossible "
     (* | A.Case _ -> failwith " case impossible " *)
     | A.Tuple es -> P.Tuple (List.map case_exp es)
-    | A.At _ -> failwith "at impossible"
+    | A.At (e, idx) -> P.At (case_exp e, idx)
     | A.Noexpr -> P.Noexpr
   in
 
