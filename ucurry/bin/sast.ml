@@ -20,8 +20,8 @@ and sx =
   | SBinop of sexpr * A.binop * sexpr
   | SUnop of A.uop * sexpr
   | SLambda of lambda
-  | SConstruct of int * sexpr
-  | STuple of sexpr list (* redundant type annotation?? *)
+  | SConstruct of vcon_id * sexpr
+  | STuple of sexpr list (* TODO: redundant type annotation?? *)
   | SAt of sexpr * int
   | SGetTag of sexpr
   | SGetField of sexpr * int

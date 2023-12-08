@@ -12,7 +12,7 @@ type semant_envs = {
   vcon_env : S.vcon_env;
       (* used to replace value constructor with
          (datatype name, index, argument type) *)
-  vcon_sets : S.vcon_sets;
+  (* vcon_sets : S.vcon_sets; *)
       (* stores the datatype and its set of value constructor
          for checking ehaustive case matching *)
 }
@@ -107,8 +107,7 @@ let rec to_spattern (vcon_env : S.vcon_env) (c : A.pattern) =
 (* | A.CONCELL (x, xs) -> S.CONCELL (x, xs)
    | A.NIL -> S.NIL *) *)
 
-let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
-    (type_env : S.type_env) (exp : P.expr) : typ * S.sx =
+let rec typ_of (vcon_env : S.vcon_env) (type_env : S.type_env) (exp : P.expr) : typ * S.sx =
   let rec ty = function
     | P.Literal l ->
         let rec lit_ty = function
@@ -149,7 +148,7 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let argty, arge = ty arg in
         let final_arg_tau = get_checked_types formalty argty in
         (retty, S.SApply ((ft, fe), [ (final_arg_tau, arge) ]))
-    | P.Apply (e, es) ->
+    | P.Apply (_, es) ->
         raise
           (U.Impossible
              ("can only take 1 arg received: "
@@ -174,13 +173,13 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let taus, ses = List.split (List.map ty es) in
         let newEnv = bindAll vars taus type_env in
         let bind_ses = List.combine vars @@ List.combine taus ses in
-        let body_tau, body_es = typ_of vcon_env vcon_sets newEnv e in
+        let body_tau, body_es = typ_of vcon_env newEnv e in
         (body_tau, S.SLet (bind_ses, (body_tau, body_es)))
     | P.Begin [] -> (UNIT_TY, S.SBegin [])
     | P.Begin es ->
         let ses = List.map ty es in
         (U.o U.fst (U.o List.hd List.rev) ses, S.SBegin ses)
-    | P.Binop (e1, b, e2) as exp -> (
+    | P.Binop (e1, b, e2) -> (
         let tau1, se1 = ty e1 in
         let tau2, se2 = ty e2 in
         let same = eqType tau1 tau2 in
@@ -228,12 +227,12 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let check_lambda tau fs env =
           match (tau, fs) with
           | _, [] ->
-              let tau', se = typ_of vcon_env vcon_sets env body in
+              let tau', se = typ_of vcon_env env body in
               let final_tau = get_checked_types tau' tau in
               (final_tau, se)
           | FUNCTION_TY (tau1, tau2), hd :: [] ->
               let new_env = StringMap.add hd tau1 env in
-              let tau', se = typ_of vcon_env vcon_sets new_env body in
+              let tau', se = typ_of vcon_env new_env body in
               let final_tau = get_checked_types tau' tau2 in
               (tau, S.SLambda ([ hd ], (final_tau, se)))
           | FUNCTION_TY (_, _), hd :: tl ->
@@ -257,8 +256,8 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let tau, e = ty exp in
         (FUNCTION_TY (UNIT_TY, tau), S.SLambda ([ "unit" ], (tau, e)))
     | P.Noexpr -> (UNIT_TY, S.SNoexpr)
-    | P.Construct ((dt_name, vcon_id, vcon_name), arg) ->
-        let _,_,formal_tau = StringMap.find vcon_name vcon_env in  (* TODO: feels a little redundant *)
+    | P.Construct (vcon_name, arg) ->
+        let dt_name,vcon_id,formal_tau = StringMap.find vcon_name vcon_env in  (* TODO: feels a little redundant *)
         let arg_tau, sarg = ty arg in
         let _ = SemantUtil.eqType arg_tau formal_tau in
         ( CONSTRUCTOR_TY (dt_name, vcon_name),
@@ -310,12 +309,12 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
 
 let rec typ_def (def : P.def) (semant_envs : semant_envs) : S.sdef * S.type_env
     =
-  let { type_env; vcon_env; vcon_sets } = semant_envs in
+  let { type_env; vcon_env } = semant_envs in
   let ty = function
     | P.Function (tau, funname, args, body) ->
         let new_env = bindUnique funname tau type_env in
         let tau', sx =
-          typ_of vcon_env vcon_sets new_env (Lambda (tau, args, body))
+          typ_of vcon_env new_env (Lambda (tau, args, body))
         in
         let final_tau = get_checked_types tau tau' in
         let match_retrun = function
@@ -331,11 +330,11 @@ let rec typ_def (def : P.def) (semant_envs : semant_envs) : S.sdef * S.type_env
            in
            (S.SDatatype (tau, val_cons), bindAllUnique vcons func_taus type_env) *)
     | P.Variable (tau, name, e) ->
-        let tau', se = typ_of vcon_env vcon_sets type_env e in
+        let tau', se = typ_of vcon_env type_env e in
         let var_tau = get_checked_types tau tau' in
         (S.SVal (name, (var_tau, se)), bindUnique name tau type_env)
     | P.Exp e ->
-        let tau, e' = typ_of vcon_env vcon_sets type_env e in
+        let tau, e' = typ_of vcon_env type_env e in
         (S.SExp (tau, e'), type_env)
     | P.CheckTypeError d -> (
         try
@@ -345,9 +344,19 @@ let rec typ_def (def : P.def) (semant_envs : semant_envs) : S.sdef * S.type_env
   in
   ty def
 
-let semant_check (defs : P.def list) (vcon_env : S.vcon_env) : S.sprogram * S.type_env =
+let semant_check (defs : P.def list) : S.sprogram * S.type_env =
+
+  let add_vcons (vcon_env : S.vcon_env) (def : P.def) : S.vcon_env =
+    match def with
+    | P.Datatype (CONSTRUCTOR_TY (dt_name, _), cons) ->
+        let add (vcon, arg_tau) i env =
+          StringMap.add vcon (dt_name, i, arg_tau) env
+        in
+        Util.fold_left_i add 1 vcon_env cons
+    | _ -> vcon_env
+  in 
 (* TODO: completely migrate to Caseconvert *)
-  let add_vcons (vcon_env, vcon_sets) (def : P.def) =
+  (* let add_vcons (vcon_env, vcon_sets) (def : P.def) =
     match def with
     | P.Datatype (CONSTRUCTOR_TY (con_name, _), cons) ->
         let con_names, _ = List.split cons in
@@ -365,15 +374,14 @@ let semant_check (defs : P.def list) (vcon_env : S.vcon_env) : S.sprogram * S.ty
         let new_vcon_sets = StringMap.add con_name vcon_set vcon_sets in
         (new_vcon_env, new_vcon_sets)
     | _ -> (vcon_env, vcon_sets)
-  in
+  in *)
 
-  let vcon_env, vcon_sets =
-    List.fold_left add_vcons (StringMap.empty, StringMap.empty) defs
-  in
+  let vcon_env = List.fold_left add_vcons StringMap.empty defs in
+
   let sdefs, global_env =
     List.fold_left
       (fun (sdefs, type_env) def ->
-        let sdef, type_env' = typ_def def { type_env; vcon_env; vcon_sets } in
+        let sdef, type_env' = typ_def def { type_env; vcon_env } in
         (sdef :: sdefs, type_env'))
       ([], StringMap.empty) defs
   in

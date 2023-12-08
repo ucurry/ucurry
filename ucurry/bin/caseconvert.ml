@@ -1,23 +1,9 @@
-open Typing 
+(* open Typing  *)
 module A = Ast
 module P = Past
 module StringMap = Map.Make (String)
 
-type dt_name = string
-type vcon_env = (dt_name * int * typ) StringMap.t
-
-let add_vcon (vcon_env : vcon_env) (def : A.def) : vcon_env =
-  match def with
-  | A.Datatype (CONSTRUCTOR_TY (dt_name, _), cons) ->
-      let add (vcon, arg_tau) i env =
-        StringMap.add vcon (dt_name, i, arg_tau) env
-      in
-      Util.fold_left_i add 1 vcon_env cons
-  | _ -> vcon_env
-
-let case_convert (program : A.def list) : P.def list * vcon_env =
-  let vcon_env = List.fold_left add_vcon StringMap.empty program in
-
+let case_convert (program : A.def list) : P.def list  =
   (* TODO: double check type casting *)
   let rec gen (scrutinee : A.expr) (ces : A.case_expr list) (resume : P.expr) :
       P.expr =
@@ -33,7 +19,6 @@ let case_convert (program : A.def list) : P.def list * vcon_env =
                   A.Equal,
                   P.Literal (A.STRING vcon) )
             in
-            (* let _, vcon_id, _ = StringMap.find vcon vcon_env in *)
             let then_exp =
               gen
                 (A.GetField (scrutinee, vcon))
@@ -49,8 +34,7 @@ let case_convert (program : A.def list) : P.def list * vcon_env =
   and case_exp : A.expr -> P.expr = function
     | A.Literal v -> P.Literal v 
     | A.Construct (vcon_name, arg) ->
-        let dt_name, vcon_id, _ = StringMap.find vcon_name vcon_env in
-        P.Construct ((dt_name, vcon_id, vcon_name), case_exp arg)
+        P.Construct (vcon_name, case_exp arg)
     | A.Case (scrutinee, ces) -> (
         match ces with
         | (_, e) :: _ -> gen scrutinee ces (case_exp e)
@@ -88,5 +72,4 @@ let case_convert (program : A.def list) : P.def list * vcon_env =
     | A.CheckTypeError d -> P.CheckTypeError (case_def d)
   in
 
-  let past = List.map case_def program in
-  (past, vcon_env)
+  List.map case_def program

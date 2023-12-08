@@ -1,6 +1,5 @@
 (* module Se = Semant *)
 
-open Typing 
 type action = Ast | CAST | LAST | Default | LLVMIR
 
 let () =
@@ -21,10 +20,9 @@ let () =
   let lexbuf = Lexing.from_channel !channel in
   let ast = Parser.program Scanner.token lexbuf in
   let curried = Curry.curry ast in
-  let past, vcon_env = Caseconvert.case_convert curried in
+  let past = Caseconvert.case_convert curried in
   (* let last = Lazy.lazy_convert curried in *)
-  (* let sast, _ = Semant.semant_check past in *)
-  let sast, _ = Semant.semant_check past vcon_env in
+  let sast, _ = Semant.semant_check past in
   (* commented out path for lazy  *)
   match !action with
   | Ast ->

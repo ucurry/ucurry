@@ -17,7 +17,7 @@ type expr =
   | Unop of uop * expr
   | Lambda of typ * arg_name list * expr
   | Thunk of expr
-  | Construct of (string * int * string) * expr (* !! (dtname, vcon_id, vcon_name) *)
+  | Construct of vcon_name * expr 
   | Tuple of expr list (* !! *)
   | At of expr * int
   | GetTag of expr (* return a string *)
@@ -52,7 +52,7 @@ let rec string_of_expr exp =
     | Lambda (t, vl, e) ->
         "\\(" ^ A.string_of_typ t ^ ")" ^ String.concat " " vl ^ " -> "
         ^ string_of_expr e
-    | Construct ((_,_,n), e) -> n ^ string_of_expr e
+    | Construct (n, e) -> n ^ string_of_expr e
     | Let (vl, e) ->
         "let "
         ^ String.concat ", "

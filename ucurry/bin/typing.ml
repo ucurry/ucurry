@@ -1,7 +1,8 @@
 
 type name = string 
-type vcon_name = string 
 type dt_name = string 
+type vcon_name = string 
+type vcon_id = int
 type arg_name = string
 
 type typ =
