@@ -120,7 +120,7 @@ pattern:
   | NAME                { VAR_PAT $1 }
   | WILDCARD            { WILDCARD }
   | LBRACE pattern_tuple RBRACE          {PATS (List.rev $2)}
-  | CAPNAME                              { CON_PAT ($1, PATS []) }
+  | CAPNAME                              { CON_PAT ($1, WILDCARD) }
   | CAPNAME  pattern                     { CON_PAT ($1, $2)}
 
 pattern_tuple:

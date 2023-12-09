@@ -63,9 +63,7 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
   let rec ty = function
     | A.Literal l ->
         let rec lit_ty = function
-          | A.INT i -> 
-            let _ = print_string "int" in 
-            (INT_TY, S.INT i)
+          | A.INT i -> (INT_TY, S.INT i)
           | A.STRING s -> (STRING_TY, S.STRING s)
           | A.EMPTYLIST tau -> (LIST_TY tau, S.EMPTYLIST tau)
           | A.LIST (hd, tl) ->
@@ -181,27 +179,15 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         | _ -> raise (TypeError "access field from non-tuple value"))
     | A.Noexpr -> (UNIT_TY, S.SNoexpr)
     | A.Case (scrutinee, cases) ->
-        let scrutinee_sexp = ty scrutinee in
-        let scrutinee_type, _ = scrutinee_sexp in
-        let patterns, es = List.split cases in
-        let case_envs =
-          List.map (new_binds_from_legal_pat type_env scrutinee_type) patterns
-        in
-        let new_envs =
-          List.map (StringMap.union (fun _ _ v2 -> Some v2) type_env) case_envs
-        in
-        let taus, case_exps =
-          List.split (List.map2 (typ_of vcon_env vcon_sets) new_envs es)
-        in
-        let scases = List.combine patterns case_exps in
-        let final_tau =
-          List.fold_left get_checked_types (List.hd taus) (List.tl taus)
-        in
-        let final_scases =
-          List.map (fun (pat, se) -> (pat, (final_tau, se))) scases
-        in
-        (* Patconvert.case_convert scrutinee_sexp final_scases vcon_env *)
-        final_tau, S.SNoexpr 
+        let tau, _ = ty scrutinee in
+        let pats, _ = List.split cases in
+        let _ = Patconvert.legal_pats tau pats vcon_env in
+        let desugared = Patconvert.case_convert scrutinee cases vcon_env tau in
+        (* print_string (A.string_of_expr exp); *)
+        (* print_newline(); *)
+        (* (ANY_TY, S.SNoexpr) *)
+        (* TODO: placeholder *)
+        ty desugared
     | A.Construct (vcon_name, arg) ->
         let dt_name, vcon_id, formal_tau = StringMap.find vcon_name vcon_env in
         let arg_tau, sarg = ty arg in

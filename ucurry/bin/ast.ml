@@ -138,7 +138,7 @@ let rec string_of_expr exp =
         ^ String.concat " " (List.map string_of_expr el)
         ^ ")"
     | If (e1, e2, e3) ->
-        "if " ^ string_of_expr e1 ^ " then " ^ string_of_expr e2 ^ " else "
+        "if " ^ string_of_expr e1 ^ " \n then " ^ string_of_expr e2 ^ " \n else "
         ^ string_of_expr e3
     | Begin el ->
         "(begin " ^ String.concat ", " (List.map string_of_expr el) ^ ")"
