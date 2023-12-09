@@ -25,10 +25,11 @@ and sx =
   | SAt of sexpr * int
   | SGetTag of sexpr
   | SGetField of sexpr * int
+  (* | SCase of sexpr * scase_expr list *)
   | SNoexpr
   | SNomatch
 
-(* and scase_expr = pattern * sexpr *)
+and scase_expr = A.pattern * sexpr
 and lambda = string list * sexpr
 (*
    and pattern =

@@ -5,34 +5,36 @@ type binop = A.binop
 type uop = A.uop
 type value = A.value
 
-type expr =
+type sexpr = typ * expr
+
+and expr =
   | Literal of value
   | Var of name
-  | Assign of name * expr
-  | Apply of expr * expr list
-  | If of expr * expr * expr
-  | Let of (name * expr) list * expr
-  | Begin of expr list
-  | Binop of expr * binop * expr
-  | Unop of uop * expr
-  | Lambda of typ * arg_name list * expr
-  | Thunk of expr
-  | Construct of vcon_name * expr
-  | Tuple of expr list (* !! *)
-  | At of expr * int
-  | GetTag of expr (* return a string *)
+  | Assign of name * sexpr
+  | Apply of sexpr * sexpr list
+  | If of sexpr * sexpr * sexpr
+  | Let of (name * sexpr) list * sexpr
+  | Begin of sexpr list
+  | Binop of sexpr * binop * sexpr
+  | Unop of uop * sexpr
+  | Lambda of typ * arg_name list * sexpr
+  | Thunk of sexpr
+  | Construct of vcon_name * sexpr
+  | Tuple of sexpr list (* !! *)
+  | At of sexpr * int
+  | GetTag of sexpr (* return a string *)
   | GetField of
-      expr * vcon_name (* return the field value of the value constructor *)
+      sexpr * vcon_name (* return the field value of the value constructor *)
   | Noexpr
   | Nomatch
 
-type case_expr = A.pattern * expr 
+type case_expr = A.pattern * sexpr
 
 type def =
-  | Function of typ * name * arg_name list * expr
+  | Function of typ * name * arg_name list * sexpr
   | Datatype of typ * constructor list (* !! *)
-  | Variable of typ * name * expr
-  | Exp of expr
+  | Variable of typ * name * sexpr
+  | Exp of sexpr
   | CheckTypeError of def
 
 and constructor = vcon_name * typ (* !! *)
@@ -72,7 +74,7 @@ let rec string_of_expr exp =
     | GetTag e -> string_of_expr e ^ ".T"
   in
 
-  match exp with Noexpr -> "" | _ -> "(" ^ flat_string_of_exp exp ^ ")"
+  match exp with _, Noexpr -> "" | _, e -> "(" ^ flat_string_of_exp e ^ ")"
 
 let string_of_constructor = function
   | c, UNIT_TY -> c
