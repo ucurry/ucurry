@@ -63,7 +63,9 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
   let rec ty = function
     | A.Literal l ->
         let rec lit_ty = function
-          | A.INT i -> (INT_TY, S.INT i)
+          | A.INT i -> 
+            let _ = print_string "int" in 
+            (INT_TY, S.INT i)
           | A.STRING s -> (STRING_TY, S.STRING s)
           | A.EMPTYLIST tau -> (LIST_TY tau, S.EMPTYLIST tau)
           | A.LIST (hd, tl) ->
@@ -198,8 +200,8 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let final_scases =
           List.map (fun (pat, se) -> (pat, (final_tau, se))) scases
         in
-        failwith "case-convert not implemented"
-        (* final_tau, S.SCase (scrutinee_sexp, final_scases) *)
+        (* Patconvert.case_convert scrutinee_sexp final_scases vcon_env *)
+        final_tau, S.SNoexpr 
     | A.Construct (vcon_name, arg) ->
         let dt_name, vcon_id, formal_tau = StringMap.find vcon_name vcon_env in
         let arg_tau, sarg = ty arg in
@@ -210,7 +212,9 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let ses = List.map ty es in
         let taus, _ = List.split ses in
         (TUPLE_TY taus, S.STuple ses)
-    | A.Thunk _ -> failwith ""
+    | A.Thunk body ->
+        let tau, e = ty body in
+        (FUNCTION_TY (UNIT_TY, tau), S.SLambda ([ "unit" ], (tau, e)))
     | A.GetTag e ->
         let tau, e' = ty e in
         ignore

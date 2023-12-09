@@ -1,4 +1,4 @@
-(* open Typing  *)
+(* open Typing 
 module A = Ast
 module P = Past
 module StringMap = Map.Make (String)
@@ -84,4 +84,4 @@ let case_convert (program : A.def list) : P.def list =
     | A.CheckTypeError d -> P.CheckTypeError (case_def d)
   in
 
-  List.map case_def program
+  List.map case_def program *)

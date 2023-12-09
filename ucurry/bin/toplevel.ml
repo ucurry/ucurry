@@ -23,6 +23,7 @@ let () =
   let ast = Parser.program Scanner.token lexbuf in
   let curried = Curry.curry ast in
   let last = Lazy.lazy_convert curried in
+  (* let _ = print_string @@ Ast.string_of_program last in  *)
   let sast, _ = Semant.semant_check last in
   (* commented out path for lazy  *)
   match !action with
