@@ -2,6 +2,7 @@ open Typing
 open Util
 module S = Sast
 module StringMap = Map.Make (String)
+module StringSet = Set.Make (String)
 module SU = SemantUtil
 
 type arg_typ = typ
@@ -21,16 +22,66 @@ let rec match_all (p : Ast.pattern) =
   | A.CON_PAT _ -> false
   | A.PATS ps -> List.for_all match_all ps
 
+let rec is_exhaustive (vcon_sets : S.vcon_sets) (vcon_env : S.vcon_env)
+    (scrutinee_tau : typ) (pats : A.pattern list) =
+  let exhaust = is_exhaustive vcon_sets vcon_env in
+  if List.exists match_all pats then ()
+  else
+    match scrutinee_tau with
+    | TUPLE_TY _ ->
+        (* HACK : too much work to check exhaustive pattern on tuple *)
+        (* let add_patterns matrix p  = match p with
+             A.PATTERNS ps -> ps :: matrix
+           | A.WILDCARD -> matrix
+           | A.VAR_PAT _ -> matrix
+           | _ -> raise (TypeError ("tuple cannot be matched on " ^ A.string_of_pattern p)) in
+           let pat_matric = List.fold_left add_patterns [] pats in *)
+        raise
+          (SU.TypeError
+             "A pattern matching expression for a tuple must have a fall \
+              through case")
+    | CONSTRUCTOR_TY name ->
+        let must_have = StringMap.find name vcon_sets in
+        let rec collect_all pats must_have collected =
+          match pats with
+          | [] -> (must_have, collected)
+          | A.CON_PAT (name, p) :: rest ->
+              let must_have' = StringSet.remove name must_have
+              and collected' =
+                match StringMap.find_opt name collected with
+                | Some ps -> StringMap.add name (p :: ps) collected
+                | None -> StringMap.add name [ p ] collected
+              in
+              collect_all rest must_have' collected'
+          | _ :: rest -> collect_all rest must_have collected
+        in
+        let remain_pat, collected =
+          collect_all pats must_have StringMap.empty
+        in
+        let check_sub_pat name pats =
+          let _, _, arg_typ = StringMap.find name vcon_env in
+          exhaust arg_typ pats
+        in
+        if StringSet.is_empty remain_pat then
+          StringMap.iter check_sub_pat collected
+        else raise (SU.TypeError "pattern matching non-ehaustive")
+    | INT_TY -> raise (SU.TypeError "an integer is not matched to any pattern")
+    | LIST_TY _ ->
+        raise (SU.TypeError "an integer is not matched to any pattern")
+    | BOOL_TY -> raise (SU.TypeError "an boolean is not matched to any pattern")
+    | STRING_TY ->
+        raise (SU.TypeError "an string is not matched to any pattern")
+    | UNIT_TY -> raise (SU.TypeError "cannot pattern match on unit")
+    | FUNCTION_TY _ -> raise (SU.TypeError "cannot pattern match on function")
+    | ANY_TY -> raise (SU.TypeError "any type cannot pattern match on function")
+
 (* a => a + 2 becomes a => let a = scrutinee in a + 2 *)
 let rec get_binds (scrutinee : A.expr) (pat : Ast.pattern) :
     (string * A.expr) list =
   let rec bind_pats scrutinee pat =
     match pat with
     | A.CON_PAT (name, pat) -> bind_pats (A.GetField (scrutinee, name)) pat
-    | A.VAR_PAT a -> (
-        match scrutinee with
-        | A.GetField _ | A.At _ -> [ (a, scrutinee) ]
-        | _ -> [ (a, A.Thunk scrutinee) ])
+    | A.VAR_PAT a -> [ (a, scrutinee) ]
     | A.WILDCARD -> []
     | A.PATS ps ->
         let bindings =
@@ -48,7 +99,7 @@ let legal_pats tau pats vcon_env =
     | _, A.VAR_PAT _ -> ()
     | CONSTRUCTOR_TY name, A.CON_PAT (vcon_name, pat) ->
         let dt_name, _, arg_typ = StringMap.find vcon_name vcon_env in
-        if dt_name = name then legal_pat (de_thunk arg_typ) pat
+        if dt_name = name then legal_pat arg_typ pat
         else
           raise
             (SU.TypeError
@@ -56,7 +107,7 @@ let legal_pats tau pats vcon_env =
               ^ " datatype, got " ^ dt_name ^ "data type"))
     | TUPLE_TY taus, A.PATS ps -> (
         try
-          ignore (List.map2 legal_pat (List.map de_thunk taus) ps);
+          ignore (List.map2 legal_pat taus ps);
           ()
         with Invalid_argument _ ->
           raise (SU.TypeError "tuple pattern and scrutine length unmatch"))
@@ -90,80 +141,54 @@ let remove_unmatch cases =
    from an all matched expression if there is any *)
 let desugar (scrutinee : A.expr) (cases : A.case_expr list) : A.case_expr list =
   let pats, _ = List.split cases in
-  let add_let (p, e) = match get_binds scrutinee p with 
-    [] -> e 
-    | bs -> A.Let (bs, e) in 
+  let add_let (p, e) =
+    match get_binds scrutinee p with [] -> e | bs -> A.Let (bs, e)
+  in
   List.combine pats (List.map add_let cases)
 
-type tree =
-  | Test of (A.expr * tree) list * tree option
-  | Choice of A.expr * tree * tree
-  | Leaf of A.expr
+type tree = Test of (A.expr * tree) list * tree | Leaf of A.expr | Failure
 
-let rec print_tree = function 
- | Test (tests, default) -> 
-    print_string "TEST-NODE{";
-    print_newline ();
-    let print_single (cond, tree) = 
-    print_string "TEST-CONDITION";
-      print_string (A.string_of_expr cond) ; 
-      print_newline ();
-      print_tree tree; 
-      print_newline ();
-    in List.iter print_single tests; 
-      print_string "DEFAULT:" ; 
-      (match default with None -> print_string "none" | Some tree -> print_tree tree);
-      print_string "}";
-      prerr_newline ();
-  | Leaf e -> (
-      print_string " LEAF-NODE {"; 
-      print_string @@ A.string_of_expr e; 
-      print_string "}"; 
-      print_newline ();)
-  | Choice (cond, tree1, tree2)  -> (
-    print_string "CHOICE-NODE {";
-    print_newline ();
-    print_string (A.string_of_expr cond) ; 
-    print_newline ();
-    print_tree tree1; 
-    print_tree tree2; 
-    print_string "}"; 
-    print_newline ();)
+let rec print_tree = function
+  | Test (tests, default) ->
+      print_endline "TEST-NODE{";
+      let print_single (cond, tree) =
+        print_endline "TEST-CONDITION";
+        print_endline (A.string_of_expr cond);
+        print_tree tree
+      in
+      List.iter print_single tests;
+      print_endline "DEFAULT:";
+      print_tree default;
+      print_endline "}";
+      prerr_newline ()
+  | Failure -> print_endline "faiure"
+  | Leaf e ->
+      print_endline " LEAF-NODE {";
+      print_endline @@ A.string_of_expr e;
+      print_endline "}";
+      print_newline ()
 
 let rec compile_tree tree =
-  print_tree tree;
   match tree with
   | Leaf e -> e
-  | Choice (cond, e1, e2) ->
-      let then_exp = compile_tree e1 and else_exp = compile_tree e2 in
-      A.If (cond, then_exp, else_exp)
-  | Test ([], Some default) -> compile_tree default
-  | Test ([], None) ->
-      failwith
-        "decision treee should never have a test node with no branch and no \
-         default tree"
-  | Test (_ :: [], None) ->
-      failwith
-        "decision tree should never have a test node with only one branch and \
-         no default tree"
-  | Test ([ (cond, tree') ], Some default) ->
+  | Test ([], default) -> compile_tree default
+  | Test ([ (cond, tree') ], default) ->
       let then_exp = compile_tree tree' and else_exp = compile_tree default in
       A.If (cond, then_exp, else_exp)
   | Test ((cond, tree') :: rest, default) ->
       let then_exp = compile_tree tree'
       and else_exp = compile_tree (Test (rest, default)) in
       A.If (cond, then_exp, else_exp)
+  | Failure -> raise (Impossible "impossible")
 
 let rec match_compile (scrutinee : A.expr) (cases : A.case_expr list)
-    (vcon_env : S.vcon_env) (tau : typ) : tree =
+    (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets) (tau : typ) : tree =
   (* Assuming that the list of cases is exahustive *)
-  let rec match_resume 
-      (scrutinee : A.expr) 
-      (cases : A.case_expr list)
-      (tau : typ) (resume : tree option) : tree =
+  let rec match_resume (scrutinee : A.expr) (cases : A.case_expr list)
+      (tau : typ) (resume : tree) : tree =
     let shrinked_cases, default = remove_unmatch cases in
     let nearest_resume =
-      match default with Some e -> Some (Leaf e) | None -> None
+      match default with Some e -> Leaf e | None -> resume
     in
     match tau with
     | CONSTRUCTOR_TY _ ->
@@ -192,22 +217,60 @@ let rec match_compile (scrutinee : A.expr) (cases : A.case_expr list)
               (A.GetField (scrutinee, vcon_name))
               (List.rev sub_cases) arg_typ nearest_resume )
         in
-        ( match nearest_resume with 
-          Some _ ->  Test (List.map build_sub_tree (StringMap.bindings vcon_to_cases), nearest_resume)
-        | None ->   Test (List.map build_sub_tree (StringMap.bindings vcon_to_cases), resume))
-
-    | TUPLE_TY _ ->
-        failwith "pattern matching for tuple has not been implemented"
+        Test
+          ( List.map build_sub_tree (StringMap.bindings vcon_to_cases),
+            nearest_resume )
+    | TUPLE_TY _ -> (
+        let rec match_pat (e : A.expr) (pat : A.pattern) (matched : tree)
+            (resume : tree) : tree =
+          match pat with
+          | A.CON_PAT (name, pat) ->
+              let matched' =
+                match_pat (A.GetField (e, name)) pat matched resume
+              in
+              let cond =
+                A.Binop (A.GetTag e, A.Equal, A.Literal (A.STRING name))
+              in
+              Test ([ (cond, matched') ], resume)
+          | A.PATS ps -> match_pats e 0 ps matched resume
+          | A.VAR_PAT _ -> matched
+          | A.WILDCARD -> matched
+        and match_pats (tuple : A.expr) (idx : int) (pats : A.pattern list)
+            (matched : tree) (default : tree) : tree =
+          if List.length pats = idx then matched
+          else
+            match List.nth pats idx with
+            | A.WILDCARD | A.VAR_PAT _ ->
+                match_pats tuple (idx + 1) pats matched default
+            | p ->
+                let continue =
+                  match_pats tuple (idx + 1) pats matched default
+                in
+                match_pat (A.At (tuple, idx)) p continue default
+        in
+        match cases with
+        | [] -> resume
+        | [ (p, matched_e) ] -> match_pat scrutinee p (Leaf matched_e) resume
+        | (p, matched_e) :: rest ->
+            let resume' = match_resume scrutinee rest tau resume in
+            match_pat scrutinee p (Leaf matched_e) resume')
     | LIST_TY _ -> failwith "pattern matching for list has not been implemented"
-    | INT_TY | STRING_TY | BOOL_TY | UNIT_TY | FUNCTION_TY _ | ANY_TY -> 
-      (match default 
-       with Some e -> Leaf e
-       | None -> (match resume with Some tree -> tree 
-                  | None -> raise (Impossible "atomic type should have fall throw case")))
+    | INT_TY | STRING_TY | BOOL_TY | UNIT_TY | FUNCTION_TY _ | ANY_TY -> (
+        match default with Some e -> Leaf e | None -> resume)
   in
   let desugared = desugar scrutinee cases in
-  match_resume scrutinee desugared tau None
+  let cases, default = remove_unmatch desugared in
+  let ps, _ = List.split cases in
+  let resume =
+    match default with
+    | Some e -> Leaf e
+    | None ->
+        let _ = is_exhaustive vcon_sets vcon_env tau ps in
+        Leaf (Util.snd @@ List.hd @@ List.rev cases)
+  in
+
+  match_resume scrutinee desugared tau resume
 
 let rec case_convert (scrutinee : A.expr) (cases : A.case_expr list)
-    (vcon_env : S.vcon_env) (tau : typ) =
-  compile_tree @@ match_compile scrutinee cases vcon_env tau
+    (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets) (tau : typ) =
+  compile_tree @@ match_compile scrutinee cases vcon_env vcon_sets tau

@@ -182,9 +182,11 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let tau, _ = ty scrutinee in
         let pats, _ = List.split cases in
         let _ = Patconvert.legal_pats tau pats vcon_env in
-        let desugared = Patconvert.case_convert scrutinee cases vcon_env tau in
-        (* print_string (A.string_of_expr exp); *)
-        (* print_newline(); *)
+        let desugared =
+          Patconvert.case_convert scrutinee cases vcon_env vcon_sets tau
+        in
+        (* print_endline (A.string_of_expr desugared);
+           print_newline (); *)
         (* (ANY_TY, S.SNoexpr) *)
         (* TODO: placeholder *)
         ty desugared
@@ -206,7 +208,7 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         ignore
           (match tau with
           | CONSTRUCTOR_TY _ -> 1
-          | _ -> raise (TypeError "not a datatype"));
+          | _ -> raise (TypeError "not a datatype in GetTag"));
         (STRING_TY, S.SGetTag (tau, e'))
     | A.GetField (e, vcon_name) -> (
         let tau, e' = ty e in
@@ -214,7 +216,7 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         | CONSTRUCTOR_TY _ ->
             let _, vcon_id, formal_tau = StringMap.find vcon_name vcon_env in
             (formal_tau, S.SGetField ((tau, e'), vcon_id))
-        | _ -> raise (TypeError "not a datatype"))
+        | _ -> raise (TypeError "not a datatype in GetField"))
   in
 
   ty exp
