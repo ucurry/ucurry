@@ -145,6 +145,7 @@ let rec typ_of (vcon_env : S.vcon_env) (type_env : S.type_env) (exp : P.expr) :
     | P.Apply (e, [ arg ]) ->
         (* base case: type checks *)
         let ft, fe = ty e in
+        (* TODO: should check if function name exists first!! *)
         let formalty, retty = get_ft ft in
         let argty, arge = ty arg in
         let final_arg_tau = get_checked_types formalty argty in

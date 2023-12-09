@@ -75,7 +75,9 @@ let build_main_body defs =
           let result =
             match fretty with UNIT_TY -> "" | _ -> "apply" ^ "_result"
           in
-          L.build_call fdef (Array.of_list llargs) result builder
+          let call = L.build_call fdef (Array.of_list llargs) result builder in 
+          ignore (L.set_tail_call true call);
+          call
       | C.If (pred, then_expr, else_expr) ->
           (* 90% code referenced from https://releases.llvm.org/12.0.1/docs/tutorial/OCamlLangImpl5.html#llvm-ir-for-if-then-else *)
           (* emit expression for condition code *)
@@ -94,7 +96,8 @@ let build_main_body defs =
           (* repeat the same above for else branch *)
           let else_bb = L.append_block context "else" the_if_fun in
           L.position_at_end else_bb builder;
-          let else_val = expr builder else_expr in
+          let _, elsev = else_expr in (* TODO: hacky  *)
+          let else_val = expr builder (ty, elsev) in
           let new_else_bb = L.insertion_block builder in
           (* emit the merge block *)
           let merge_bb = L.append_block context "ifcon" the_if_fun in
@@ -265,11 +268,7 @@ let build_main_body defs =
           let str_ptr = expr builder e in
           Util.get_data_field i str_ptr builder "fi"
       | C.Nomatch ->
-          let nomatch_func_ty = L.function_type i32_t [||] in
-          let nomatch_func =
-            L.declare_function "nomatch" nomatch_func_ty the_module
-          in
-          L.build_call nomatch_func [||] "nomatch" builder
+          L.const_null (ltype_of_type ty)
     in
     expr builder
   and alloc_function name fun_tau =
