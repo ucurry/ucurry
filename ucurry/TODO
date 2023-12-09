@@ -2,8 +2,8 @@ Documentation:
 - Currently the pass goes:
   --Scan--> AST 
   --Curry--> AST 
-  --CaseConvert--> PAST
-  (LAZY not yet added)
+  SEMANT + CaseConvert--> PAST
+  --Lazy-->LAST
   --Semant--> SAST 
   --Clconvert--> CAST 
   --Codegen--> LLVM IR
