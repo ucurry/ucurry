@@ -3,10 +3,10 @@ make clean
 echo "Running codegen tests"
 
 anyfailed=0
-
-for f in ../tests/codegen/*.uc 
+cd ..
+for f in ./tests/codegen/*.uc 
 do 
-    echo "Testing $f"
+    echo "Testing .$f"
     # dune exec ucurry -- -s < $f > $f.ll
     # llc -relocation-model=pic $f.ll
     # cc -o $f.exe $f.s

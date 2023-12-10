@@ -2,9 +2,10 @@
 
 anyfailed=0
 counter=0
-for f in ../tests/test_suite/positive_test/*.uc
+cd ..
+for f in ./tests/test_suite/positive_test/*.uc
 do 
-    echo "Testing $f"
+    echo "Testing .$f"
     ((counter++))
 
     dune exec ucurry -- -s < $f | lli > $f.out
@@ -26,9 +27,9 @@ fi
 
 anyfailed=0
 counter=0
-for f in ../tests/test_suite/negative_test/*.uc
+for f in ./tests/test_suite/negative_test/*.uc
 do 
-    echo "Testing $f"
+    echo "Testing .$f"
     ((counter++))
 
     dune exec ucurry -- -s < $f 2> $f.out

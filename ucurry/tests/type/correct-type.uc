@@ -3,8 +3,8 @@ int a = 1;
 bool bb = true;
 bool c = false;
 string str = "hello";
-int list l1 = [1,2,3];
-bool list l2 = [true, false, true, true];
+int list l_i = [1,2,3];
+bool list l_b= [true, false, true, true];
 int list list l3 = [[1,2], [3,4], [5,6]];
 unit u = ();
 int tu  = (1, 2, 3).1;
@@ -40,18 +40,9 @@ int y = if true then 1 else 2;
 
 -- binop expression  
 int num = 1 + 2;
-num = (4 - 5) * 2 + 3;
-num = (4 - 5) * (2 + 3);
-num = 2 * 4;
-num = 12839 / 234;
-num = 398 % 32;
 bool b = 3 == 3;
-b = 4 != 3;
-b = 1 < 2;
-b = b or b;
-b = b and b;
 int list l = [1, 2, 3];
-l = 1 :: l; 
+int list l2 = 1 :: l; 
 
 -- unary 
 int h = hd [1, 2, 3];
@@ -68,6 +59,7 @@ bool c2 = let b = true in b and b;
 datatype Shape = Circle | Square;
 string shape = (case (Circle) of Circle => "circle" 
                                | Square => "square");
+
 string shape2 = (case (Circle) of Circle => "circle" 
                                | _ => "square");
 

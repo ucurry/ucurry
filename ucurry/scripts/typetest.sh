@@ -1,8 +1,9 @@
 #! /bin/sh
 echo "Tests for success cases \n"
-for f in ../tests/type/*.uc
+cd ..
+for f in ./tests/type/*.uc
 do
-    echo "Testing $f"
+    echo "Testing .$f"
     dune exec ucurry -- -a < $f > $f.trimmed
     dune exec ucurry -- -a < $f.trimmed > $f.out
     diff $f.trimmed $f.out

@@ -83,7 +83,6 @@ exp:
     LBRACE exp RBRACE         { $2 }
   | value                   { Literal $1 }
   | NAME                      { Var $1 }
-  | NAME ASN exp              { Assign ($1, $3) }
   | LBRACE exp args RBRACE    { Apply ($2, List.rev $3) }
   | IF exp THEN exp ELSE exp  { If ($2, $4, $6) }
   | LET bindings IN exp       { Let (List.rev $2, $4) }
@@ -122,7 +121,8 @@ pattern:
   | LBRACE pattern_tuple RBRACE          {PATS (List.rev $2)}
   | CAPNAME                              { CON_PAT ($1, WILDCARD) }
   | CAPNAME  pattern                     { CON_PAT ($1, $2)}
-
+  | NAME CONS NAME                       { CONCELL ($1, $3) }
+  | LBRACKET RBRACKET                    { NIL }
 pattern_tuple:
     pattern COMMA pattern       { [$3; $1] }
   | pattern_tuple COMMA pattern { $3 :: $1 }

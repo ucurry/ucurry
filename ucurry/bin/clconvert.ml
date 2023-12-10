@@ -28,7 +28,6 @@ let rec free ((t, exp) : SA.sexpr) : S.t =
   match exp with
   | SA.SLiteral _ -> S.empty
   | SA.SVar name -> S.of_list [ (t, name) ]
-  | SA.SAssign (assigned, e) -> S.union (free e) (S.of_list [ (t, assigned) ])
   | SA.SApply (f, thunks) -> unionFree (f :: thunks)
   | SA.SIf (s1, s2, s3) -> unionFree [ s1; s2; s3 ]
   | SA.SLet (bindings, body) ->
@@ -89,12 +88,6 @@ and close_exp (captured : freevar list) (le : SA.sexpr) : C.sexpr =
           match indexOf name captured with
           | Some i -> C.Captured i
           | None -> C.Var name (* this case, name is a local *))
-      | SA.SAssign (name, e) -> (
-          (* cannot captured local cannot be set, why? *)
-          match indexOf name captured with
-          (* | Some _ -> C.Assign (name, exp e) *)
-          | Some _ -> raise (Failure "Cannot assign to captured variable")
-          | None -> C.Assign (name, exp e))
       | SA.SApply (f, ls) -> C.Apply (exp f, List.map exp ls)
       | SA.SIf (i, t, e) -> C.If (exp i, exp t, exp e)
       | SA.SBegin es -> C.Begin (List.map exp es)

@@ -52,29 +52,6 @@ let ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
   in
   ltype_of ty
 
-(*
-   let get_named_structptr_type
-       (context : L.llcontext)
-       (llmodule : L.llmodule)
-       (map: L.lltype StringMap.t)
-       (name: string)
-       (field_types: A.typ list) :L.lltype StringMap.t * L.lltype =
-       let struct_ty = L.named_struct_type context name in
-       let map' = StringMap.add name struct_ty map in
-       let field_lltypes = List.map (ltype_of_type map' llmodule context) field_types in
-       let _ = L.struct_set_body struct_ty (Array.of_list field_lltypes) false in
-       (map', L.pointer_type struct_ty) *)
-(*
-   let build_struct (context : L.llcontext) (llmodule : L.llmodule)
-       (builder : L.llbuilder) (map : L.lltype StringMap.t) (name : string)
-       (taus : A.typ list) (elements : L.llvalue list) : L.llvalue =
-     let element_types = List.map (ltype_of_type map llmodule context) taus in
-     let struct_type = L.struct_type context (Array.of_list element_types) in
-     let str = L.build_malloc struct_type name builder in
-     ignore
-       (Util.map_i (fun v i -> Util.set_data_field v i str builder) 0 elements);
-     str *)
-
 (* given the program return a map that maps the datatype name to its lltype *)
 let build_datatypes (context : L.llcontext) (llmodule : L.llmodule)
     (program : def list) : L.lltype StringMap.t =
@@ -83,7 +60,6 @@ let build_datatypes (context : L.llcontext) (llmodule : L.llmodule)
         (* Define dt struct type to allow for recursive adt *)
         let dt_struct_type = L.named_struct_type context dt_name in
         let map' = StringMap.add dt_name dt_struct_type map in
-
         (* Get the arg types of each value constructor *)
         let vcon_names, arg_taus = List.split cons in
         let fieldTypes =
@@ -94,7 +70,6 @@ let build_datatypes (context : L.llcontext) (llmodule : L.llmodule)
             (List.to_seq @@ (List.combine vcon_names) fieldTypes)
             map'
         in
-
         (* Fully define the datatype struct type: the first field is a tag *)
         let _ =
           L.struct_set_body dt_struct_type
@@ -102,36 +77,6 @@ let build_datatypes (context : L.llcontext) (llmodule : L.llmodule)
             false
         in
         map''
-    (* | Cast.Datatype (CONSTRUCTOR_TY datatype_name, cons) ->
-        let datatype_struct_type = L.named_struct_type context datatype_name in
-        let map' = StringMap.add datatype_name datatype_struct_type map in
-
-        (* Get the type of the arguments of each value constructor *)
-        let vcon_names, arg_taus = List.split cons in
-        let get_field_type = function
-          | [] -> L.i1_type context
-          | [ t ] -> ltype_of_type map' llmodule context t
-          | ts ->
-              L.pointer_type
-                (L.struct_type context
-                   (Array.of_list
-                      (List.map (ltype_of_type map' llmodule context) ts)))
-        in
-        let subtypesList = List.map get_field_type arg_taus in
-        let newmap =
-          StringMap.add_seq
-            (List.to_seq @@ (List.combine vcon_names) subtypesList)
-            map'
-        in
-
-        (* Define the datatype struct type *)
-        let _ =
-          L.struct_set_body datatype_struct_type
-            (list_to_arr (L.i32_type context :: subtypesList))
-            false
-        in
-        (* StringMap.add datatype_name newContype newmap *)
-        newmap *)
     | _ -> map
   in
   List.fold_left add_datatype StringMap.empty program
@@ -142,14 +87,6 @@ let build_literal builder (ty_map : L.lltype StringMap.t)
     (string_pool : L.llvalue StringMap.t) (ty : typ) (v : literal) =
   let i32_t = L.i32_type context and i1_t = L.i1_type context in
   let rec to_lit ty = function
-    (* | S.Construct ((con_name, i, inner_ty), value) ->
-        let field_v = to_lit inner_ty value
-        and con_v =
-          L.build_malloc (StringMap.find con_name ty_map) con_name builder
-        and tag_v = L.const_int i32_t i in
-        ignore (set_data_field field_v i con_v builder);
-        ignore (set_data_field tag_v 0 con_v builder);
-        con_v *)
     | S.INT i -> L.const_int i32_t i
     | S.STRING s -> StringMap.find s string_pool
     | S.BOOL b -> L.const_int i1_t (if b then 1 else 0)
@@ -167,19 +104,6 @@ let build_literal builder (ty_map : L.lltype StringMap.t)
         ignore (set_data_field hd_v 0 list_ptr builder);
         ignore (set_data_field tl_ptr 1 list_ptr builder);
         list_ptr
-    (* | S.TUPLE vs -> (
-        match ty with
-        | TUPLE_TY taus ->
-            let tuple_ptr_ty = ltype_of_type ty_map llmodule context ty in
-            let tuple_ty = L.element_type tuple_ptr_ty in
-            let tuple_ptr = L.build_malloc tuple_ty "tuple address" builder in
-            let inner_values = List.map2 to_lit taus vs in
-            let set_feild value index =
-              Util.set_data_field value index tuple_ptr builder
-            in
-            ignore (Util.map_i set_feild 0 inner_values);
-            tuple_ptr
-        | _ -> raise (Impossible "tuple must have tuple type")) *)
     | S.INF_LIST _ -> raise (UNIMPLEMENTED "inf list")
     | S.UNIT -> L.const_int i1_t 0
   in
@@ -217,8 +141,6 @@ let build_string_pool (program : C.program) (builder : L.llbuilder) :
       | S.LIST (hd, tl) ->
           let v_pool' = mk_value_string_pool v_pool hd in
           mk_value_string_pool v_pool' tl
-      (* | S.Construct (_, v) -> mk_value_string_pool v_pool v *)
-      (* | S.TUPLE vs -> List.fold_left mk_value_string_pool v_pool vs *)
       | S.BOOL _ -> v_pool
       | S.EMPTYLIST _ -> v_pool
       | S.INF_LIST _ -> v_pool
@@ -228,7 +150,6 @@ let build_string_pool (program : C.program) (builder : L.llbuilder) :
     match sx with
     | C.Literal l -> mk_value_string_pool pool l
     | C.Var _ -> pool
-    | C.Assign (_, sexpr) -> mk_expr_string_pool builder pool sexpr
     | C.Apply (func, args) ->
         let pool' = mk_expr_string_pool builder pool func in
         List.fold_left (mk_expr_string_pool builder) pool' args
@@ -250,10 +171,6 @@ let build_string_pool (program : C.program) (builder : L.llbuilder) :
         let pool'' = List.fold_left (mk_expr_string_pool builder) pool' cap in
         pool''
     | C.Construct (_, arg) -> mk_expr_string_pool builder pool arg
-    (* | C.Case (scrutinee, patterns) ->
-        let _, es = List.split patterns in
-        let pool' = mk_expr_string_pool builder pool scrutinee in
-        List.fold_left (mk_expr_string_pool builder) pool' es *)
     | C.Tuple ses -> List.fold_left (mk_expr_string_pool builder) pool ses
     | C.At (sexpr, _) -> mk_expr_string_pool builder pool sexpr
     | C.GetField (sexpr, _) -> mk_expr_string_pool builder pool sexpr

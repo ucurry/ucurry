@@ -12,7 +12,6 @@ type sexpr = typ * sx
 and sx =
   | SLiteral of svalue
   | SVar of name
-  | SAssign of name * sexpr
   | SApply of sexpr * sexpr list
   | SIf of sexpr * sexpr * sexpr
   | SLet of (name * sexpr) list * sexpr

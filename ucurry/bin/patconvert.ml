@@ -12,7 +12,7 @@ let rec match_all (p : Ast.pattern) =
   match p with
   | A.WILDCARD -> true
   | A.VAR_PAT _ -> true
-  | A.CON_PAT _ -> false
+  | A.CON_PAT _ | A.NIL | A.CONCELL _ -> false
   | A.PATS ps -> List.for_all match_all ps
 
 let rec is_exhaustive (vcon_sets : S.vcon_sets) (vcon_env : S.vcon_env)
@@ -60,7 +60,19 @@ let rec is_exhaustive (vcon_sets : S.vcon_sets) (vcon_env : S.vcon_env)
         else raise (SU.TypeError "pattern matching non-ehaustive")
     | INT_TY -> raise (SU.TypeError "an integer is not matched to any pattern")
     | LIST_TY _ ->
-        raise (SU.TypeError "an integer is not matched to any pattern")
+        let must_have =
+          StringSet.add "cons" (StringSet.add "nil" StringSet.empty)
+        in
+        let rec has_all pats must_have =
+          match pats with
+          | [] -> must_have
+          | A.CONCELL (_, _) :: rest ->
+              has_all rest (StringSet.remove "cons" must_have)
+          | A.NIL :: rest -> has_all rest (StringSet.remove "nil" must_have)
+          | _ -> must_have
+        in
+        if StringSet.is_empty (has_all pats must_have) then ()
+        else raise (SU.TypeError "pattern matching non exhastive for list")
     | BOOL_TY -> raise (SU.TypeError "an boolean is not matched to any pattern")
     | STRING_TY ->
         raise (SU.TypeError "an string is not matched to any pattern")
@@ -69,13 +81,15 @@ let rec is_exhaustive (vcon_sets : S.vcon_sets) (vcon_env : S.vcon_env)
     | ANY_TY -> raise (SU.TypeError "any type cannot pattern match on function")
 
 (* a => a + 2 becomes a => let a = scrutinee in a + 2 *)
-let rec get_binds (scrutinee : A.expr) (pat : Ast.pattern) :
+let  get_binds (scrutinee : A.expr) (pat : Ast.pattern) :
     (string * A.expr) list =
   let rec bind_pats scrutinee pat =
     match pat with
     | A.CON_PAT (name, pat) -> bind_pats (A.GetField (scrutinee, name)) pat
     | A.VAR_PAT a -> [ (a, scrutinee) ]
-    | A.WILDCARD -> []
+    | A.WILDCARD | A.NIL -> []
+    | A.CONCELL (hd, tl) ->
+        [ (hd, A.Unop (A.Hd, scrutinee)); (tl, A.Unop (A.Tl, scrutinee)) ]
     | A.PATS ps ->
         let bindings =
           List.mapi (fun idx p -> bind_pats (A.At (scrutinee, idx)) p) ps
@@ -90,6 +104,8 @@ let legal_pats tau pats vcon_env =
     match (t, p) with
     | _, A.WILDCARD -> ()
     | _, A.VAR_PAT _ -> ()
+    | LIST_TY _, A.CONCELL _ -> ()
+    | LIST_TY _, A.NIL -> ()
     | CONSTRUCTOR_TY name, A.CON_PAT (vcon_name, pat) ->
         let dt_name, _, arg_typ = StringMap.find vcon_name vcon_env in
         if dt_name = name then legal_pat arg_typ pat
@@ -104,15 +120,10 @@ let legal_pats tau pats vcon_env =
           ()
         with Invalid_argument _ ->
           raise (SU.TypeError "tuple pattern and scrutine length unmatch"))
-    | _, A.CON_PAT _ ->
+    | _, A.CON_PAT _ | _, A.PATS _ | _, A.CONCELL _ | _, A.NIL ->
         raise
           (SU.TypeError
-             ("illugal use of constructor pattern: got scrutinee type "
-            ^ string_of_typ tau ^ " and pattern: " ^ A.string_of_pattern p))
-    | _, A.PATS _ ->
-        raise
-          (SU.TypeError
-             ("illegal use of tuple pattern: " ^ "got scrutinee type "
+             ("illegal use of pattern: " ^ "got scrutinee type "
             ^ string_of_typ tau ^ " and pattern: " ^ A.string_of_pattern p))
   in
   ignore (List.map (legal_pat tau) pats);
@@ -177,6 +188,33 @@ let rec compile_tree tree =
 let match_compile (scrutinee : A.expr) (cases : A.case_expr list)
     (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets) (tau : typ) : tree =
   (* Assuming that the list of cases is exahustive *)
+  let rec match_pat (scrutinee : A.expr) (pat : A.pattern) (matched : tree)
+      (resume : tree) : tree =
+    match pat with
+    | A.CON_PAT (name, pat') ->
+        let matched' = match_pat (A.GetField (scrutinee, name)) pat' matched resume in
+        let cond = A.Binop (A.GetTag scrutinee, A.Equal, A.Literal (A.STRING name)) in
+        Test ([ (cond, matched') ], resume)
+    | A.CONCELL _ ->
+        let cond = A.Unop (A.Not, A.Unop (A.IsNull, scrutinee)) in
+        Test ([ (cond, matched) ], resume)
+    | A.NIL ->
+        let cond = A.Unop (A.IsNull, scrutinee) in
+        Test ([ (cond, matched) ], resume)
+    | A.PATS ps -> match_pats scrutinee 0 ps matched resume
+    | A.VAR_PAT _ -> matched
+    | A.WILDCARD -> matched
+  and match_pats (tuple : A.expr) (idx : int) (pats : A.pattern list)
+      (matched : tree) (default : tree) : tree =
+    if List.length pats = idx then matched
+    else
+      match List.nth pats idx with
+      | A.WILDCARD | A.VAR_PAT _ ->
+          match_pats tuple (idx + 1) pats matched default
+      | p ->
+          let continue = match_pats tuple (idx + 1) pats matched default in
+          match_pat (A.At (tuple, idx)) p continue default
+  in
   let rec match_resume (scrutinee : A.expr) (cases : A.case_expr list)
       (tau : typ) (resume : tree) : tree =
     let shrinked_cases, default = remove_unmatch cases in
@@ -213,41 +251,13 @@ let match_compile (scrutinee : A.expr) (cases : A.case_expr list)
         Test
           ( List.map build_sub_tree (StringMap.bindings vcon_to_cases),
             nearest_resume )
-    | TUPLE_TY _ -> (
-        let rec match_pat (e : A.expr) (pat : A.pattern) (matched : tree)
-            (resume : tree) : tree =
-          match pat with
-          | A.CON_PAT (name, pat) ->
-              let matched' =
-                match_pat (A.GetField (e, name)) pat matched resume
-              in
-              let cond =
-                A.Binop (A.GetTag e, A.Equal, A.Literal (A.STRING name))
-              in
-              Test ([ (cond, matched') ], resume)
-          | A.PATS ps -> match_pats e 0 ps matched resume
-          | A.VAR_PAT _ -> matched
-          | A.WILDCARD -> matched
-        and match_pats (tuple : A.expr) (idx : int) (pats : A.pattern list)
-            (matched : tree) (default : tree) : tree =
-          if List.length pats = idx then matched
-          else
-            match List.nth pats idx with
-            | A.WILDCARD | A.VAR_PAT _ ->
-                match_pats tuple (idx + 1) pats matched default
-            | p ->
-                let continue =
-                  match_pats tuple (idx + 1) pats matched default
-                in
-                match_pat (A.At (tuple, idx)) p continue default
-        in
+    | TUPLE_TY _ | LIST_TY _ -> (
         match cases with
         | [] -> resume
         | [ (p, matched_e) ] -> match_pat scrutinee p (Leaf matched_e) resume
         | (p, matched_e) :: rest ->
             let resume' = match_resume scrutinee rest tau resume in
             match_pat scrutinee p (Leaf matched_e) resume')
-    | LIST_TY _ -> failwith "pattern matching for list has not been implemented"
     | INT_TY | STRING_TY | BOOL_TY | UNIT_TY | FUNCTION_TY _ | ANY_TY -> (
         match default with Some e -> Leaf e | None -> resume)
   in
@@ -264,6 +274,6 @@ let match_compile (scrutinee : A.expr) (cases : A.case_expr list)
 
   match_resume scrutinee desugared tau resume
 
-let rec case_convert (scrutinee : A.expr) (cases : A.case_expr list)
+let case_convert (scrutinee : A.expr) (cases : A.case_expr list)
     (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets) (tau : typ) =
   compile_tree @@ match_compile scrutinee cases vcon_env vcon_sets tau

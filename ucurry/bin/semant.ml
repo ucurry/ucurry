@@ -43,10 +43,6 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let tau, lit = lit_ty l in
         (tau, S.SLiteral lit)
     | A.Var x -> (findType x type_env, S.SVar x)
-    | A.Assign (x, e) ->
-        let var_ty = findType x type_env and assign_ty, se = ty e in
-        let final_tau = get_checked_types var_ty assign_ty in
-        (final_tau, S.SAssign (x, (final_tau, se)))
     | A.Apply (e, [ arg ]) ->
         (* base case: type checks *)
         let ft, fe = ty e in
@@ -144,21 +140,13 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         | TUPLE_TY ts -> (nth ts i, S.SAt ((tau, se), i))
         | _ -> raise (TypeError "access field from non-tuple value"))
     | A.Noexpr -> (UNIT_TY, S.SNoexpr)
-    | A.Case (scrutinee, cases) ->
-      raise (U.Impossible ("impossible case expression" ^ (Ast.string_of_expr exp)))
-        (* let tau, _ = ty scrutinee in
-        let pats, _ = List.split cases in
-        let _ = Patconvert.legal_pats tau pats vcon_env in
-        let desugared =
-          Patconvert.case_convert scrutinee cases vcon_env vcon_sets tau
-        in *)
-        (* (ANY_TY, S.SNoexpr) *)
-        (* TODO: placeholder *)
-        (* ty desugared *)
+    | A.Case (_) ->
+        raise
+          (U.Impossible ("impossible case expression" ^ Ast.string_of_expr exp))
     | A.Construct (vcon_name, arg) ->
-        let dt_name, vcon_id, formal_tau = StringMap.find vcon_name vcon_env in
+        let dt_name, vcon_id, formal_tau = findType vcon_name vcon_env in
         let arg_tau, sarg = ty arg in
-        let _ = SemantUtil.eqType arg_tau formal_tau in
+        let _ = SemantUtil.get_checked_types arg_tau formal_tau in
         ( CONSTRUCTOR_TY dt_name,
           S.SConstruct ((vcon_id, vcon_name), (arg_tau, sarg)) )
     | A.Tuple es ->
@@ -179,7 +167,7 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let tau, e' = ty e in
         match tau with
         | CONSTRUCTOR_TY _ ->
-            let _, vcon_id, formal_tau = StringMap.find vcon_name vcon_env in
+            let _, vcon_id, formal_tau = findType vcon_name vcon_env in
             (formal_tau, S.SGetField ((tau, e'), vcon_id))
         | _ -> raise (TypeError "not a datatype in GetField"))
   in

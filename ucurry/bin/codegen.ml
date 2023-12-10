@@ -58,10 +58,6 @@ let build_main_body defs =
       | C.Var name ->
           (* let _ = print_string ("in var" ^ name )in  *)
           L.build_load (lookup name varmap) name builder
-      | C.Assign (name, e) ->
-          let e' = expr builder e in
-          let _ = L.build_store e' (lookup name varmap) builder in
-          e'
       | C.Apply (((ft, _) as sf), args) ->
           let fun_closure = expr builder sf in
 

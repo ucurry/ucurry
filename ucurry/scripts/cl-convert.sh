@@ -2,11 +2,11 @@
 #! /bin/sh 
 make clean
 echo "Running cl-convert tests"
-
+cd ..
 anyfailed=0
-for f in ../tests/cl-convert/*.uc 
+for f in ./tests/cl-convert/*.uc 
 do 
-    echo "Testing $f"
+    echo "Testing .$f"
     # dune exec ucurry -- -s < $f > $f.ll
     # llc -relocation-model=pic $f.ll > $f.s
     # cc -o $f.exe $f.s

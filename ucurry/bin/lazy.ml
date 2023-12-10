@@ -17,8 +17,6 @@ let rec lazy_expr (exp : A.expr) : A.expr =
   match exp with
   | A.Literal _ -> exp
   | A.Var n -> A.Apply (A.Var n, [ unitv ])
-  | A.Assign (n, e) ->
-      A.Begin [ A.Assign (n, to_thunk e); A.Apply (A.Var n, [ unitv ]) ]
   | A.Apply (e, es) ->
       let lazy_fun = lazy_expr e in
       let lazy_args = List.map to_thunk es in

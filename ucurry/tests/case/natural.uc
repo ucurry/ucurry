@@ -23,6 +23,6 @@ printList l = (case l of
                     Nil => 0
                     | Cons (y, ys) => (begin println y, (printList ys)));
 
-(printList (take (nat ()) 22));
+(printList (take (nat ()) 14));
 
 --(printList (nat ()));

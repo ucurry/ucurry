@@ -3,6 +3,5 @@ len l = (case l of [] => 0
          | h :: t => 1 + (len t));
 int empty_list_len = (len [int]);
 int list_len = (len [1, 2, 3]);
--- TODO: cannot do recursion deeper than two levels
 println empty_list_len;
 println list_len;

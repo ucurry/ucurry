@@ -4,7 +4,6 @@ let rec curry_expr (exp : A.expr) : A.expr =
   match exp with
   | A.Literal _ -> exp
   | A.Var _ -> exp
-  | A.Assign (name, e) -> A.Assign (name, curry_expr e)
   | A.Apply (f, [ arg ]) -> A.Apply (curry_expr f, [ curry_expr arg ])
   | A.Apply (f, args) ->
       List.fold_left

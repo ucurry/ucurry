@@ -14,7 +14,8 @@ type semant_envs = {
 
 let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
     (type_env : S.type_env) (exp : Ast.expr) : typ * Ast.expr =
-  let rec ty exp = match exp with 
+  let rec ty exp =
+    match exp with
     | A.Literal l ->
         let rec lit_ty = function
           | A.INT _ -> INT_TY
@@ -115,12 +116,12 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         | _ -> raise (SU.TypeError "access field from non-tuple value"))
     | A.Noexpr -> (UNIT_TY, exp)
     | A.Construct (vcon_name, arg) ->
-        let dt_name, _, formal_tau = StringMap.find vcon_name vcon_env in
+        let dt_name, _, formal_tau = SU.findType vcon_name vcon_env in
         let arg_tau, arg' = ty arg in
-        let _ = SemantUtil.eqType arg_tau formal_tau in
+        let _ = SU.get_checked_types arg_tau formal_tau in
         (CONSTRUCTOR_TY dt_name, A.Construct (vcon_name, arg'))
-    | A.Tuple es  ->
-        let taus, es' = List.split @@ (List.map ty es) in
+    | A.Tuple es ->
+        let taus, es' = List.split @@ List.map ty es in
         (TUPLE_TY taus, A.Tuple es')
     | A.Thunk body ->
         let tau, body' = ty body in
@@ -134,7 +135,7 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let tau, e' = ty e in
         match tau with
         | CONSTRUCTOR_TY _ ->
-            let _, _, formal_tau = StringMap.find vcon_name vcon_env in
+            let _, _, formal_tau = SU.findType vcon_name vcon_env in
             (formal_tau, A.GetField (e', vcon_name))
         | _ -> raise (SU.TypeError ""))
     | A.Case (scrutinee, cases) ->
@@ -145,7 +146,6 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
           Patconvert.case_convert scrutinee cases vcon_env vcon_sets tau
         in
         ty desugared
-    | A.Assign _ -> raise (Util.Impossible "impossible")
   in
   ty exp
 
@@ -153,16 +153,17 @@ let rec typ_def (def : A.def) (semant_envs : semant_envs) : A.def * S.type_env =
   let { type_env; vcon_env; vcon_sets } = semant_envs in
   let ty = function
     | A.Function (tau, funname, args, body) ->
-      let new_env = SU.bindUnique funname tau type_env in
-      let tau', lambda' =
-        typ_of vcon_env vcon_sets new_env (A.Lambda (tau, args, body))
-      in
-      let final_tau = SU.get_checked_types tau tau' in
-      let match_retrun = function
-        | A.Lambda (tau', formals', body) -> (A.Function (tau', funname, formals', body), new_env)
-        | e -> (A.Variable (final_tau, funname, e), new_env)
-      in
-      match_retrun lambda'
+        let new_env = SU.bindUnique funname tau type_env in
+        let tau', lambda' =
+          typ_of vcon_env vcon_sets new_env (A.Lambda (tau, args, body))
+        in
+        let final_tau = SU.get_checked_types tau tau' in
+        let match_retrun = function
+          | A.Lambda (tau', formals', body) ->
+              (A.Function (tau', funname, formals', body), new_env)
+          | e -> (A.Variable (final_tau, funname, e), new_env)
+        in
+        match_retrun lambda'
     | A.Datatype _ -> (def, type_env)
     | A.Variable (tau, name, e) ->
         let tau', e' = typ_of vcon_env vcon_sets type_env e in

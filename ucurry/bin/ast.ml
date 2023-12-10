@@ -33,11 +33,12 @@ type pattern =
   | CON_PAT of vcon_name * pattern (* !! *)
   | PATS of pattern list
   | WILDCARD
+  | NIL
+  | CONCELL of name * name
 
 type expr =
   | Literal of value
   | Var of name
-  | Assign of string * expr
   | Apply of expr * expr list
   | If of expr * expr * expr
   | Let of (name * expr) list * expr
@@ -109,22 +110,12 @@ let string_of_uop = function
 let rec string_of_pattern = function
   | VAR_PAT s -> s
   | CON_PAT (c, p) -> (
-      match p with PATS [] -> c | _ -> c ^ "(" ^ string_of_pattern p ^ ")")
+      match p with PATS [] -> c | _ -> c ^" "^ string_of_pattern p )
   | PATS [] -> ""
-  | PATS ps -> String.concat ", " (List.map string_of_pattern ps)
+  | PATS ps -> "(" ^ String.concat ", " (List.map string_of_pattern ps) ^ ")"
   | WILDCARD -> "_"
-(*
-   let rec string_of_typ = function
-     | INT_TY -> "int"
-     | STRING_TY -> "string"
-     | BOOL_TY -> "bool"
-     | LIST_TY typ -> string_of_typ typ ^ " list"
-     | UNIT_TY -> "unit"
-     | FUNCTION_TY (t1, t2) ->
-         "(" ^ string_of_typ t1 ^ " -> " ^ string_of_typ t2 ^ ")"
-     | CONSTRUCTOR_TY dt -> dt
-     | TUPLE_TY typs ->
-         "(" ^ String.concat " * " (List.map string_of_typ typs) ^ ")" *)
+  | NIL -> "[]"
+  | CONCELL (hd, tl) -> hd ^ "::" ^ tl
 
 let string_of_variable (t, s) = string_of_typ t ^ " " ^ s
 
@@ -132,7 +123,6 @@ let rec string_of_expr exp =
   let flat_string_of_exp = function
     | Literal l -> string_of_literal l
     | Var s -> s
-    | Assign (v, e) -> v ^ " = " ^ string_of_expr e
     | Apply (e, el) ->
         "(" ^ string_of_expr e ^ " "
         ^ String.concat " " (List.map string_of_expr el)
@@ -149,9 +139,6 @@ let rec string_of_expr exp =
         "\\(" ^ string_of_typ t ^ ")" ^ String.concat " " vl ^ " -> "
         ^ string_of_expr e
     | Construct (n, e) -> n ^ string_of_expr e
-    (* | Construct (n, []) -> n
-       | Construct (n, es) ->
-           n ^ "(" ^ String.concat ", " (List.map string_of_expr es) ^ ")" *)
     | Case (e, cel) ->
         "(case " ^ string_of_expr e ^ " of\n\t" ^ "  "
         ^ String.concat " \n\t| "

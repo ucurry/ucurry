@@ -2,13 +2,11 @@
 open Typing
 module A = Ast
 module S = Sast
-
 type sexpr = typ * expr
 
 and expr =
   | Literal of S.svalue
   | Var of string
-  | Assign of string * thunk
   | Apply of sexpr * thunk list
   | If of sexpr * sexpr * sexpr
   | Let of (string * thunk) list * sexpr
@@ -18,7 +16,6 @@ and expr =
   | Captured of int
   | Closure of closure
   | Construct of (vcon_id * vcon_name) * sexpr
-  (* | Case of sexpr * case_expr list *)
   | Tuple of sexpr list
   | At of sexpr * int
   | GetTag of sexpr
@@ -59,7 +56,6 @@ and string_of_sexpr (delim : string) ((ty, expr) : sexpr) : string =
     match exp with
     | Literal l -> S.string_of_literal l
     | Var x -> x
-    | Assign (name, thunk) -> name ^ " = " ^ string_of_sexpr delim thunk
     | Apply (sexpr, tlist) ->
         let expr_string = string_of_sexpr delim sexpr in
         let args_string =

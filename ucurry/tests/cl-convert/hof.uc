@@ -2,7 +2,6 @@ int x = 1;
 fun : int -> int :
 addx y = y + x;
 
-x = 5;
 
 fun : (int -> int) -> int list -> int list:
 map f nums  = (case nums of [] => [int]
