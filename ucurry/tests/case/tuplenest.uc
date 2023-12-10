@@ -1,6 +1,15 @@
 datatype Color = Black of int | Red ; 
-(int * int * Color ) triple = (1, 2, (Black 1));
-int a = (case triple
+
+Color b = (Black 1);
+println (case b of Black a => a);
+
+(int * Color) p = (2, (Black 3));
+println (case p of (a, Black b) => b);  
+
+(int * int * Color) t = (1, 2, (Black 3));
+println (case t of (a, b, Black s) => s);
+
+int a = (case (1, 2, (Black 1))
           of  (a, b, Red) => a
           |   (a, b, Black s) => s);
 println a;
@@ -17,15 +26,3 @@ println a;
                     --|  Function (Var x, _ , _) => x
                     --|  Var x => x);
 --println fun_name;
-(println(a));
-
-int a = (let a = ((triple).0) 
-            in (let b = ((triple).1) 
-                    in (if ((((triple).2).T) == ("Red")) 
-                        then (a) 
-                        else (let a = (((triple).2).0) 
-                                    in (let b = (((triple).2).1) 
-                                        in (if (((((triple).2).2).T) == ("Black")) 
-                                            then (let s = ((((triple).2).2)@Black) in (s)) 
-                                            else (No match)))))));
-(println(a));

@@ -1,7 +1,6 @@
 datatype Num = One | Two | Three ;
 datatype ColorN = G of Num | R of Num |  B of Num ;
 
-
 int b  = (case ((One), (Two), (Three)) 
             of (a, b, Two) => 100
             | (One, b, c) => 2
@@ -31,5 +30,5 @@ int digit = (case (TIMESPLUS ((ZERO), 9)) of
                 TIMESPLUS (TIMESPLUS _, d) => d
               | TIMESPLUS (_, d) => d
               | ZERO => 0 );
-              
+
 println digit;

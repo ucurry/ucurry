@@ -8,13 +8,6 @@ module SU = SemantUtil
 type arg_typ = typ
 type ret_typ = typ
 
-(* HACK: since user defined datatype has been changed *)
-let de_thunk = function
-  | FUNCTION_TY (UNIT_TY, ret_typ) -> ret_typ
-  | _ ->
-      raise
-        (Impossible "constructor arg type should be function type after lazy")
-
 let rec match_all (p : Ast.pattern) =
   match p with
   | A.WILDCARD -> true
@@ -181,7 +174,7 @@ let rec compile_tree tree =
       A.If (cond, then_exp, else_exp)
   | Failure -> raise (Impossible "impossible")
 
-let rec match_compile (scrutinee : A.expr) (cases : A.case_expr list)
+let match_compile (scrutinee : A.expr) (cases : A.case_expr list)
     (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets) (tau : typ) : tree =
   (* Assuming that the list of cases is exahustive *)
   let rec match_resume (scrutinee : A.expr) (cases : A.case_expr list)

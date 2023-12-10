@@ -12,40 +12,6 @@ type semant_envs = {
   vcon_sets : S.vcon_sets;
 }
 
-let new_binds_from_legal_pat (type_env : S.type_env) (scrutinee_tau : typ)
-    (pat : A.pattern) : typ StringMap.t =
-  let rec get_binds tau p =
-    match p with
-    | A.PATS ps -> (
-        match tau with
-        | TUPLE_TY taus ->
-            let new_envs =
-              try List.map2 get_binds taus ps
-              with Invalid_argument _ ->
-                raise (TypeError ("illegal pattern " ^ A.string_of_pattern pat))
-            and combine_unique_env =
-              StringMap.union (fun _ _ _ ->
-                  raise (TypeError "cannot have duplicated name in pattern"))
-            in
-            List.fold_left combine_unique_env StringMap.empty new_envs
-        | _ ->
-            raise
-              (TypeError ("cannot pattern match on" ^ Ast.string_of_pattern p)))
-    | A.VAR_PAT x -> StringMap.add x tau StringMap.empty
-    | A.CON_PAT (name, p) ->
-        let arg_tau, ret_tau = findFunctionType name type_env in
-        let _ = get_checked_types tau ret_tau in
-        get_binds arg_tau p
-    | A.WILDCARD -> StringMap.empty
-    (* | NIL ->
-           let _ = subtypeOfList tau in
-           StringMap.empty
-       | CONCELL (s1, s2) ->
-           let subty = subtypeOfList tau in
-           bindAllUnique [ s1; s2 ] [ subty; LIST_TY subty ] StringMap.empty *)
-  in
-  get_binds scrutinee_tau pat
-
 (* TODO: commented out to use string to compare pattern instead of index *)
 (* let rec to_spattern (vcon_env : S.vcon_env) (c : A.pattern) =
    let pattern_of = to_spattern vcon_env in
@@ -179,17 +145,16 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         | _ -> raise (TypeError "access field from non-tuple value"))
     | A.Noexpr -> (UNIT_TY, S.SNoexpr)
     | A.Case (scrutinee, cases) ->
-        let tau, _ = ty scrutinee in
+      raise (U.Impossible ("impossible case expression" ^ (Ast.string_of_expr exp)))
+        (* let tau, _ = ty scrutinee in
         let pats, _ = List.split cases in
         let _ = Patconvert.legal_pats tau pats vcon_env in
         let desugared =
           Patconvert.case_convert scrutinee cases vcon_env vcon_sets tau
-        in
-        (* print_endline (A.string_of_expr desugared);
-           print_newline (); *)
+        in *)
         (* (ANY_TY, S.SNoexpr) *)
         (* TODO: placeholder *)
-        ty desugared
+        (* ty desugared *)
     | A.Construct (vcon_name, arg) ->
         let dt_name, vcon_id, formal_tau = StringMap.find vcon_name vcon_env in
         let arg_tau, sarg = ty arg in
@@ -233,7 +198,7 @@ let rec typ_def (def : A.def) (semant_envs : semant_envs) : S.sdef * S.type_env
         let final_tau = get_checked_types tau tau' in
         let match_retrun = function
           | S.SLambda body -> (S.SFunction (final_tau, funname, body), new_env)
-          | _ -> (S.SVal (funname, (final_tau, sx)), new_env)
+          | e -> (S.SVal (funname, (final_tau, e)), new_env)
         in
         match_retrun sx
     | A.Datatype (tau, val_cons) ->
