@@ -152,27 +152,33 @@ let desugar (scrutinee : A.expr) (cases : A.case_expr list) : A.case_expr list =
 
 type tree = Test of (A.expr * tree) list * tree | Leaf of A.expr | Failure
 
-let rec print_tree = function
+let rec string_repeat s n = match n with
+| 0 ->  s
+| _ -> s ^ string_repeat s (n - 1)
+
+let rec print_tree n tree = 
+  let space = string_repeat  "  " n in 
+  let print_with_space s = print_endline @@ space ^ s 
+in
+  print_with_space "{";
+  (match tree with 
   | Test (tests, default) ->
-      print_endline "TEST-NODE{";
       let print_single (cond, tree) =
-        print_endline "TEST-CONDITION";
-        print_endline (A.string_of_expr cond);
-        print_tree tree
+        print_with_space @@ " TEST-CONDITION" ^ (A.string_of_expr cond);
+        print_tree (n + 1) tree
       in
       List.iter print_single tests;
-      print_endline "DEFAULT:";
-      print_tree default;
-      print_endline "}";
-      prerr_newline ()
-  | Failure -> print_endline "faiure"
+      print_with_space " DEFAULT:";
+      print_tree (n + 1) default;
+      print_with_space "}";
+  | Failure -> print_with_space "faiure"
   | Leaf e ->
-      print_endline " LEAF-NODE {";
-      print_endline @@ A.string_of_expr e;
-      print_endline "}";
-      print_newline ()
-
+    print_with_space " LEAF-NODE ";
+    print_with_space @@  " " ^A.string_of_expr e;
+    print_newline ());
+  print_with_space "}"
 let rec compile_tree tree =
+  (* print_tree 0 tree; *)
   match tree with
   | Leaf e -> e
   | Test ([], default) -> compile_tree default
