@@ -22,6 +22,7 @@ let rec is_exhaustive (vcon_sets : S.vcon_sets) (vcon_env : S.vcon_env)
   else
     match scrutinee_tau with
     | TUPLE_TY _ ->
+        ()
         (* HACK : too much work to check exhaustive pattern on tuple *)
         (* let add_patterns matrix p  = match p with
              A.PATTERNS ps -> ps :: matrix
@@ -29,10 +30,6 @@ let rec is_exhaustive (vcon_sets : S.vcon_sets) (vcon_env : S.vcon_env)
            | A.VAR_PAT _ -> matrix
            | _ -> raise (TypeError ("tuple cannot be matched on " ^ A.string_of_pattern p)) in
            let pat_matric = List.fold_left add_patterns [] pats in *)
-        raise
-          (SU.TypeError
-             "A pattern matching expression for a tuple must have a fall \
-              through case")
     | CONSTRUCTOR_TY name ->
         let must_have = StringMap.find name vcon_sets in
         let rec collect_all pats must_have collected =
@@ -278,7 +275,14 @@ let match_compile (scrutinee : A.expr) (cases : A.case_expr list)
     | Some e -> Leaf e
     | None ->
         let _ = is_exhaustive vcon_sets vcon_env tau ps in
-        Leaf (Util.snd @@ List.hd @@ List.rev cases)
+        let default_err =
+          A.Begin
+            [
+              A.Unop (A.Println, A.Literal (A.STRING "Case not matched"));
+              A.NoMatch;
+            ]
+        in
+        Leaf default_err
   in
 
   match_resume scrutinee desugared tau resume

@@ -45,8 +45,11 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let branch_tau = SU.get_checked_types then_tau else_tau in
         (branch_tau, A.If (cond', then', else'))
     | A.Let (bindings, e) ->
-        let vars, es = List.split bindings in
-        let taus, es' = List.split @@ List.map ty es in
+        let check_e (xi, ei) =
+          typ_of vcon_env vcon_sets (SU.add_let_type (xi, ei) type_env) ei
+        in
+        let vars, _ = List.split bindings in
+        let taus, es' = List.split @@ List.map check_e bindings in
         let new_env = SU.bindAll vars taus type_env in
         let tau, e' = typ_of vcon_env vcon_sets new_env e in
         (tau, A.Let (List.combine vars es', e'))
@@ -151,6 +154,7 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         | LIST_TY sub_tau ->
             (LIST_TY (SU.get_checked_types hd_tau sub_tau), A.List (hd', tl'))
         | _ -> raise (SU.TypeError "tail is not a list"))
+    | A.NoMatch -> (ANY_TY, A.NoMatch)
   in
   ty exp
 

@@ -8,6 +8,7 @@ and transform_ty ty =
   | FUNCTION_TY (argty, retty) ->
       FUNCTION_TY (to_thunk_ty argty, transform_ty retty)
   | TUPLE_TY taus -> TUPLE_TY (List.map to_thunk_ty taus)
+  | LIST_TY taus -> LIST_TY (transform_ty taus)
   | _ -> ty
 
 let unitv = A.Literal Ast.UNIT
@@ -43,6 +44,7 @@ let rec lazy_expr (exp : A.expr) : A.expr =
       let scrutinee' = lazy_expr scrutinee and ps, cs' = List.split cases in
       let cs' = List.combine ps (List.map lazy_expr cs') in
       A.Case (scrutinee', cs')
+  | A.NoMatch -> A.NoMatch
   | A.Thunk _ -> failwith "Illegal thunk"
 
 let rec lazy_def def =

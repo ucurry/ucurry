@@ -113,8 +113,7 @@ let ty_fmt_string ty (builder : L.llbuilder) : L.llvalue =
 let build_string_pool (program : C.program) (builder : L.llbuilder) :
     L.llvalue StringMap.t =
   let rec mk_expr_string_pool builder pool (_, sx) =
-    let mk_value_string_pool (v_pool : L.llvalue StringMap.t) (v : S.svalue)
-        =
+    let mk_value_string_pool (v_pool : L.llvalue StringMap.t) (v : S.svalue) =
       match v with
       | S.STRING s -> (
           match StringMap.find_opt s v_pool with

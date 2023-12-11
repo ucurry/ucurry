@@ -103,3 +103,6 @@ let rec eqType tau1 tau2 =
   | ANY_TY, _ -> true
   | _, ANY_TY -> true
   | _ -> false
+
+let add_let_type (s, e) env =
+  match e with A.Lambda (t, _, _) -> StringMap.add s t env | _ -> env

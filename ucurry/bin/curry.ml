@@ -35,8 +35,9 @@ let rec curry_expr (exp : A.expr) : A.expr =
   | A.GetField (e, i) -> A.GetField (curry_expr e, i)
   | A.Noexpr -> A.Noexpr
   | A.EmptyList tau -> A.EmptyList tau
-  | A.List  _ as list -> list
+  | A.List (hd, tl) -> A.List (curry_expr hd, curry_expr tl)
   | A.Thunk _ as thunk -> A.Thunk thunk
+  | A.NoMatch -> A.NoMatch
 
 let curry (program : A.program) : A.program =
   let rec curry_def (def : A.def) : A.def =

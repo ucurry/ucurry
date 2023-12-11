@@ -41,7 +41,7 @@ let build_main_body defs =
   and int_nl_format_str = L.build_global_stringptr "%d\n" "fmt" builder
   and string_nl_format_str = L.build_global_stringptr "%s\n" "fmt" builder
   and string_pool = CGUtil.build_string_pool defs builder in
-  let build_lit = CGUtil.build_literal context string_pool in 
+  let build_lit = CGUtil.build_literal context string_pool in
   let lookup n varmap = StringMap.find n varmap in
   let add_terminal builder instr =
     match L.block_terminator (L.insertion_block builder) with
@@ -52,13 +52,10 @@ let build_main_body defs =
   let rec exprWithVarmap builder captured_param varmap =
     let rec expr builder (ty, top_exp) =
       match top_exp with
-      | C.Literal l -> build_lit l 
-      | C.Var name ->
-          (* let _ = print_string ("in var" ^ name )in  *)
-          L.build_load (lookup name varmap) name builder
+      | C.Literal l -> build_lit l
+      | C.Var name -> L.build_load (lookup name varmap) name builder
       | C.Apply (((ft, _) as sf), args) ->
           let fun_closure = expr builder sf in
-
           let fdef = U.get_data_field 0 fun_closure builder "fdef" in
           let cap = U.get_data_field 1 fun_closure builder "cap" in
           let fretty = U.get_retty ft in
@@ -110,11 +107,11 @@ let build_main_body defs =
           let varmap' =
             List.fold_left
               (fun vm (name, e) ->
-                let tau, _ = e in
-                let e' = expr builder e in
                 (*TODO: error here with function types*)
+                let tau, _ = e in
                 let reg = L.build_alloca (ltype_of_type tau) name builder in
                 let vm' = StringMap.add name reg vm in
+                let e' = exprWithVarmap builder captured_param vm' e in
                 let _ = L.build_store e' (lookup name vm') builder in
                 vm')
               varmap bindings
@@ -209,7 +206,6 @@ let build_main_body defs =
       | C.Closure (_, cap) ->
           (* Alloc function *)
           let funtype, function_ptr = alloc_function lambda_name ty in
-
           let cl_struct_type =
             L.struct_type context [| L.pointer_type funtype; void_ptr |]
           in
@@ -258,12 +254,7 @@ let build_main_body defs =
       | C.GetField (e, i) ->
           let str_ptr = expr builder e in
           Util.get_data_field i str_ptr builder "fi"
-      | C.Nomatch ->
-          let nomatch_func_ty = L.function_type i32_t [||] in
-          let nomatch_func =
-            L.declare_function "nomatch" nomatch_func_ty the_module
-          in
-          L.build_call nomatch_func [||] "nomatch" builder
+      | C.Nomatch -> L.undef (ltype_of_type ty)
       | C.EmptyList _ ->
           let list_ptr_ty = ltype_of_type ty in
           L.const_null list_ptr_ty
@@ -315,6 +306,7 @@ let build_main_body defs =
         "cap" builder
     in
 
+
     (* let localvarmap = StringMap.add "cap" cap_param StringMap.empty in *)
 
     (* TODO: dont think this is necessary *)
@@ -339,7 +331,37 @@ let build_main_body defs =
     let e' = exprWithVarmap builder cap_param localvarmap' body in
     ignore (add_terminal builder (fun b -> L.build_ret e' b))
   (* varmap is the variable environment that maps (variable : string |---> to reg : llvale) *)
-  and stmt builder varmap = function
+  and build_named_function tau name lambda cap varmap =
+    let funtype, function_ptr = alloc_function name tau in
+    (* Alloc the closure struct and adds it into varmap *)
+    let cl_struct_type =
+      L.struct_type context [| L.pointer_type funtype; void_ptr |]
+    in
+    let closure_ptr = L.build_malloc cl_struct_type "fun_closure" builder in
+    let closure_pp =
+      L.build_alloca (L.pointer_type cl_struct_type) "closurepp" builder
+    in
+    let _ = L.build_store closure_ptr closure_pp builder in
+    let varmap' = StringMap.add name closure_pp varmap in
+    (* Populate the capture struct  *)
+    let capstruct_type, capstruct_ptr =
+      build_captured_struct builder varmap' null_captured_param cap
+    in
+    let casted_capstruct_ptr =
+      L.build_bitcast capstruct_ptr void_ptr "capstruct" builder
+    in
+
+    (* Populate the closure struct *)
+    let _ = U.set_data_field function_ptr 0 closure_ptr builder in
+    let _ = U.set_data_field casted_capstruct_ptr 1 closure_ptr builder in
+
+    (* Build the function body *)
+    ignore
+      (build_function_body function_ptr capstruct_type
+         (tau, C.Closure (lambda, cap)));
+    (builder, varmap')
+  in
+  let stmt builder varmap = function
     | C.Val (name, e) ->
         (* Handle string -> create a global string pointer and assign the global name to the name *)
         let tau, _ = e in
@@ -349,37 +371,7 @@ let build_main_body defs =
         let _ = L.build_store e' reg builder in
         (builder, varmap')
     | C.Function (tau, name, (lambda, cap)) ->
-        (* Alloc function *)
-        let funtype, function_ptr = alloc_function name tau in
-
-        (* Alloc the closure struct and adds it into varmap *)
-        let cl_struct_type =
-          L.struct_type context [| L.pointer_type funtype; void_ptr |]
-        in
-        let closure_ptr = L.build_malloc cl_struct_type "fun_closure" builder in
-        let closure_pp =
-          L.build_alloca (L.pointer_type cl_struct_type) "closurepp" builder
-        in
-        let _ = L.build_store closure_ptr closure_pp builder in
-        let varmap' = StringMap.add name closure_pp varmap in
-
-        (* Populate the capture struct  *)
-        let capstruct_type, capstruct_ptr =
-          build_captured_struct builder varmap' null_captured_param cap
-        in
-        let casted_capstruct_ptr =
-          L.build_bitcast capstruct_ptr void_ptr "capstruct" builder
-        in
-
-        (* Populate the closure struct *)
-        let _ = U.set_data_field function_ptr 0 closure_ptr builder in
-        let _ = U.set_data_field casted_capstruct_ptr 1 closure_ptr builder in
-
-        (* Build the function body *)
-        ignore
-          (build_function_body function_ptr capstruct_type
-             (tau, C.Closure (lambda, cap)));
-        (builder, varmap')
+        build_named_function tau name lambda cap varmap
     | C.Exp e ->
         let _ = exprWithVarmap builder null_captured_param varmap e in
         (builder, varmap)

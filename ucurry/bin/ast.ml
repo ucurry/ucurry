@@ -57,6 +57,7 @@ type expr =
   | GetField of expr * vcon_name
     (* Only for testing - need to be deleted; return the field value of the value constructor *)
   | Noexpr
+  | NoMatch
 
 and value =
   | INT of int
@@ -166,6 +167,7 @@ let rec string_of_expr exp =
           | _ -> raise (Invalid_argument "should not be reached")
         in
         "[" ^ listString (x, xs) ^ "]"
+    | NoMatch -> "no match"
   in
 
   match exp with Noexpr -> "" | _ -> "(" ^ flat_string_of_exp exp ^ ")"
