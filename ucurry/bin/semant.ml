@@ -12,30 +12,13 @@ type semant_envs = {
   vcon_sets : S.vcon_sets;
 }
 
-(* TODO: commented out to use string to compare pattern instead of index *)
-(* let rec to_spattern (vcon_env : S.vcon_env) (c : A.pattern) =
-   let pattern_of = to_spattern vcon_env in
-   match c with
-   | A.PATS ps -> S.PATTERNS (List.map (to_spattern vcon_env) ps)
-   | A.VAR_PAT s -> S.VAR_PAT s
-   | A.CON_PAT (name, ps) ->
-       S.CON_PAT (U.mid @@ findType name vcon_env, pattern_of ps)
-   | A.WILDCARD -> S.WILDCARD
-   (* | A.CONCELL (x, xs) -> S.CONCELL (x, xs)
-   | A.NIL -> S.NIL *) *)
-
 let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
     (type_env : S.type_env) (exp : Ast.expr) : typ * S.sx =
   let rec ty = function
     | A.Literal l ->
-        let rec lit_ty = function
+        let lit_ty = function
           | A.INT i -> (INT_TY, S.INT i)
           | A.STRING s -> (STRING_TY, S.STRING s)
-          | A.EMPTYLIST tau -> (LIST_TY tau, S.EMPTYLIST tau)
-          | A.LIST (hd, tl) ->
-              let hd_tau, hd_val = lit_ty hd and tl_tau, tl_val = lit_ty tl in
-              let list_tau = get_checked_types (LIST_TY hd_tau) tl_tau in
-              (list_tau, S.LIST (hd_val, tl_val))
           | A.BOOL b -> (BOOL_TY, S.BOOL b)
           | A.UNIT -> (UNIT_TY, S.UNIT)
           | A.INF_LIST i -> (LIST_TY INT_TY, S.INF_LIST i)
@@ -140,7 +123,7 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         | TUPLE_TY ts -> (nth ts i, S.SAt ((tau, se), i))
         | _ -> raise (TypeError "access field from non-tuple value"))
     | A.Noexpr -> (UNIT_TY, S.SNoexpr)
-    | A.Case (_) ->
+    | A.Case _ ->
         raise
           (U.Impossible ("impossible case expression" ^ Ast.string_of_expr exp))
     | A.Construct (vcon_name, arg) ->
@@ -170,6 +153,17 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
             let _, vcon_id, formal_tau = findType vcon_name vcon_env in
             (formal_tau, S.SGetField ((tau, e'), vcon_id))
         | _ -> raise (TypeError "not a datatype in GetField"))
+    | A.EmptyList tau -> (LIST_TY tau, S.SEmptyList tau)
+    | A.List (hd, tl) -> (
+        let hd_tau, hd' = ty hd and tl_tau, tl' = ty tl in
+        match tl_tau with
+        | LIST_TY UNIT_TY ->
+            ( LIST_TY hd_tau,
+              S.SList ((hd_tau, hd'), (LIST_TY hd_tau, S.SEmptyList hd_tau)) )
+        | LIST_TY sub_tau ->
+            ( LIST_TY (get_checked_types hd_tau sub_tau),
+              S.SList ((hd_tau, hd'), (tl_tau, tl')) )
+        | _ -> raise (TypeError "tail is not a list"))
   in
 
   ty exp

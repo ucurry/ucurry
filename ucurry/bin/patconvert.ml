@@ -81,8 +81,8 @@ let rec is_exhaustive (vcon_sets : S.vcon_sets) (vcon_env : S.vcon_env)
     | ANY_TY -> raise (SU.TypeError "any type cannot pattern match on function")
 
 (* a => a + 2 becomes a => let a = scrutinee in a + 2 *)
-let  get_binds (scrutinee : A.expr) (pat : Ast.pattern) :
-    (string * A.expr) list =
+let get_binds (scrutinee : A.expr) (pat : Ast.pattern) : (string * A.expr) list
+    =
   let rec bind_pats scrutinee pat =
     match pat with
     | A.CON_PAT (name, pat) -> bind_pats (A.GetField (scrutinee, name)) pat
@@ -152,31 +152,30 @@ let desugar (scrutinee : A.expr) (cases : A.case_expr list) : A.case_expr list =
 
 type tree = Test of (A.expr * tree) list * tree | Leaf of A.expr | Failure
 
-let rec string_repeat s n = match n with
-| 0 ->  s
-| _ -> s ^ string_repeat s (n - 1)
+let rec string_repeat s n =
+  match n with 0 -> s | _ -> s ^ string_repeat s (n - 1)
 
-let rec print_tree n tree = 
-  let space = string_repeat  "  " n in 
-  let print_with_space s = print_endline @@ space ^ s 
-in
+let rec print_tree n tree =
+  let space = string_repeat "  " n in
+  let print_with_space s = print_endline @@ space ^ s in
   print_with_space "{";
-  (match tree with 
+  (match tree with
   | Test (tests, default) ->
       let print_single (cond, tree) =
-        print_with_space @@ " TEST-CONDITION" ^ (A.string_of_expr cond);
+        print_with_space @@ " TEST-CONDITION" ^ A.string_of_expr cond;
         print_tree (n + 1) tree
       in
       List.iter print_single tests;
       print_with_space " DEFAULT:";
       print_tree (n + 1) default;
-      print_with_space "}";
+      print_with_space "}"
   | Failure -> print_with_space "faiure"
   | Leaf e ->
-    print_with_space " LEAF-NODE ";
-    print_with_space @@  " " ^A.string_of_expr e;
-    print_newline ());
+      print_with_space " LEAF-NODE ";
+      print_with_space @@ " " ^ A.string_of_expr e;
+      print_newline ());
   print_with_space "}"
+
 let rec compile_tree tree =
   (* print_tree 0 tree; *)
   match tree with
@@ -198,8 +197,12 @@ let match_compile (scrutinee : A.expr) (cases : A.case_expr list)
       (resume : tree) : tree =
     match pat with
     | A.CON_PAT (name, pat') ->
-        let matched' = match_pat (A.GetField (scrutinee, name)) pat' matched resume in
-        let cond = A.Binop (A.GetTag scrutinee, A.Equal, A.Literal (A.STRING name)) in
+        let matched' =
+          match_pat (A.GetField (scrutinee, name)) pat' matched resume
+        in
+        let cond =
+          A.Binop (A.GetTag scrutinee, A.Equal, A.Literal (A.STRING name))
+        in
         Test ([ (cond, matched') ], resume)
     | A.CONCELL _ ->
         let cond = A.Unop (A.Not, A.Unop (A.IsNull, scrutinee)) in

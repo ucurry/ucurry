@@ -31,8 +31,8 @@ let build_main_body defs =
         ([ formalty ], retty, formals, body, cap)
     | _ -> raise (SHOULDNT_RAISED "not an C.closure type")
   in
-  let datatype_map = CGUtil.build_datatypes context the_module defs in
-  let ltype_of_type = CGUtil.ltype_of_type datatype_map the_module context in
+  let ty_map = CGUtil.build_datatypes context the_module defs in
+  let ltype_of_type = CGUtil.ltype_of_type ty_map the_module context in
   let lambda_name = "lambda" in
   let main_function = L.define_function "main" main_ftype the_module in
   let builder = L.builder_at_end context (L.entry_block main_function) in
@@ -41,7 +41,7 @@ let build_main_body defs =
   and int_nl_format_str = L.build_global_stringptr "%d\n" "fmt" builder
   and string_nl_format_str = L.build_global_stringptr "%s\n" "fmt" builder
   and string_pool = CGUtil.build_string_pool defs builder in
-
+  let build_lit = CGUtil.build_literal context string_pool in 
   let lookup n varmap = StringMap.find n varmap in
   let add_terminal builder instr =
     match L.block_terminator (L.insertion_block builder) with
@@ -52,9 +52,7 @@ let build_main_body defs =
   let rec exprWithVarmap builder captured_param varmap =
     let rec expr builder (ty, top_exp) =
       match top_exp with
-      | C.Literal l ->
-          CGUtil.build_literal builder datatype_map context the_module
-            string_pool ty l
+      | C.Literal l -> build_lit l 
       | C.Var name ->
           (* let _ = print_string ("in var" ^ name )in  *)
           L.build_load (lookup name varmap) name builder
@@ -232,7 +230,7 @@ let build_main_body defs =
           closure_ptr
       | C.Construct ((i, vcon_name), arg) ->
           let dt_name = get_dt_name ty in
-          let dt_struct_type = StringMap.find dt_name datatype_map in
+          let dt_struct_type = StringMap.find dt_name ty_map in
           let dt_struct = L.build_malloc dt_struct_type dt_name builder in
           let tag_v = StringMap.find vcon_name string_pool in
           let field_v = expr builder arg in
@@ -266,6 +264,17 @@ let build_main_body defs =
             L.declare_function "nomatch" nomatch_func_ty the_module
           in
           L.build_call nomatch_func [||] "nomatch" builder
+      | C.EmptyList _ ->
+          let list_ptr_ty = ltype_of_type ty in
+          L.const_null list_ptr_ty
+      | C.List (hd, tl) ->
+          let list_ty = L.element_type (ltype_of_type ty) in
+          let hd_v = expr builder hd in
+          let tl_ptr = expr builder tl in
+          let list_ptr = L.build_malloc list_ty "list_ptr" builder in
+          ignore (Util.set_data_field hd_v 0 list_ptr builder);
+          ignore (Util.set_data_field tl_ptr 1 list_ptr builder);
+          list_ptr
     in
     expr builder
   and alloc_function name fun_tau =

@@ -33,6 +33,8 @@ let rec lazy_expr (exp : A.expr) : A.expr =
   | A.Unop (up, e) -> A.Unop (up, lazy_expr e)
   | A.Construct (vcon_name, arg) -> A.Construct (vcon_name, to_thunk arg)
   | A.Tuple es -> A.Tuple (List.map to_thunk es)
+  | A.List (hd, tl) -> A.List (lazy_expr hd, lazy_expr tl)
+  | A.EmptyList tau -> A.EmptyList tau
   | A.At (e, idx) -> A.Apply (A.At (lazy_expr e, idx), [ unitv ])
   | A.Noexpr -> A.Noexpr
   | A.GetTag e -> A.GetTag (lazy_expr e)

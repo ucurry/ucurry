@@ -47,10 +47,12 @@ type expr =
   | Unop of uop * expr
   | Lambda of typ * arg_name list * expr
   | Thunk of expr
-  | Construct of vcon_name * expr (* !! *)
   | Case of expr * case_expr list
-  | Tuple of expr list (* !! *)
   | At of expr * int
+  | List of expr * expr
+  | EmptyList of typ
+  | Tuple of expr list
+  | Construct of vcon_name * expr
   | GetTag of expr (* Only for testing - need to be deleted; return a string *)
   | GetField of expr * vcon_name
     (* Only for testing - need to be deleted; return the field value of the value constructor *)
@@ -60,9 +62,6 @@ and value =
   | INT of int
   | STRING of string
   | BOOL of bool
-  | EMPTYLIST of typ
-  | LIST of value * value
-  (* | TUPLE of value list *)
   | INF_LIST of int
   | UNIT
 
@@ -110,7 +109,7 @@ let string_of_uop = function
 let rec string_of_pattern = function
   | VAR_PAT s -> s
   | CON_PAT (c, p) -> (
-      match p with PATS [] -> c | _ -> c ^" "^ string_of_pattern p )
+      match p with PATS [] -> c | _ -> c ^ " " ^ string_of_pattern p)
   | PATS [] -> ""
   | PATS ps -> "(" ^ String.concat ", " (List.map string_of_pattern ps) ^ ")"
   | WILDCARD -> "_"
@@ -158,6 +157,15 @@ let rec string_of_expr exp =
     | Thunk e -> "THUNK: " ^ string_of_expr e
     | GetField (e, v) -> string_of_expr e ^ "@" ^ v
     | GetTag e -> string_of_expr e ^ ".T"
+    | EmptyList t -> "[" ^ string_of_typ t ^ "]"
+    | List (x, xs) ->
+        let rec listString (x, xs) =
+          match (x, xs) with
+          | x, EmptyList _ -> string_of_expr x
+          | x, List (y, ys) -> string_of_expr x ^ "," ^ listString (y, ys)
+          | _ -> raise (Invalid_argument "should not be reached")
+        in
+        "[" ^ listString (x, xs) ^ "]"
   in
 
   match exp with Noexpr -> "" | _ -> "(" ^ flat_string_of_exp exp ^ ")"
@@ -166,25 +174,12 @@ and string_of_literal = function
   | INT l -> string_of_int l
   | STRING l -> "\"" ^ l ^ "\""
   | BOOL l -> string_of_bool l
-  | EMPTYLIST t -> "[" ^ string_of_typ t ^ "]"
-  | LIST (x, xs) ->
-      let rec listString (x, xs) =
-        match (x, xs) with
-        | x, EMPTYLIST _ -> string_of_literal x
-        | x, LIST (y, ys) -> string_of_literal x ^ "," ^ listString (y, ys)
-        | _ -> raise (Invalid_argument "should not be reached")
-      in
-      "[" ^ listString (x, xs) ^ "]"
-  (* | TUPLE l -> "(" ^ String.concat ", " (List.map string_of_literal l) ^ ")" *)
   | UNIT -> "()"
   | INF_LIST n -> "[" ^ string_of_int n ^ "..]"
-(* | Construct (c, e) -> "(" ^ c ^ " " ^ string_of_literal e ^ ")" *)
 
 let string_of_constructor = function
   | c, UNIT_TY -> c
   | c, t -> c ^ " of " ^ string_of_typ t
-(* | c, [] -> c
-   | c, ts -> c ^ " of " ^ String.concat " * " (List.map string_of_typ ts) *)
 
 let rec string_of_def = function
   | Function (ty, f, args, e) ->

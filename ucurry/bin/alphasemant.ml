@@ -17,12 +17,9 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
   let rec ty exp =
     match exp with
     | A.Literal l ->
-        let rec lit_ty = function
+        let lit_ty = function
           | A.INT _ -> INT_TY
           | A.STRING _ -> STRING_TY
-          | A.EMPTYLIST tau -> LIST_TY tau
-          | A.LIST (hd, tl) ->
-              SU.get_checked_types (LIST_TY (lit_ty hd)) (lit_ty tl)
           | A.BOOL _ -> BOOL_TY
           | A.UNIT -> UNIT_TY
           | A.INF_LIST _ -> LIST_TY INT_TY
@@ -146,6 +143,14 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
           Patconvert.case_convert scrutinee cases vcon_env vcon_sets tau
         in
         ty desugared
+    | A.EmptyList tau -> (LIST_TY tau, exp)
+    | A.List (hd, tl) -> (
+        let hd_tau, hd' = ty hd and tl_tau, tl' = ty tl in
+        match tl_tau with
+        | LIST_TY UNIT_TY -> (LIST_TY hd_tau, A.List (hd', tl'))
+        | LIST_TY sub_tau ->
+            (LIST_TY (SU.get_checked_types hd_tau sub_tau), A.List (hd', tl'))
+        | _ -> raise (SU.TypeError "tail is not a list"))
   in
   ty exp
 

@@ -42,19 +42,13 @@ let rec free ((t, exp) : SA.sexpr) : S.t =
   | SA.SBinop (operand1, _, operand2) -> S.union (free operand1) (free operand2)
   | SA.SUnop (_, operand) -> free operand
   | SA.SConstruct (_, arg) -> free arg
-  (* | SA.SCase (scrutinee, cexprs) ->
-      let fscrutinee = free scrutinee in
-      List.fold_left
-        (fun freevars (_, sexpr) -> S.union freevars (free sexpr))
-        fscrutinee cexprs *)
   | SA.SLambda (formals, sexpr) ->
       let formalTypes = Util.get_formalty t in
-      (* let _ = Printf.printf "formals: %d\n" (List.length formals) in
-         let _ = Printf.printf "formal_types: %d\n" (List.length formalTypes) in
-         let _ = failwith "REACHED CL" in *)
       let formalWithTypes = List.combine formalTypes formals in
       S.diff (free sexpr) (S.of_list formalWithTypes)
   | SA.STuple ses -> unionFree ses
+  | SA.SEmptyList _ -> S.empty
+  | SA.SList (hd, tl) -> unionFree [ hd; tl ]
   | SA.SAt (se, _) -> free se
   | SA.SGetTag se -> free se
   | SA.SGetField (se, _) -> free se
@@ -98,13 +92,9 @@ and close_exp (captured : freevar list) (le : SA.sexpr) : C.sexpr =
           (* need to recheck*)
           let e' = exp e in
           C.Let (ls', e')
-      | SA.SConstruct (i, arg) ->
-          (* TODO here *)
-          C.Construct (i, exp arg)
-      (* | SA.SCase (scrutinee, cases) ->
-          let scrutinee' = exp scrutinee in
-          let cases' = List.map (fun (p, e) -> (p, exp e)) cases in
-          C.Case (scrutinee', cases') *)
+      | SA.SConstruct (i, arg) -> C.Construct (i, exp arg)
+      | SA.SEmptyList tau -> C.EmptyList tau
+      | SA.SList (hd, tl) -> C.List (exp hd, exp tl)
       | SA.SLambda lambda -> C.Closure (asClosure ty lambda captured)
       | SA.SNoexpr -> Noexpr
       | SA.STuple ses -> C.Tuple (List.map exp ses)

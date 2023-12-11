@@ -82,32 +82,17 @@ let build_datatypes (context : L.llcontext) (llmodule : L.llmodule)
   List.fold_left add_datatype StringMap.empty program
 
 (* build a llvm value from a literal value  *)
-let build_literal builder (ty_map : L.lltype StringMap.t)
-    (context : L.llcontext) (llmodule : L.llmodule)
-    (string_pool : L.llvalue StringMap.t) (ty : typ) (v : literal) =
+let build_literal (context : L.llcontext) (string_pool : L.llvalue StringMap.t)
+    (v : literal) =
   let i32_t = L.i32_type context and i1_t = L.i1_type context in
-  let rec to_lit ty = function
+  let to_lit = function
     | S.INT i -> L.const_int i32_t i
     | S.STRING s -> StringMap.find s string_pool
     | S.BOOL b -> L.const_int i1_t (if b then 1 else 0)
-    | S.EMPTYLIST _ ->
-        let list_ptr_ty = ltype_of_type ty_map llmodule context ty in
-        L.const_null list_ptr_ty
-    | S.LIST (hd, tl) ->
-        let subty = Util.list_subtype ty in
-        let list_ty =
-          L.element_type (ltype_of_type ty_map llmodule context ty)
-        in
-        let hd_v = to_lit subty hd in
-        let tl_ptr = to_lit ty tl in
-        let list_ptr = L.build_malloc list_ty "list_ptr" builder in
-        ignore (set_data_field hd_v 0 list_ptr builder);
-        ignore (set_data_field tl_ptr 1 list_ptr builder);
-        list_ptr
     | S.INF_LIST _ -> raise (UNIMPLEMENTED "inf list")
     | S.UNIT -> L.const_int i1_t 0
   in
-  to_lit ty v
+  to_lit v
 
 (* return the formating string for a A.typ  *)
 let ty_fmt_string ty (builder : L.llbuilder) : L.llvalue =
@@ -128,7 +113,7 @@ let ty_fmt_string ty (builder : L.llbuilder) : L.llvalue =
 let build_string_pool (program : C.program) (builder : L.llbuilder) :
     L.llvalue StringMap.t =
   let rec mk_expr_string_pool builder pool (_, sx) =
-    let rec mk_value_string_pool (v_pool : L.llvalue StringMap.t) (v : S.svalue)
+    let mk_value_string_pool (v_pool : L.llvalue StringMap.t) (v : S.svalue)
         =
       match v with
       | S.STRING s -> (
@@ -138,11 +123,11 @@ let build_string_pool (program : C.program) (builder : L.llbuilder) :
               StringMap.add s
                 (L.build_global_stringptr s "strlit" builder)
                 v_pool)
-      | S.LIST (hd, tl) ->
+      (* | S.LIST (hd, tl) ->
           let v_pool' = mk_value_string_pool v_pool hd in
-          mk_value_string_pool v_pool' tl
+          mk_value_string_pool v_pool' tl *)
       | S.BOOL _ -> v_pool
-      | S.EMPTYLIST _ -> v_pool
+      (* | S.EMPTYLIST _ -> v_pool *)
       | S.INF_LIST _ -> v_pool
       | S.INT _ -> v_pool
       | S.UNIT -> v_pool
@@ -172,6 +157,10 @@ let build_string_pool (program : C.program) (builder : L.llbuilder) :
         pool''
     | C.Construct (_, arg) -> mk_expr_string_pool builder pool arg
     | C.Tuple ses -> List.fold_left (mk_expr_string_pool builder) pool ses
+    | C.EmptyList _ -> pool
+    | C.List (hd, tl) ->
+        let pool' = mk_expr_string_pool builder pool hd in
+        mk_expr_string_pool builder pool' tl
     | C.At (sexpr, _) -> mk_expr_string_pool builder pool sexpr
     | C.GetField (sexpr, _) -> mk_expr_string_pool builder pool sexpr
     | C.GetTag sexpr -> mk_expr_string_pool builder pool sexpr

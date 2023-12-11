@@ -2,6 +2,7 @@
 open Typing
 module A = Ast
 module S = Sast
+
 type sexpr = typ * expr
 
 and expr =
@@ -18,6 +19,8 @@ and expr =
   | Construct of (vcon_id * vcon_name) * sexpr
   | Tuple of sexpr list
   | At of sexpr * int
+  | List of sexpr * sexpr
+  | EmptyList of typ
   | GetTag of sexpr
   | GetField of sexpr * int
   | Noexpr
@@ -86,15 +89,15 @@ and string_of_sexpr (delim : string) ((ty, expr) : sexpr) : string =
     | Captured i -> "Captured " ^ string_of_int i
     | Closure cl -> string_of_closure cl
     | Construct ((_, vcon_name), arg) ->
-        (* "(" ^ dt_name ^ " " ^ string_of_int vcon_i ^ " " ^ vcon_name ^ " " ^ (string_of_sexpr delim arg) ^ ")" *)
         "(" ^ vcon_name ^ " " ^ string_of_sexpr delim arg ^ ")"
-    (* | Case _ -> failwith "String_of_expr Not implemented for case" *)
     | Tuple _ -> failwith "String_of_expr Not implemented for Tuple"
     | At _ -> failwith "String_of_exor Not implemented for at"
     | GetField (e, i) -> string_of_sexpr delim e ^ "@" ^ string_of_int i
     | GetTag e -> string_of_typ ty ^ " " ^ string_of_sexpr delim e
     | Noexpr -> ""
     | Nomatch -> "No match"
+    | List (_, _) -> "[]" (* TODO: PP for list  *)
+    | EmptyList _ -> "[]"
   in
   "(" ^ string_of_typ ty ^ "," ^ string_of_expr expr ^ ")"
 

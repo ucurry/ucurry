@@ -1,6 +1,5 @@
 %{
     open Ast
-    open Util
 %}
 
 // delimiters
@@ -27,7 +26,6 @@
 %nonassoc ISNULL
 %nonassoc IN ELSE 
 %right ARROW
-%right ASN 
 %left OR 
 %left AND 
 %left CONS 
@@ -77,16 +75,17 @@ constructor_list:
 constructor:
     CAPNAME        { ($1, UNIT_TY) }
   | CAPNAME OF typ { ($1, $3)}
-  // | CAPNAME OF typelist { ($1, $3) }
 
 exp:
     LBRACE exp RBRACE         { $2 }
-  | value                   { Literal $1 }
+  | value                     { Literal $1 }
   | NAME                      { Var $1 }
   | LBRACE exp args RBRACE    { Apply ($2, List.rev $3) }
   | IF exp THEN exp ELSE exp  { If ($2, $4, $6) }
   | LET bindings IN exp       { Let (List.rev $2, $4) }
   | LBRACE BEGIN exp_list RBRACE        { Begin (List.rev $3) }
+  | LBRACKET typ RBRACKET          { EmptyList $2 }
+  | LBRACKET cons_cell RBRACKET     {  $2 } 
   | binop                     { $1 }
   | unop                      { $1 }
   | lambda                    { $1 }
@@ -97,6 +96,10 @@ exp:
   | exp DOT INTEGER           { At ($1, $3) }
   | exp TAG                   { GetTag $1}
   | exp FIELD CAPNAME         { GetField ($1, $3)}
+
+cons_cell:
+  | exp  COMMA cons_cell   { List ($1, $3)}
+  | exp               { List ($1, EmptyList UNIT_TY) } // TODO: reconsider this
 
 // opt_exp_list:
 //   | /* Nothing */  {[]}
@@ -168,15 +171,9 @@ value:
     STRINGLIT                      { STRING $1 } 
   | INTEGER                        { INT $1 }
   | BOOL                           { BOOL $1 }
-  | LBRACKET typ RBRACKET          { EMPTYLIST $2 }
-  | LBRACKET literal_list RBRACKET {  $2 } 
-  // | LBRACE literal_tuple RBRACE    { TUPLE (List.rev $2)}
   | UNIT                           { UNIT }
   | LBRACKET INTEGER DOTS RBRACKET { INF_LIST $2 }
 
-literal_list:
-  | value  COMMA literal_list   { LIST ($1, $3)}
-  | value                       { LIST ($1, EMPTYLIST (typ_of_value $1)) } // TODO: reconsider this
 
 // literal_tuple:
 //     value  COMMA value     { [$3; $1] }
