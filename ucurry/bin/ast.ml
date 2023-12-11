@@ -15,7 +15,6 @@ type binop =
   | Geq
   | And
   | Or
-  | Cons
 
 type uop =
   | Neg
@@ -96,7 +95,6 @@ let string_of_binop = function
   | Geq -> ">="
   | And -> "and"
   | Or -> "or"
-  | Cons -> "::"
 
 let string_of_uop = function
   | Neg -> "~"
@@ -165,14 +163,14 @@ let rec string_of_expr exp =
     | GetField (e, v) -> string_of_expr e ^ "@" ^ v
     | GetTag e -> string_of_expr e ^ ".T"
     | EmptyList t -> "[" ^ string_of_typ t ^ "]"
-    | List (x, xs) ->
-        let rec listString (x, xs) =
+    | List (x, xs) -> "(" ^ (string_of_expr x) ^ " :: " ^ (string_of_expr xs) ^ ")"
+        (* let rec listString (x, xs) = 
           match (x, xs) with
           | x, EmptyList _ -> string_of_expr x
           | x, List (y, ys) -> string_of_expr x ^ "," ^ listString (y, ys)
           | _ -> raise (Invalid_argument "should not be reached")
         in
-        "[" ^ listString (x, xs) ^ "]"
+        "[" ^ listString (x, xs) ^ "]" *)
     | NoMatch -> "no match"
   in
 

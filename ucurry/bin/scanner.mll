@@ -46,7 +46,8 @@ rule token = parse
 | "of"       { OF }
 | '_'        { WILDCARD }
 | ".T"       { TAG }
-| "@"       { FIELD }
+| "@"        { FIELD }
+| "::"       { CONS }
 
 (* typ *)  
 | "int"      { INTTYPE }
@@ -70,7 +71,6 @@ rule token = parse
 | ">="       { GEQ }
 | "and"      { AND }
 | "or"       { OR }
-| "::"       { CONS }
 
 (* unop *)  
 | "hd"       { HD }

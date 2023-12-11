@@ -28,7 +28,7 @@
 %right ARROW
 %left OR 
 %left AND 
-%left CONS 
+%right CONS 
 %left NEQ EQUAL LESS LEQ GREATER GEQ 
 %left ADD SUB  
 %left TIMES DIVIDE MOD 
@@ -84,9 +84,10 @@ exp:
   | IF exp THEN exp ELSE exp  { If ($2, $4, $6) }
   | LET bindings IN exp       { Let (List.rev $2, $4) }
   | LETREC bindings IN exp    { Letrec (List.rev $2, $4) }
-  | LBRACE BEGIN exp_list RBRACE        { Begin (List.rev $3) }
+  | LBRACE BEGIN exp_list RBRACE   { Begin (List.rev $3) }
   | LBRACKET typ RBRACKET          { EmptyList $2 }
-  | LBRACKET cons_cell RBRACKET     {  $2 } 
+  | LBRACKET cons_cell RBRACKET {  $2 } 
+  | exp CONS exp              { List ($1, $3)}
   | binop                     { $1 }
   | unop                      { $1 }
   | lambda                    { $1 }
@@ -101,11 +102,6 @@ exp:
 cons_cell:
   | exp  COMMA cons_cell   { List ($1, $3)}
   | exp               { List ($1, EmptyList UNIT_TY) } // TODO: reconsider this
-
-// opt_exp_list:
-//   | /* Nothing */  {[]}
-//   | exp            {[$1]}
-//   | LBRACE exp_tuple RBRACE { List.rev $2 }
 
 exp_tuple:
   | exp COMMA exp { [$3;$1] }
@@ -199,7 +195,6 @@ binop:
   | exp GEQ    exp      { Binop ($1, Geq,   $3) }
   | exp AND    exp      { Binop ($1, And,   $3) }
   | exp OR     exp      { Binop ($1, Or,    $3) }
-  | exp CONS   exp      { Binop ($1, Cons,  $3) }
 
 unop:
   | HD exp              { Unop (Hd, $2) }

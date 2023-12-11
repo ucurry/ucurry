@@ -54,9 +54,9 @@ TODO:
 
 
 TODO (DEC 11):
+- [DONE] Combine `Binop e1 :: e2` with `List e1 e2` expression
+- [DONE but may optimize] Consider adding let rec 
 - Consider convert AST to PAST in Desugar
-- Consider adding let rec 
 - Primitive List pattern only takes in name , 
   pattern like `x :: []` is not supported yet
-- Combine `Binop e1 :: e2` with `List e1 e2` expression
 - Delete infinite list 

@@ -90,9 +90,6 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
             (BOOL_TY, S.SBinop ((tau1, se1), b, (tau2, se2)))
         | (Equal | Neq) when same ->
             (BOOL_TY, S.SBinop ((tau1, se1), b, (tau2, se2)))
-        | Cons ->
-            let final_tau = get_checked_types (LIST_TY tau1) tau2 in
-            (final_tau, S.SBinop ((tau1, se1), b, (final_tau, se2)))
         | _ ->
             raise
               (TypeError ("type error in expression " ^ A.string_of_expr exp)))

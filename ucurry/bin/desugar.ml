@@ -83,7 +83,6 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
               BOOL_TY
           | (And | Or) when same && SU.eqType tau1 BOOL_TY -> BOOL_TY
           | (Equal | Neq) when same -> BOOL_TY
-          | Cons -> SU.get_checked_types (LIST_TY tau1) tau2
           | _ ->
               raise
                 (SU.TypeError
