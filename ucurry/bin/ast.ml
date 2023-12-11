@@ -41,7 +41,8 @@ type expr =
   | Var of name
   | Apply of expr * expr list
   | If of expr * expr * expr
-  | Let of (name * expr) list * expr
+  | Let of (name * expr) list * expr (* TODO: consider combine the two nodes to avoid repeated code, pattern matching inside LET node *)
+  | Letrec of (name * expr) list * expr
   | Begin of expr list
   | Binop of expr * binop * expr
   | Unop of uop * expr
@@ -149,6 +150,11 @@ let rec string_of_expr exp =
         ^ ")"
     | Let (vl, e) ->
         "let "
+        ^ String.concat ", "
+            (List.map (fun (v, e) -> v ^ " = " ^ string_of_expr e) vl)
+        ^ " in " ^ string_of_expr e
+    | Letrec (vl, e) ->
+        "letrec "
         ^ String.concat ", "
             (List.map (fun (v, e) -> v ^ " = " ^ string_of_expr e) vl)
         ^ " in " ^ string_of_expr e

@@ -39,6 +39,7 @@ rule token = parse
 | "then"     { THEN }
 | "else"     { ELSE }
 | "let"      { LET }
+| "letrec"   { LETREC }
 | "begin"    { BEGIN }
 | "in"       { IN }
 | "case"     { CASE }

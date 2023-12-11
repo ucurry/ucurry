@@ -15,6 +15,7 @@ and sx =
   | SApply of sexpr * sexpr list
   | SIf of sexpr * sexpr * sexpr
   | SLet of (name * sexpr) list * sexpr
+  | SLetrec of (name * sexpr) list * sexpr
   | SBegin of sexpr list
   | SBinop of sexpr * A.binop * sexpr
   | SUnop of A.uop * sexpr

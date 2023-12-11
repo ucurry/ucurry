@@ -14,7 +14,8 @@ and transform_ty ty =
 let unitv = A.Literal Ast.UNIT
 
 let rec lazy_expr (exp : A.expr) : A.expr =
-  let to_thunk e = A.Thunk (lazy_expr e) in
+  let to_thunk e = A.Thunk (lazy_expr e)
+   in
   match exp with
   | A.Literal _ -> exp
   | A.Var n -> A.Apply (A.Var n, [ unitv ])
@@ -26,6 +27,9 @@ let rec lazy_expr (exp : A.expr) : A.expr =
   | A.Let (bindings, body) ->
       let thunk_bindings = List.map (fun (n, e) -> (n, to_thunk e)) bindings in
       A.Let (thunk_bindings, lazy_expr body)
+  | A.Letrec (bindings, body) -> 
+      let thunk_bindings = List.map (fun (n, e) -> (n, to_thunk e)) bindings in
+      A.Letrec (thunk_bindings, lazy_expr body) 
   | A.Lambda (typ, args, body) ->
       let typ' = transform_ty typ in
       A.Lambda (typ', args, lazy_expr body)

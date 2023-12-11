@@ -1,0 +1,1 @@
+println (let f = \(int -> int) x -> x + 1 in (f 2));

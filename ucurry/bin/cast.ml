@@ -11,6 +11,7 @@ and expr =
   | Apply of sexpr * thunk list
   | If of sexpr * sexpr * sexpr
   | Let of (string * thunk) list * sexpr
+  | Letrec of (string * thunk) list * sexpr
   | Begin of sexpr list
   | Binop of sexpr * A.binop * sexpr
   | Unop of A.uop * sexpr
@@ -78,6 +79,13 @@ and string_of_sexpr (delim : string) ((ty, expr) : sexpr) : string =
                (fun (name, thunk) -> name ^ " = " ^ string_of_sexpr delim thunk)
                vl)
         ^ " in \n" ^ delim ^ string_of_sexpr delim e
+    | Letrec (vl, e) -> 
+        "letrec "
+        ^ String.concat ", "
+            (List.map
+               (fun (name, thunk) -> name ^ " = " ^ string_of_sexpr delim thunk)
+               vl)
+        ^ " in \n" ^ delim ^ string_of_sexpr delim e 
     | Begin el ->
         "(begin "
         ^ String.concat (", " ^ delim) (List.map (string_of_sexpr delim) el)

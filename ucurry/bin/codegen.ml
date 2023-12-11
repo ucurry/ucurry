@@ -117,6 +117,18 @@ let build_main_body defs =
               varmap bindings
           in
           exprWithVarmap builder captured_param varmap' exp
+      | C.Letrec (bindings, exp) -> 
+         let builder', varmap' =
+            List.fold_left
+              (fun (builder, vm) (name, (tau, e)) ->
+                match e with 
+                  |C.Closure (lambda, cap) -> 
+                      build_named_function tau name lambda cap captured_param vm builder
+                  | _ -> failwith "impossible letrec not binds with closure"
+                )
+              (builder, varmap) bindings
+          in
+          exprWithVarmap builder' captured_param varmap' exp 
       | C.Begin sexprs ->
           List.fold_left
             (fun _ sexpr -> expr builder sexpr)
@@ -327,7 +339,7 @@ let build_main_body defs =
     let e' = exprWithVarmap builder cap_param localvarmap' body in
     ignore (add_terminal builder (fun b -> L.build_ret e' b))
   (* varmap is the variable environment that maps (variable : string |---> to reg : llvale) *)
-  and build_named_function tau name lambda cap captured_param varmap =
+  and build_named_function tau name lambda cap captured_param varmap builder =
     let funtype, function_ptr = alloc_function name tau in
     (* Alloc the closure struct and adds it into varmap *)
     let cl_struct_type =
@@ -367,7 +379,7 @@ let build_main_body defs =
         let _ = L.build_store e' reg builder in
         (builder, varmap')
     | C.Function (tau, name, (lambda, cap)) ->
-        build_named_function tau name lambda cap null_captured_param varmap
+        build_named_function tau name lambda cap null_captured_param varmap builder
     | C.Exp e ->
         let _ = exprWithVarmap builder null_captured_param varmap e in
         (builder, varmap)

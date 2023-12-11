@@ -5,7 +5,7 @@
 // delimiters
 %token ARROW DOUBLEARROW SEMI COMMA COLON LBRACE RBRACE LBRACKET RBRACKET BAR DOTS DOT ISNULL
 // keyword
-%token FUNCTION LAMBDA DATATYPE IF THEN ELSE LET BEGIN IN CASE OF WILDCARD CHECK_TYPE_ERROR TAG FIELD 
+%token FUNCTION LAMBDA DATATYPE IF THEN ELSE LET LETREC BEGIN IN CASE OF WILDCARD CHECK_TYPE_ERROR TAG FIELD 
 // type
 %token INTTYPE STRTYPE LISTTYPE BOOLTYPE UNITTYPE 
 // binop 
@@ -83,6 +83,7 @@ exp:
   | LBRACE exp args RBRACE    { Apply ($2, List.rev $3) }
   | IF exp THEN exp ELSE exp  { If ($2, $4, $6) }
   | LET bindings IN exp       { Let (List.rev $2, $4) }
+  | LETREC bindings IN exp    { Letrec (List.rev $2, $4) }
   | LBRACE BEGIN exp_list RBRACE        { Begin (List.rev $3) }
   | LBRACKET typ RBRACKET          { EmptyList $2 }
   | LBRACKET cons_cell RBRACKET     {  $2 } 

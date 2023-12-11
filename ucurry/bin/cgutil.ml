@@ -141,7 +141,7 @@ let build_string_pool (program : C.program) (builder : L.llbuilder) :
         let pool' = mk_expr_string_pool builder pool condition in
         let pool'' = mk_expr_string_pool builder pool' texpr in
         mk_expr_string_pool builder pool'' eexpr
-    | C.Let (bindings, sexpr) ->
+    | C.Let (bindings, sexpr) | C.Letrec (bindings, sexpr) ->
         let _, es = List.split bindings in
         let pool' = List.fold_left (mk_expr_string_pool builder) pool es in
         mk_expr_string_pool builder pool' sexpr

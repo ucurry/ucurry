@@ -58,6 +58,21 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let bind_ses = List.combine vars @@ List.combine taus ses in
         let body_tau, body_es = typ_of vcon_env vcon_sets newEnv e in
         (body_tau, S.SLet (bind_ses, (body_tau, body_es)))
+    | A.Letrec (bindings, e) -> 
+         let check_letrec_binding (env, new_es) (n, ei) = 
+           match ei with
+            | A.Thunk (A.Lambda (t, _, _)) -> 
+                let new_t = FUNCTION_TY (UNIT_TY, t) in
+                let new_env = StringMap.add n new_t env in 
+                let tau, e' = typ_of vcon_env vcon_sets new_env ei in 
+                let _ = get_checked_types new_t tau in 
+                (new_env, (tau, e')::new_es)
+            | _ ->raise (TypeError ("Letrec binds name " ^ n ^ " to non-lambda expression")) 
+        in  
+        let vars, _ = List.split bindings in 
+        let final_env, new_es = List.fold_left check_letrec_binding (type_env,[]) bindings in 
+        let tau, e' = typ_of vcon_env vcon_sets final_env e in 
+        (tau, S.SLetrec (List.combine vars (List.rev new_es), (tau, e')))
     | A.Begin [] -> (UNIT_TY, S.SBegin [])
     | A.Begin es ->
         let ses = List.map ty es in
