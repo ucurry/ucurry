@@ -46,6 +46,7 @@ string_exists s trie =
             node -> (node.0 == c and (string_exists rest node.1))
         in (any_true (map_bool search tries)));
 
+-- this does not work since no let rec is supported
 fun : string list -> Trie -> Trie :
 add s trie =
     (case (trie, s) 
@@ -77,5 +78,5 @@ println (string_exists ["h", "i"] trie);
 println (string_exists ["h", "e", "l", "l", "o"] trie);
 println (string_exists ["h", "e", "l", "l", "o"] trie2);
 (print_trie (add ["h", "i"] (Leaf)));
-(print_trie (add ["h", "i"] trie));
+--(print_trie (add ["h", "i"] trie));
 

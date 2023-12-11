@@ -1,13 +1,21 @@
 Documentation:
 - Currently the pass goes:
+LAZY (-s)
   --Scan--> AST 
   --Curry--> AST 
-  --CaseConvert--> PAST
-  (LAZY not yet added)
+  --DESUGAR--> AST
+  --LAZY--> AST
   --Semant--> SAST 
   --Clconvert--> CAST 
   --Codegen--> LLVM IR
 
+BARE (-l)
+  --Scan--> AST 
+  --Curry--> AST 
+  --DESUGAR--> AST
+  --Semant--> SAST 
+  --Clconvert--> CAST 
+  --Codegen--> LLVM IR
 
 - Case Convert:
 
@@ -43,3 +51,10 @@ TODO:
 - Switch gear to pattern matching of Lists and ADT
     => then come back to implement infinite list 
 - IN PROGRESS
+
+
+TODO (DEC 11):
+- Consider convert AST to PAST in Desugar
+- Consider adding let rec 
+- Primitive List pattern only takes in name , 
+  pattern like `x :: []` is not supported yet

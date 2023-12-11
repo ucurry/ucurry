@@ -1,7 +1,5 @@
 type action = Ast | PAST | CAST | LAST | Default | LAZY | BARE
 
-module T = Trie
-
 let () =
   let action = ref Default in
   let set_action a () = action := a in
@@ -23,20 +21,20 @@ let () =
   | Ast ->
       let lexbuf = Lexing.from_channel !channel in
       let ast = Parser.program Scanner.token lexbuf in
-      let _ = Alphasemant.alpha_semant ast in
+      let _ = Desugar.desugar ast in
       let _ = print_string (Ast.string_of_program ast) in
       print_newline ()
   | PAST ->
       let lexbuf = Lexing.from_channel !channel in
       let ast = Parser.program Scanner.token lexbuf in
-      let desugared, _ = Alphasemant.alpha_semant ast in
+      let desugared = Desugar.desugar ast in
       let _ = print_string (Ast.string_of_program desugared) in
       print_newline ()
   | LAST ->
       let lexbuf = Lexing.from_channel !channel in
       let ast = Parser.program Scanner.token lexbuf in
       let curried = Curry.curry ast in
-      let desugared, _ = Alphasemant.alpha_semant curried in
+      let desugared = Desugar.desugar curried in
       let lazied = Lazy.lazy_convert desugared in
       let _ = Semant.semant_check lazied in
       let _ = print_string (Ast.string_of_program lazied) in
@@ -44,7 +42,7 @@ let () =
   | CAST ->
       let lexbuf = Lexing.from_channel !channel in
       let ast = Parser.program Scanner.token lexbuf in
-      let desugared, _ = Alphasemant.alpha_semant ast in
+      let desugared = Desugar.desugar ast in
       let sast, _ = Semant.semant_check desugared in
       let cast = Clconvert.close_program sast in
       let _ = print_string (Cast.string_of_program cast) in
@@ -53,7 +51,7 @@ let () =
       let lexbuf = Lexing.from_channel !channel in
       let ast = Parser.program Scanner.token lexbuf in
       let curried = Curry.curry ast in
-      let desugared, _ = Alphasemant.alpha_semant curried in
+      let desugared = Desugar.desugar curried in
       let lazied = Lazy.lazy_convert desugared in
       let sast, _ = Semant.semant_check lazied in
       let cast = Clconvert.close_program sast in
@@ -64,16 +62,10 @@ let () =
       let lexbuf = Lexing.from_channel !channel in
       let ast = Parser.program Scanner.token lexbuf in
       let curried = Curry.curry ast in
-      let desugared, _ = Alphasemant.alpha_semant curried in
+      let desugared = Desugar.desugar curried in
       let sast, _ = Semant.semant_check desugared in
       let cast = Clconvert.close_program sast in
       let llvmir = Codegen.build_main_body cast in
       let _ = print_string (Llvm.string_of_llmodule llvmir) in
       print_newline ()
-  | Default ->
-      let trie = Trie.build_node [ "h"; "e"; "l"; "l"; "o" ] in
-      let trie' = Trie.add [ "h"; "e"; "l"; "l"; "o" ] trie in
-      let _ = prerr_endline (Trie.trie_string trie') in
-      let _ = prerr_endline (Trie.trie_string trie) in
-      let exist = Trie.exists [ "h"; "e" ] trie' in
-      if exist then print_endline "exist" else print_endline "not exist"
+  | Default -> print_newline ()

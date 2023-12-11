@@ -37,7 +37,7 @@ let rec free ((t, exp) : SA.sexpr) : S.t =
       let freeXSet = S.of_list localsWithTypes in
       let freeESet = unionFree thunks in
       let freeBody = free body in
-      S.diff (S.union freeESet freeBody) freeXSet
+      S.union freeESet (S.diff freeBody freeXSet)
   | SA.SBegin sexprs -> unionFree sexprs
   | SA.SBinop (operand1, _, operand2) -> S.union (free operand1) (free operand2)
   | SA.SUnop (_, operand) -> free operand

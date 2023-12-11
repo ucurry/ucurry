@@ -16,11 +16,5 @@ Num one = (Addone zero);
 (println
   (case (Addone (Addone (Zero))) of 
       Zero => 2
-    | Addone Addone Zero => 3));
-
---(println
-  --(case (Addone (Addone (Zero))) of 
-      --_ => 4
-    --| Zero => 2
-    --| Addone (Addone (Zero)) => 3));
-
+    | Addone Addone Zero => 3
+    | _ => 0));

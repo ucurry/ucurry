@@ -48,9 +48,10 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         ( branch_tau,
           S.SIf ((cond_tau', cond_e), (branch_tau, se1), (branch_tau, se2)) )
     | A.Let (bindings, e) ->
-        let check_e (xi, ei) =
-          typ_of vcon_env vcon_sets (add_let_type (xi, ei) type_env) ei
-        in
+        (* let check_e (xi, ei) =
+             typ_of vcon_env vcon_sets (add_let_type (xi, ei) type_env) ei
+           in *)
+        let check_e (_, ei) = ty ei in
         let vars, _ = List.split bindings in
         let taus, ses = List.split (List.map check_e bindings) in
         let newEnv = bindAll vars taus type_env in

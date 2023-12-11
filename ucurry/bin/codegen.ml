@@ -107,11 +107,11 @@ let build_main_body defs =
           let varmap' =
             List.fold_left
               (fun vm (name, e) ->
-                (*TODO: error here with function types*)
                 let tau, _ = e in
+                let e' = expr builder e in
+                (*TODO: error here with function types*)
                 let reg = L.build_alloca (ltype_of_type tau) name builder in
                 let vm' = StringMap.add name reg vm in
-                let e' = exprWithVarmap builder captured_param vm' e in
                 let _ = L.build_store e' (lookup name vm') builder in
                 vm')
               varmap bindings
@@ -244,10 +244,7 @@ let build_main_body defs =
       | C.At (e, i) ->
           let tuple_ptr = expr builder e in
           Util.get_data_field i tuple_ptr builder "tuple field"
-      | C.Noexpr ->
-          L.const_int i1_t 0
-          (* This is for no-arg value construct: TODO double check  *)
-          (* L.build_unreachable builder  *)
+      | C.Noexpr -> L.const_int i1_t 0
       | C.GetTag e ->
           let str_ptr = expr builder e in
           Util.get_data_field 0 str_ptr builder "tag"
@@ -306,7 +303,6 @@ let build_main_body defs =
         "cap" builder
     in
 
-
     (* let localvarmap = StringMap.add "cap" cap_param StringMap.empty in *)
 
     (* TODO: dont think this is necessary *)
@@ -331,7 +327,7 @@ let build_main_body defs =
     let e' = exprWithVarmap builder cap_param localvarmap' body in
     ignore (add_terminal builder (fun b -> L.build_ret e' b))
   (* varmap is the variable environment that maps (variable : string |---> to reg : llvale) *)
-  and build_named_function tau name lambda cap varmap =
+  and build_named_function tau name lambda cap captured_param varmap =
     let funtype, function_ptr = alloc_function name tau in
     (* Alloc the closure struct and adds it into varmap *)
     let cl_struct_type =
@@ -345,7 +341,7 @@ let build_main_body defs =
     let varmap' = StringMap.add name closure_pp varmap in
     (* Populate the capture struct  *)
     let capstruct_type, capstruct_ptr =
-      build_captured_struct builder varmap' null_captured_param cap
+      build_captured_struct builder varmap' captured_param cap
     in
     let casted_capstruct_ptr =
       L.build_bitcast capstruct_ptr void_ptr "capstruct" builder
@@ -371,7 +367,7 @@ let build_main_body defs =
         let _ = L.build_store e' reg builder in
         (builder, varmap')
     | C.Function (tau, name, (lambda, cap)) ->
-        build_named_function tau name lambda cap varmap
+        build_named_function tau name lambda cap null_captured_param varmap
     | C.Exp e ->
         let _ = exprWithVarmap builder null_captured_param varmap e in
         (builder, varmap)

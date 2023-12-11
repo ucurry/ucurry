@@ -45,9 +45,10 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let branch_tau = SU.get_checked_types then_tau else_tau in
         (branch_tau, A.If (cond', then', else'))
     | A.Let (bindings, e) ->
-        let check_e (xi, ei) =
-          typ_of vcon_env vcon_sets (SU.add_let_type (xi, ei) type_env) ei
-        in
+        (* let check_e (xi, ei) =
+             typ_of vcon_env vcon_sets (SU.add_let_type (xi, ei) type_env) ei
+           in *)
+        let check_e (_, ei) = ty ei in
         let vars, _ = List.split bindings in
         let taus, es' = List.split @@ List.map check_e bindings in
         let new_env = SU.bindAll vars taus type_env in
@@ -189,7 +190,7 @@ let rec typ_def (def : A.def) (semant_envs : semant_envs) : A.def * S.type_env =
   in
   ty def
 
-let alpha_semant (defs : A.program) : A.program * S.type_env =
+let desugar (defs : A.program) : A.program =
   let add_vcons (vcon_env, vcon_sets) (def : Ast.def) =
     match def with
     | A.Datatype (CONSTRUCTOR_TY con_name, cons) ->
@@ -213,11 +214,11 @@ let alpha_semant (defs : A.program) : A.program * S.type_env =
   let vcon_env, vcon_sets =
     List.fold_left add_vcons (StringMap.empty, StringMap.empty) defs
   in
-  let sdefs, global_env =
+  let sdefs, _ =
     List.fold_left
       (fun (sdefs, type_env) def ->
         let sdef, type_env' = typ_def def { type_env; vcon_env; vcon_sets } in
         (sdef :: sdefs, type_env'))
       ([], StringMap.empty) defs
   in
-  (List.rev sdefs, global_env)
+  List.rev sdefs

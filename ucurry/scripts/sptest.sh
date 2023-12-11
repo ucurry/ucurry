@@ -1,8 +1,9 @@
 #! /bin/sh
+cd ..
 echo "Tests for success cases \n"
 for f in ./tests/scanparse/*test-*.uc
 do
-    echo "Testing $f"
+    echo "Testing .$f"
     dune exec ucurry -- -a < $f > $f.trimmed
     dune exec ucurry -- -a < $f.trimmed > $f.out
     diff $f.trimmed $f.out
@@ -20,7 +21,7 @@ done
 echo "Tests for fail cases \n"
 for f in ./tests/scanparse/*fail-*.uc
 do
-    echo "Testing $f which is supposed to fail"
+    echo "Testing .$f which is supposed to fail"
     dune exec ucurry -- -a < $f 2> /dev/null 1> /dev/null
     ecode=$?
     
