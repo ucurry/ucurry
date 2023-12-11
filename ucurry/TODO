@@ -58,3 +58,5 @@ TODO (DEC 11):
 - Consider adding let rec 
 - Primitive List pattern only takes in name , 
   pattern like `x :: []` is not supported yet
+- Combine `Binop e1 :: e2` with `List e1 e2` expression
+- Delete infinite list 
