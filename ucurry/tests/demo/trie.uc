@@ -53,7 +53,8 @@ add s trie =
       of (_, []) => trie
       | (Leaf, xs) => (build_node s)
       | (Node tries, s) => 
-        let add_to_tries = \((string * Trie) list -> string list -> (string * Trie) list)
+        letrec add_to_tries = 
+        \((string * Trie) list -> string list -> (string * Trie) list)
             t s -> (case (t, s)  
                     of (t, []) => t 
                     |  ([], c :: cs) => [(c, (build_node cs))]
@@ -78,5 +79,9 @@ println (string_exists ["h", "i"] trie);
 println (string_exists ["h", "e", "l", "l", "o"] trie);
 println (string_exists ["h", "e", "l", "l", "o"] trie2);
 (print_trie (add ["h", "i"] (Leaf)));
---(print_trie (add ["h", "i"] trie));
+(print_trie (add ["h", "i"] trie));
+(print_trie (add ["1", "0", "7"] (add ["1", "0", "6"] trie)));
+(println (string_exists ["h"] (add ["h", "i"] (Leaf))));
+(println (string_exists ["h", "i"](add ["h", "i"] trie)));
+(println (string_exists ["h", "o"](add ["h", "i"] trie)));
 

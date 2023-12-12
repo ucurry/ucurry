@@ -11,7 +11,7 @@ do
     # llc -relocation-model=pic $f.ll > $f.s
     # cc -o $f.exe $f.s
     # ./$f.exe > $f.out
-    dune exec ucurry -- -b < $f | lli > $f.out
+    dune exec ucurry -- -s < $f | lli > $f.out
     diff $f.out $f.gold 
 
     ecode=$? 

@@ -61,11 +61,18 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
     | A.Letrec (bindings, e) -> 
          let check_letrec_binding (env, new_es) (n, ei) = 
            match ei with
+           (* A.Thunk will only be matched when lazy convert is added *)
             | A.Thunk (A.Lambda (t, _, _)) -> 
                 let new_t = FUNCTION_TY (UNIT_TY, t) in
                 let new_env = StringMap.add n new_t env in 
                 let tau, e' = typ_of vcon_env vcon_sets new_env ei in 
                 let _ = get_checked_types new_t tau in 
+                (new_env, (tau, e')::new_es)
+           (* A.Lambda will only be matched when lazy convert is not added *)
+            | A.Lambda (t, _, _) ->
+                let new_env = StringMap.add n t env in 
+                let tau, e' = typ_of vcon_env vcon_sets new_env ei in 
+                let _ = get_checked_types t tau in 
                 (new_env, (tau, e')::new_es)
             | _ ->raise (TypeError ("Letrec binds name " ^ n ^ " to non-lambda expression")) 
         in  
