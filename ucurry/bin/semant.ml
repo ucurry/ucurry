@@ -21,7 +21,6 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
           | A.STRING s -> (STRING_TY, S.STRING s)
           | A.BOOL b -> (BOOL_TY, S.BOOL b)
           | A.UNIT -> (UNIT_TY, S.UNIT)
-          | A.INF_LIST i -> (LIST_TY INT_TY, S.INF_LIST i)
         in
         let tau, lit = lit_ty l in
         (tau, S.SLiteral lit)

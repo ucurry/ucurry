@@ -3,7 +3,7 @@
 %}
 
 // delimiters
-%token ARROW DOUBLEARROW SEMI COMMA COLON LBRACE RBRACE LBRACKET RBRACKET BAR DOTS DOT ISNULL
+%token ARROW DOUBLEARROW SEMI COMMA COLON LBRACE RBRACE LBRACKET RBRACKET BAR DOT ISNULL
 // keyword
 %token FUNCTION LAMBDA DATATYPE IF THEN ELSE LET LETREC BEGIN IN CASE OF WILDCARD CHECK_TYPE_ERROR TAG FIELD 
 // type
@@ -169,13 +169,6 @@ value:
   | INTEGER                        { INT $1 }
   | BOOL                           { BOOL $1 }
   | UNIT                           { UNIT }
-  | LBRACKET INTEGER DOTS RBRACKET { INF_LIST $2 }
-
-
-// literal_tuple:
-//     value  COMMA value     { [$3; $1] }
-//   | literal_tuple COMMA value { $3 :: $1 }
-
 
 args:
   | exp { [$1] }

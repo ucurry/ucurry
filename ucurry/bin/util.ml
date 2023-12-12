@@ -68,5 +68,4 @@ let typ_of_value = function
   | A.INT _ -> INT_TY
   | A.STRING _ -> STRING_TY
   | A.BOOL _ -> BOOL_TY
-  | A.INF_LIST _ -> LIST_TY INT_TY
   | A.UNIT -> UNIT_TY

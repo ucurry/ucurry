@@ -89,7 +89,6 @@ let build_literal (context : L.llcontext) (string_pool : L.llvalue StringMap.t)
     | S.INT i -> L.const_int i32_t i
     | S.STRING s -> StringMap.find s string_pool
     | S.BOOL b -> L.const_int i1_t (if b then 1 else 0)
-    | S.INF_LIST _ -> raise (UNIMPLEMENTED "inf list")
     | S.UNIT -> L.const_int i1_t 0
   in
   to_lit v
@@ -122,12 +121,7 @@ let build_string_pool (program : C.program) (builder : L.llbuilder) :
               StringMap.add s
                 (L.build_global_stringptr s "strlit" builder)
                 v_pool)
-      (* | S.LIST (hd, tl) ->
-          let v_pool' = mk_value_string_pool v_pool hd in
-          mk_value_string_pool v_pool' tl *)
       | S.BOOL _ -> v_pool
-      (* | S.EMPTYLIST _ -> v_pool *)
-      | S.INF_LIST _ -> v_pool
       | S.INT _ -> v_pool
       | S.UNIT -> v_pool
     in

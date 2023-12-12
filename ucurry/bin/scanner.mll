@@ -25,7 +25,6 @@ rule token = parse
 | '['        { LBRACKET }
 | ']'        { RBRACKET }
 | '|'        { BAR }
-| ".."       { DOTS }
 | "."        { DOT }
 
 

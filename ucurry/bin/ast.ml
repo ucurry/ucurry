@@ -63,7 +63,6 @@ and value =
   | INT of int
   | STRING of string
   | BOOL of bool
-  | INF_LIST of int
   | UNIT
 
 and case_expr = pattern * expr
@@ -181,7 +180,6 @@ and string_of_literal = function
   | STRING l -> "\"" ^ l ^ "\""
   | BOOL l -> string_of_bool l
   | UNIT -> "()"
-  | INF_LIST n -> "[" ^ string_of_int n ^ "..]"
 
 let string_of_constructor = function
   | c, UNIT_TY -> c

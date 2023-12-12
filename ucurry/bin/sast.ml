@@ -37,7 +37,6 @@ and svalue =
   | INT of int
   | STRING of string
   | BOOL of bool
-  | INF_LIST of int
   | UNIT
 
 type sdef =
@@ -57,4 +56,3 @@ let string_of_literal : svalue -> string = function
   | STRING l -> "\"" ^ l ^ "\""
   | BOOL l -> string_of_bool l
   | UNIT -> "()"
-  | INF_LIST n -> "[" ^ string_of_int n ^ "..]"

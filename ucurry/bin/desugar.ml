@@ -22,7 +22,6 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
           | A.STRING _ -> STRING_TY
           | A.BOOL _ -> BOOL_TY
           | A.UNIT -> UNIT_TY
-          | A.INF_LIST _ -> LIST_TY INT_TY
         in
         (lit_ty l, exp)
     | A.Var x -> (SU.findType x type_env, exp)
