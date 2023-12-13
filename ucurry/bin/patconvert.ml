@@ -57,6 +57,7 @@ let rec is_exhaustive (vcon_sets : S.vcon_sets) (vcon_env : S.vcon_env)
         else raise (SU.TypeError "pattern matching non-ehaustive")
     | INT_TY -> raise (SU.TypeError "an integer is not matched to any pattern")
     | LIST_TY _ ->
+        (* TODO: list pattern check is not exhaustive *)
         let must_have =
           StringSet.add "cons" (StringSet.add "nil" StringSet.empty)
         in
@@ -78,22 +79,21 @@ let rec is_exhaustive (vcon_sets : S.vcon_sets) (vcon_env : S.vcon_env)
     | ANY_TY -> raise (SU.TypeError "any type cannot pattern match on function")
 
 (* a => a + 2 becomes a => let a = scrutinee in a + 2 *)
-let get_binds (scrutinee : A.expr) (pat : Ast.pattern) : (string * A.expr) list
-    =
-  let rec bind_pats scrutinee pat =
-    match pat with
-    | A.CON_PAT (name, pat) -> bind_pats (A.GetField (scrutinee, name)) pat
-    | A.VAR_PAT a -> [ (a, scrutinee) ]
-    | A.WILDCARD | A.NIL -> []
-    | A.CONCELL (hd, tl) ->
-        [ (hd, A.Unop (A.Hd, scrutinee)); (tl, A.Unop (A.Tl, scrutinee)) ]
-    | A.PATS ps ->
-        let bindings =
-          List.mapi (fun idx p -> bind_pats (A.At (scrutinee, idx)) p) ps
-        in
-        List.concat bindings
-  in
-  bind_pats scrutinee pat
+let rec get_binds (scrutinee : A.expr) (pat : Ast.pattern) :
+    (string * A.expr) list =
+  match pat with
+  | A.CON_PAT (name, pat) -> get_binds (A.GetField (scrutinee, name)) pat
+  | A.VAR_PAT a -> [ (a, scrutinee) ]
+  | A.WILDCARD | A.NIL -> []
+  | A.CONCELL (hd, tl) ->
+      List.append
+        (get_binds (A.Unop (A.Hd, scrutinee)) hd)
+        (get_binds (A.Unop (A.Tl, scrutinee)) tl)
+  | A.PATS ps ->
+      let bindings =
+        List.mapi (fun idx p -> get_binds (A.At (scrutinee, idx)) p) ps
+      in
+      List.concat bindings
 
 (* raise error if the pattern is illegal *)
 let legal_pats tau pats vcon_env =
@@ -201,9 +201,10 @@ let match_compile (scrutinee : A.expr) (cases : A.case_expr list)
           A.Binop (A.GetTag scrutinee, A.Equal, A.Literal (A.STRING name))
         in
         Test ([ (cond, matched') ], resume)
-    | A.CONCELL _ ->
+    | A.CONCELL (tl, hd) ->
+        let matched' = match_pats scrutinee 0 [ tl; hd ] matched resume in
         let cond = A.Unop (A.Not, A.Unop (A.IsNull, scrutinee)) in
-        Test ([ (cond, matched) ], resume)
+        Test ([ (cond, matched') ], resume)
     | A.NIL ->
         let cond = A.Unop (A.IsNull, scrutinee) in
         Test ([ (cond, matched) ], resume)

@@ -32,12 +32,7 @@ and sx =
 
 and scase_expr = A.pattern * sexpr
 and lambda = string list * sexpr
-
-and svalue =
-  | INT of int
-  | STRING of string
-  | BOOL of bool
-  | UNIT
+and svalue = INT of int | STRING of string | BOOL of bool | UNIT
 
 type sdef =
   | SDatatype of typ * constructor list

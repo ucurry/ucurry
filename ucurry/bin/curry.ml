@@ -10,11 +10,11 @@ let rec curry_expr (exp : A.expr) : A.expr =
         (fun f' arg -> A.Apply (f', [ curry_expr arg ]))
         (curry_expr f) args
   | A.If (e1, e2, e3) -> A.If (curry_expr e1, curry_expr e2, curry_expr e3)
-  | A.Let (bs, body)  ->
+  | A.Let (bs, body) ->
       let vars, binds = List.split bs in
       let new_bs = List.combine vars (List.map curry_expr binds) in
       A.Let (new_bs, curry_expr body)
-  | A.Letrec (bs, body) -> 
+  | A.Letrec (bs, body) ->
       let vars, binds = List.split bs in
       let new_bs = List.combine vars (List.map curry_expr binds) in
       A.Letrec (new_bs, curry_expr body)

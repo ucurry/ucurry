@@ -33,14 +33,15 @@ type pattern =
   | PATS of pattern list
   | WILDCARD
   | NIL
-  | CONCELL of name * name
+  | CONCELL of pattern * pattern
 
 type expr =
   | Literal of value
   | Var of name
   | Apply of expr * expr list
   | If of expr * expr * expr
-  | Let of (name * expr) list * expr (* TODO: consider combine the two nodes to avoid repeated code, pattern matching inside LET node *)
+  | Let of (name * expr) list * expr
+    (* TODO: consider combine the two nodes to avoid repeated code, pattern matching inside LET node *)
   | Letrec of (name * expr) list * expr
   | Begin of expr list
   | Binop of expr * binop * expr
@@ -59,12 +60,7 @@ type expr =
   | Noexpr
   | NoMatch
 
-and value =
-  | INT of int
-  | STRING of string
-  | BOOL of bool
-  | UNIT
-
+and value = INT of int | STRING of string | BOOL of bool | UNIT
 and case_expr = pattern * expr
 
 type def =
@@ -113,7 +109,7 @@ let rec string_of_pattern = function
   | PATS ps -> "(" ^ String.concat ", " (List.map string_of_pattern ps) ^ ")"
   | WILDCARD -> "_"
   | NIL -> "[]"
-  | CONCELL (hd, tl) -> hd ^ "::" ^ tl
+  | CONCELL (hd, tl) -> "(" ^ string_of_pattern hd ^ "::" ^ string_of_pattern tl ^ ")"
 
 let string_of_variable (t, s) = string_of_typ t ^ " " ^ s
 
@@ -162,14 +158,8 @@ let rec string_of_expr exp =
     | GetField (e, v) -> string_of_expr e ^ "@" ^ v
     | GetTag e -> string_of_expr e ^ ".T"
     | EmptyList t -> "[" ^ string_of_typ t ^ "]"
-    | List (x, xs) -> "(" ^ (string_of_expr x) ^ " :: " ^ (string_of_expr xs) ^ ")"
-        (* let rec listString (x, xs) = 
-          match (x, xs) with
-          | x, EmptyList _ -> string_of_expr x
-          | x, List (y, ys) -> string_of_expr x ^ "," ^ listString (y, ys)
-          | _ -> raise (Invalid_argument "should not be reached")
-        in
-        "[" ^ listString (x, xs) ^ "]" *)
+    | List (x, xs) ->
+        "(" ^ string_of_expr x ^ " :: " ^ string_of_expr xs ^ ")"
     | NoMatch -> "no match"
   in
 

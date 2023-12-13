@@ -79,13 +79,13 @@ and string_of_sexpr (delim : string) ((ty, expr) : sexpr) : string =
                (fun (name, thunk) -> name ^ " = " ^ string_of_sexpr delim thunk)
                vl)
         ^ " in \n" ^ delim ^ string_of_sexpr delim e
-    | Letrec (vl, e) -> 
+    | Letrec (vl, e) ->
         "letrec "
         ^ String.concat ", "
             (List.map
                (fun (name, thunk) -> name ^ " = " ^ string_of_sexpr delim thunk)
                vl)
-        ^ " in \n" ^ delim ^ string_of_sexpr delim e 
+        ^ " in \n" ^ delim ^ string_of_sexpr delim e
     | Begin el ->
         "(begin "
         ^ String.concat (", " ^ delim) (List.map (string_of_sexpr delim) el)

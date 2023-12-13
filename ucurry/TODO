@@ -59,4 +59,3 @@ TODO (DEC 11):
 - Consider convert AST to PAST in Desugar
 - Primitive List pattern only takes in name , 
   pattern like `x :: []` is not supported yet
-- Delete infinite list 

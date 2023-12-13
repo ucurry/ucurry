@@ -38,7 +38,7 @@ let rec free ((t, exp) : SA.sexpr) : S.t =
       let freeESet = unionFree thunks in
       let freeBody = free body in
       S.union freeESet (S.diff freeBody freeXSet)
-  | SA.SLetrec (bindings, body) -> 
+  | SA.SLetrec (bindings, body) ->
       let names, thunks = List.split bindings in
       let tau, _ = List.split thunks in
       let localsWithTypes = List.combine tau names in
@@ -100,7 +100,7 @@ and close_exp (captured : freevar list) (le : SA.sexpr) : C.sexpr =
           (* need to recheck*)
           let e' = exp e in
           C.Let (ls', e')
-      | SA.SLetrec (ls, e) -> 
+      | SA.SLetrec (ls, e) ->
           let ls' = List.map (fun (name, l) -> (name, exp l)) ls in
           (* need to recheck*)
           let e' = exp e in

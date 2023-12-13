@@ -121,7 +121,7 @@ pattern:
   | LBRACE pattern_tuple RBRACE          {PATS (List.rev $2)}
   | CAPNAME                              { CON_PAT ($1, WILDCARD) }
   | CAPNAME  pattern                     { CON_PAT ($1, $2)}
-  | NAME CONS NAME                       { CONCELL ($1, $3) }
+  | LBRACE pattern CONS pattern RBRACE   { CONCELL ($2, $4) }
   | LBRACKET RBRACKET                    { NIL }
 pattern_tuple:
     pattern COMMA pattern       { [$3; $1] }

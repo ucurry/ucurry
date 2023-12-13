@@ -117,18 +117,18 @@ let build_main_body defs =
               varmap bindings
           in
           exprWithVarmap builder captured_param varmap' exp
-      | C.Letrec (bindings, exp) -> 
-         let builder', varmap' =
+      | C.Letrec (bindings, exp) ->
+          let builder', varmap' =
             List.fold_left
               (fun (builder, vm) (name, (tau, e)) ->
-                match e with 
-                  |C.Closure (lambda, cap) -> 
-                      build_named_function tau name lambda cap captured_param vm builder
-                  | _ -> failwith "impossible letrec not binds with closure"
-                )
+                match e with
+                | C.Closure (lambda, cap) ->
+                    build_named_function tau name lambda cap captured_param vm
+                      builder
+                | _ -> failwith "impossible letrec not binds with closure")
               (builder, varmap) bindings
           in
-          exprWithVarmap builder' captured_param varmap' exp 
+          exprWithVarmap builder' captured_param varmap' exp
       | C.Begin sexprs ->
           List.fold_left
             (fun _ sexpr -> expr builder sexpr)
@@ -158,8 +158,7 @@ let build_main_body defs =
           | A.Less -> L.build_icmp L.Icmp.Slt e1' e2' "temp" builder
           | A.Leq -> L.build_icmp L.Icmp.Sle e1' e2' "temp" builder
           | A.Greater -> L.build_icmp L.Icmp.Sgt e1' e2' "temp" builder
-          | A.Geq -> L.build_icmp L.Icmp.Sge e1' e2' "temp" builder
-            )
+          | A.Geq -> L.build_icmp L.Icmp.Sge e1' e2' "temp" builder)
       | C.Unop (unop, inner_e) -> (
           let printf_t : L.lltype =
             L.var_arg_function_type i32_t [| L.pointer_type i8_t |]
@@ -372,7 +371,8 @@ let build_main_body defs =
         let _ = L.build_store e' reg builder in
         (builder, varmap')
     | C.Function (tau, name, (lambda, cap)) ->
-        build_named_function tau name lambda cap null_captured_param varmap builder
+        build_named_function tau name lambda cap null_captured_param varmap
+          builder
     | C.Exp e ->
         let _ = exprWithVarmap builder null_captured_param varmap e in
         (builder, varmap)

@@ -1,6 +1,6 @@
 fun : (int -> bool) -> int list -> int list: 
 filter f nums = (case nums of [] => [int]
-                  | h :: t => if (f h) 
+                  | (h :: t) => if (f h) 
                               then (h :: (filter f t))
                               else (filter f t));
 fun : int -> bool :

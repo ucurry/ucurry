@@ -55,18 +55,23 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         (tau, A.Let (List.combine vars es', e'))
     | A.Letrec (bindings, e) ->
         (* enforce the bindings are all lambdas *)
-        let check_letrec_binding (env, new_es) (n, ei) = 
-           match ei with 
-            | A.Lambda (t, _, _) -> 
-                let new_env = StringMap.add n t env in 
-                let tau, e' = typ_of vcon_env vcon_sets new_env ei in 
-                let _ = SU.get_checked_types t tau in 
-                (new_env, e'::new_es)
-            | _ ->raise (SU.TypeError ("Letrec binds name " ^ n ^ " to non-lambda expression")) 
-        in  
-        let vars, _ = List.split bindings in 
-        let final_env, new_es = List.fold_left check_letrec_binding (type_env,[]) bindings in 
-        let tau, e' = typ_of vcon_env vcon_sets final_env e in 
+        let check_letrec_binding (env, new_es) (n, ei) =
+          match ei with
+          | A.Lambda (t, _, _) ->
+              let new_env = StringMap.add n t env in
+              let tau, e' = typ_of vcon_env vcon_sets new_env ei in
+              let _ = SU.get_checked_types t tau in
+              (new_env, e' :: new_es)
+          | _ ->
+              raise
+                (SU.TypeError
+                   ("Letrec binds name " ^ n ^ " to non-lambda expression"))
+        in
+        let vars, _ = List.split bindings in
+        let final_env, new_es =
+          List.fold_left check_letrec_binding (type_env, []) bindings
+        in
+        let tau, e' = typ_of vcon_env vcon_sets final_env e in
         (tau, A.Letrec (List.combine vars (List.rev new_es), e'))
     | A.Begin [] -> (UNIT_TY, exp)
     | A.Begin es ->
