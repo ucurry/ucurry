@@ -1,0 +1,20 @@
+datatype Num = Zero of (unit -> unit) | Addone of (unit -> Num);
+(unit -> Num) zero = \((unit -> Num))unit -> Zero THUNK: ;
+(unit -> Num) one = \((unit -> Num))unit -> Addone zero;
+if Zero THUNK: .T == "Addone" 
+ then let a = Zero THUNK: @Addone in println0 
+ else println1;
+printlnif Addone THUNK: Zero THUNK: .T == "Addone" 
+ then if (Addone THUNK: Zero THUNK: @Addone ()).T == "Zero" 
+ then 2 
+ else 10 
+ else 10;
+printlnif Addone THUNK: Addone THUNK: Zero THUNK: .T == "Addone" 
+ then if (Addone THUNK: Addone THUNK: Zero THUNK: @Addone ()).T == "Addone" 
+ then if ((Addone THUNK: Addone THUNK: Zero THUNK: @Addone ())@Addone ()).T == "Zero" 
+ then 3 
+ else 0 
+ else 0 
+ else if Addone THUNK: Addone THUNK: Zero THUNK: .T == "Zero" 
+ then 2 
+ else 0;

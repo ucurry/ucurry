@@ -17,10 +17,16 @@ take l i = if i == 0 then (Nil)
                                 Nil => (Nil)
                                 | Cons (y, ys) => (Cons (y, (take ys (i - 1)))));
 
+fun : List -> int -> int :
+takePrint l i = if i == 0 then 0
+                     else (case l of 
+                                Nil => 0
+                                | Cons (y, ys) => (begin println y, (takePrint ys (i - 1))));
+(takePrint (nat ()) 25);
 
-fun : List -> int:
-printList l = (case l of
-                    Nil => 0
-                    | Cons (y, ys) => (begin println y, (printList ys)));
+--fun : List -> int:
+--printList l = (case l of
+                    --Nil => 0
+                    --| Cons (y, ys) => (begin println y, (printList ys)));
 
 (printList (take (nat ()) 11));

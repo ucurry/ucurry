@@ -1,0 +1,14 @@
+datatype List = Nil of (unit -> unit) | Cons of (unit -> ((unit -> int) * (unit -> List)));
+fun : (unit -> ((unit -> unit) -> List)):
+
+ones unit = \(((unit -> unit) -> List))u -> Cons THUNK: (THUNK: 1, THUNK: ((ones ()) THUNK: ()));
+
+fun : (unit -> ((unit -> List) -> ((unit -> int) -> int))):
+take unit = \(((unit -> List) -> ((unit -> int) -> int)))l -> \(((unit -> int) -> int))i -> if (i ()) == 0 
+ then 0 
+ else if (l ()).T == "Cons" 
+ then let a = ((l ())@Cons ()).0, b = ((l ())@Cons ()).1 in (begin println(a ()), (((take ()) b) THUNK: (i ()) - 1)) 
+ else if (l ()).T == "Nil" 
+ then 0 
+ else (begin println"Case not matched", no match);
+(((take ()) THUNK: ((ones ()) THUNK: ())) THUNK: 15);

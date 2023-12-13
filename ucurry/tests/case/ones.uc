@@ -10,4 +10,4 @@ take l i = if i == 0
                     Nil => 0
                     | Cons (a, b) => (begin (println a), (take b (i - 1))));
 
-(take (ones ()) 21);
+(take (ones ()) 15);
