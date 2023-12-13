@@ -8,6 +8,6 @@ take l i = if i == 0
            then 0 
            else (case l of 
                     Nil => 0
-                    | (Cons (a, b)) => (begin (println a), (take b (i - 1))));
+                    | Cons (a, b) => (begin (println a), (take b (i - 1))));
 
 (take (ones ()) 5);

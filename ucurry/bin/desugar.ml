@@ -149,7 +149,7 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let tau, e' = ty e in
         match tau with
         | CONSTRUCTOR_TY _ -> (STRING_TY, A.GetTag e')
-        | _ -> raise (SU.TypeError "get field on  "))
+        | _ -> raise (SU.TypeError ("get field on  " ^ string_of_typ tau)))
     | A.GetField (e, vcon_name) -> (
         let tau, e' = ty e in
         match tau with

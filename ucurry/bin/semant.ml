@@ -182,7 +182,8 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         | _ -> raise (TypeError "not a datatype in GetField"))
     | A.EmptyList tau -> (LIST_TY tau, S.SEmptyList tau)
     | A.List (hd, tl) -> (
-        let hd_tau, hd' = ty hd and tl_tau, tl' = ty tl in
+        let hd_tau, hd' = ty hd 
+        and tl_tau, tl' = ty tl in
         match tl_tau with
         | LIST_TY UNIT_TY ->
             ( LIST_TY hd_tau,

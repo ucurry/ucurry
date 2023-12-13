@@ -21,8 +21,7 @@ let rec is_exhaustive (vcon_sets : S.vcon_sets) (vcon_env : S.vcon_env)
   if List.exists match_all pats then ()
   else
     match scrutinee_tau with
-    | TUPLE_TY _ ->
-        ()
+    | TUPLE_TY _ -> ()
         (* HACK : too much work to check exhaustive pattern on tuple *)
         (* let add_patterns matrix p  = match p with
              A.PATTERNS ps -> ps :: matrix
@@ -72,8 +71,7 @@ let rec is_exhaustive (vcon_sets : S.vcon_sets) (vcon_env : S.vcon_env)
         if StringSet.is_empty (has_all pats must_have) then ()
         else raise (SU.TypeError "pattern matching non exhastive for list")
     | BOOL_TY -> raise (SU.TypeError "an boolean is not matched to any pattern")
-    | STRING_TY ->
-        raise (SU.TypeError "an string is not matched to any pattern")
+    | STRING_TY -> raise (SU.TypeError "an string is not matched to any pattern")
     | UNIT_TY -> raise (SU.TypeError "cannot pattern match on unit")
     | FUNCTION_TY _ -> raise (SU.TypeError "cannot pattern match on function")
     | ANY_TY -> raise (SU.TypeError "any type cannot pattern match on function")
@@ -101,7 +99,9 @@ let legal_pats tau pats vcon_env =
     match (t, p) with
     | _, A.WILDCARD -> ()
     | _, A.VAR_PAT _ -> ()
-    | LIST_TY _, A.CONCELL _ -> ()
+    | LIST_TY tau, A.CONCELL (hd, tl) -> 
+      ignore (legal_pat tau hd);
+      ignore (legal_pat t tl)
     | LIST_TY _, A.NIL -> ()
     | CONSTRUCTOR_TY name, A.CON_PAT (vcon_name, pat) ->
         let dt_name, _, arg_typ = StringMap.find vcon_name vcon_env in
@@ -201,8 +201,8 @@ let match_compile (scrutinee : A.expr) (cases : A.case_expr list)
           A.Binop (A.GetTag scrutinee, A.Equal, A.Literal (A.STRING name))
         in
         Test ([ (cond, matched') ], resume)
-    | A.CONCELL (tl, hd) ->
-        let matched' = match_pats scrutinee 0 [ tl; hd ] matched resume in
+    | A.CONCELL (hd, tl) ->
+        let matched' = match_cons scrutinee hd tl matched resume in 
         let cond = A.Unop (A.Not, A.Unop (A.IsNull, scrutinee)) in
         Test ([ (cond, matched') ], resume)
     | A.NIL ->
@@ -221,6 +221,10 @@ let match_compile (scrutinee : A.expr) (cases : A.case_expr list)
       | p ->
           let continue = match_pats tuple (idx + 1) pats matched default in
           match_pat (A.At (tuple, idx)) p continue default
+  and match_cons (cons : A.expr) (hd_pat: A.pattern) (tl_pat: A.pattern)
+      (matched: tree) (default : tree) : tree = 
+      let match_tl = match_pat (A.Unop (A.Tl, cons)) tl_pat matched default
+      in match_pat (A.Unop (A.Hd, cons)) hd_pat match_tl default 
   in
   let rec match_resume (scrutinee : A.expr) (cases : A.case_expr list)
       (tau : typ) (resume : tree) : tree =
