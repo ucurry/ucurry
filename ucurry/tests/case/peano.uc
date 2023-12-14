@@ -10,8 +10,9 @@ Num one = (Addone zero);
 (println
   (case (Addone (Zero)) of 
       Addone Zero => 2
-    | _ => 10
-    | Zero => 20));
+    | Zero => 20
+    | _ => 10));
+
 
 (println
   (case (Addone (Addone (Zero))) of 

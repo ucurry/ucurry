@@ -1,11 +1,11 @@
-int x = (
+check_type_error int x = (
     case (1, 2, 3) of   
      (a, b, c) => a
      | x => x.1
 );
 
 -- local name
-int y = (
+check_type_error int y = (
     case (1, 2, 3) of   
      (a, b, c) => a
      | x => x.1
@@ -22,7 +22,6 @@ datatype Color = Green | Red | Blue;
 Color c = (
     case ((Green), 1) of 
        (a, b) => a 
-      | x => x.0
 );
 
 
@@ -46,17 +45,16 @@ datatype Number = ZERO
                 | TIMESPLUS of (Number * int);
 
 
-int digit_a = (case (TIMESPLUS ((ZERO), 1)) of 
+ int digit_a = (case (TIMESPLUS ((ZERO), 1)) of 
                           ZERO => 0 
                         | TIMESPLUS (ZERO , d) => d
                         | TIMESPLUS a => a.1); 
 
-int digit_b = (case (TIMESPLUS ((ZERO), 1)) of 
+ int digit_b = (case (TIMESPLUS ((ZERO), 1)) of 
                           ZERO => 0 
                         | TIMESPLUS (ZERO , d) => d
                         | TIMESPLUS (TIMESPLUS (ZERO, d), d2) => d2
                         | TIMESPLUS _ => 0); 
-
 
 ------- type-check for illegal pattern 
 check_type_error (case 1 of (a, b) => a);

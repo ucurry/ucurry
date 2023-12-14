@@ -3,8 +3,8 @@ datatype Graph =   Node of (int * int list)
 Graph g =  (Node (1, [10, 2, 3]));
 
 int n = (case g of 
-            Node (a, xs) => hd xs
-          | Node (a, []) => 2
+            Node (a, []) => 2
+          | Node (a, xs) => hd xs
           | _ => 3);
 println n;
 

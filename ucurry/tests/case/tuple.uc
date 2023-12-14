@@ -10,6 +10,14 @@ check_type_error (case ((One), (Two), (Three))
             | (One, Two, Two) => 5
             | _ => 4);
 
+check_type_error (case ((One), (Two), (Three)) 
+            of (One, Three, Three) => 2
+            | (One, Three, Two) => 3
+            | (One, b, Two) => 4
+            | (One, Two, Three) => 5
+            | (One, Two, Two) => 5
+            | _ => 4);
+
 int b  = (case ((One), (Two), (Three)) 
             of (One, Three, Three) => 4
             | (One, Three, Two) => 3
@@ -30,7 +38,8 @@ println c;
 int d = (case ((G (One)), (R (Two)), (B (Three))) 
          of (G Two, R Two, _) => 1
           | (_, _, B Two) => 2
-          | (G One, R Two, B Three) => 3
+          | (G One, b, B Three) => 3
+          | (G One, R Two, c ) => 4
           | _ => 4 );
 println d;
 

@@ -144,7 +144,9 @@ let remove_unmatch cases =
         | _ -> raise (SU.TypeError "some cases are unused")
         else remove_unmatch_acc rest ((p, e) :: acc)
   in
-  remove_unmatch_acc cases []
+  let scrutinee ,  default =  remove_unmatch_acc cases [] in 
+  List.rev scrutinee, default
+
 
 let repeat_check (pat_groups : A.case_expr list PatMap.t) (idx : int) : unit =
   let extract_pat p =
@@ -182,8 +184,7 @@ let rec simplify_pat p =
   | A.WILDCARD -> A.WILDCARD
   | A.VAR_PAT _ -> A.WILDCARD
   | A.CONCELL (p1, p2) -> A.CONCELL (simplify_pat p1, simplify_pat p2)
-  | A.PATS ps ->
-      if match_all p then A.WILDCARD else A.PATS (List.map simplify_pat ps)
+  | A.PATS ps -> if match_all p then A.WILDCARD else A.PATS (List.map simplify_pat ps)
   | A.NIL -> A.NIL
   | A.CON_PAT (name, p) -> A.CON_PAT (name, simplify_pat p)
 
@@ -311,13 +312,13 @@ let match_compile (scrutinee : A.expr) (cases : A.case_expr list)
           ( cond,
             match_resume
               (A.GetField (scrutinee, vcon_name))
-              sub_cases arg_typ nearest_resume )
+              (List.rev sub_cases) arg_typ nearest_resume )
         in
         Test
           ( List.map build_sub_tree (StringMap.bindings vcon_to_cases),
             nearest_resume )
     | TUPLE_TY taus ->
-        let rec match_tuple idx cases resume : tree =
+        let rec match_tuple idx cases : unit =
           (* get the current pattern that is aimed to be matched *)
           let get_cur_pat pat =
             match pat with
@@ -328,13 +329,7 @@ let match_compile (scrutinee : A.expr) (cases : A.case_expr list)
                      ("tuple type always have tuple pattern "
                     ^ A.string_of_pattern pat))
           in
-          if idx == List.length taus - 1 then
-            let pats, cases = List.split cases in
-            let final_pats = List.map get_cur_pat pats in
-            let new_scrutinee = A.At (scrutinee, idx) in
-            match_resume new_scrutinee
-              (List.combine final_pats cases)
-              (List.nth taus idx) resume
+          if idx == List.length taus - 1 then ()
           else
             (* add one (pat * expr) case expression to the collected based on idx *)
             let add_one_case collected (pat, e) =
@@ -346,23 +341,19 @@ let match_compile (scrutinee : A.expr) (cases : A.case_expr list)
             (* pat_to_rest organize the list case expression based on idx*)
             let pat_to_rest = List.fold_left add_one_case PatMap.empty cases in
             repeat_check pat_to_rest (idx + 1);
-            let rec match_binds bind =
-              match bind with
-              | [] -> resume
-              | (p, patterns) :: rest ->
-                  let resume' = match_binds rest in
-                  let continue = match_tuple (idx + 1) patterns resume' in
-                  match_pat (A.At (scrutinee, idx)) p continue resume'
-            in
-            match_binds (PatMap.bindings pat_to_rest)
+            List.iter  (fun (_, pats) -> match_tuple (idx + 1) pats) (PatMap.bindings pat_to_rest)
         in
-        match_tuple 0 shrinked_cases nearest_resume
-    | LIST_TY _ -> (
-        match cases with
-        | [] -> resume
-        | [ (p, matched_e) ] -> match_pat scrutinee p (Leaf matched_e) resume
+        match_tuple 0 shrinked_cases;
+        (match shrinked_cases with
+        | [] -> nearest_resume
         | (p, matched_e) :: rest ->
-            let resume' = match_resume scrutinee rest tau resume in
+            let resume' = match_resume scrutinee rest tau nearest_resume in
+            match_pat scrutinee p (Leaf matched_e) resume')
+    | LIST_TY _ -> (
+        match shrinked_cases with
+        | [] -> nearest_resume
+        | (p, matched_e) :: rest ->
+            let resume' = match_resume scrutinee rest tau nearest_resume in
             match_pat scrutinee p (Leaf matched_e) resume')
     | INT_TY | STRING_TY | BOOL_TY | UNIT_TY | FUNCTION_TY _ | ANY_TY -> (
         match default with Some e -> Leaf e | None -> resume)
