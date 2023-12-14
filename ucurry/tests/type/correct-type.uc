@@ -80,9 +80,9 @@ Color color = (case (Pure (Black))
 
 int list xs = (case [1, 2, 3] 
                 of [] => [int]
-                | x :: xs => xs);
+                | (x :: xs) => xs);
 
 int  single = (case [1, 2, 3] 
                 of [] => 1
-                | x :: xs => x);
+                | (x :: xs) => x);
                  

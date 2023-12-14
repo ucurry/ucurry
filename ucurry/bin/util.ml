@@ -64,6 +64,12 @@ let rec map_i (f : 'a -> int -> 'b) (i : int) (l : 'a list) =
 
 let list_to_arr l = Array.init (List.length l) (List.nth l)
 
+let rec drop xs n =
+  match (xs, n) with
+  | xs, 0 -> xs
+  | _ :: ys, n -> drop ys (n - 1)
+  | _ -> raise (Impossible "should not be reached")
+
 let typ_of_value = function
   | A.INT _ -> INT_TY
   | A.STRING _ -> STRING_TY

@@ -109,7 +109,8 @@ let rec string_of_pattern = function
   | PATS ps -> "(" ^ String.concat ", " (List.map string_of_pattern ps) ^ ")"
   | WILDCARD -> "_"
   | NIL -> "[]"
-  | CONCELL (hd, tl) -> "(" ^ string_of_pattern hd ^ "::" ^ string_of_pattern tl ^ ")"
+  | CONCELL (hd, tl) ->
+      "(" ^ string_of_pattern hd ^ "::" ^ string_of_pattern tl ^ ")"
 
 let string_of_variable (t, s) = string_of_typ t ^ " " ^ s
 
@@ -158,8 +159,7 @@ let rec string_of_expr exp =
     | GetField (e, v) -> string_of_expr e ^ "@" ^ v
     | GetTag e -> string_of_expr e ^ ".T"
     | EmptyList t -> "[" ^ string_of_typ t ^ "]"
-    | List (x, xs) ->
-        "(" ^ string_of_expr x ^ " :: " ^ string_of_expr xs ^ ")"
+    | List (x, xs) -> string_of_expr x ^ " :: " ^ string_of_expr xs
     | NoMatch -> "no match"
   in
 

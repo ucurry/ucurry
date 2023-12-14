@@ -19,9 +19,9 @@ check_type_error int n = (case (ZERO) of Red => 1);
 check_type_error Nat n = (case (Zero) of Zero => 0 | TenTimesPlus (natural, d) =>  d);
 check_type_error int  xs = (case [1, 2, 3] 
                             of [] => [int]
-                            | x :: xs => x);
+                            | (x :: xs) => x);
 
 check_type_error int  single = (case (ZERO) 
                                 of [] => 1
-                                | x :: xs => x);
+                                | (x :: xs) => x);
 

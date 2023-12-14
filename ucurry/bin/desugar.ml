@@ -132,7 +132,10 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let tau, e' = ty e in
         match tau with
         | TUPLE_TY ts -> (SU.nth ts i, A.At (e', i))
-        | _ -> raise (SU.TypeError "access field from non-tuple value"))
+        | _ ->
+            raise
+              (SU.TypeError
+                 ("access field from non-tuple value" ^ A.string_of_expr e)))
     | A.Noexpr -> (UNIT_TY, exp)
     | A.Construct (vcon_name, arg) ->
         let dt_name, _, formal_tau = SU.findType vcon_name vcon_env in

@@ -1,0 +1,12 @@
+datatype IntList = Nil | Cons of (int * IntList);
+datatype Number = One | Two | Three;
+datatype Color = Green of (Number * Number) | Blue of (Number * Number);
+(Number * Number) k = (One, Two);
+int c = if k.0.T == "Two" 
+ then if k.1.T == "One" 
+ then 2 
+ else if k.1.T == "Three" 
+ then 3 
+ else let b = k in 5 
+ else let b = k in 5;
+println c;
