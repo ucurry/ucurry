@@ -29,11 +29,11 @@ type uop =
 
 type pattern =
   | VAR_PAT of name
-  | CON_PAT of vcon_name * pattern (* !! *)
+  | CON_PAT of vcon_name * pattern 
   | PATS of pattern list
+  | CONCELL of pattern * pattern
   | WILDCARD
   | NIL
-  | CONCELL of pattern * pattern
 
 type expr =
   | Literal of value

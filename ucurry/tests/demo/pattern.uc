@@ -10,12 +10,12 @@ datatype IntList = Nil | Cons of (int * IntList);
 
 datatype Number = One | Two | Three;
 datatype Color =  Green of (Number * Number)| Blue of (Number * Number); 
---Color color = (Blue ((Two), (Three)));
---int c = (case color
-          --of Blue (Two, One) => 2
-           --| Blue (Two, Three) => 3
-           --| Blue b => 5
-           --| _ => 1);
+Color color = (Blue ((Two), (Three)));
+int c = (case color
+          of Blue (Two, One) => 2
+           | Blue (Two, Three) => 3
+           | Blue b => 5
+           | _ => 1);
 
 (Number * Number) k = ((One), (Two));
 int c = (case k of 
