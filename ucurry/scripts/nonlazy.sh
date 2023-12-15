@@ -1,15 +1,15 @@
-#!/bin/bash
+#! /bin/bash
 
 failed=0
 counter=0
 
-echo "Testing for lazy cases"
+echo "Testing for non-lazy cases"
 cd ..
-for f in ./tests/lazy/*.uc
+for f in ./tests/non-lazy/*.uc
 do 
-    echo "Testing $f"
+    echo "Testing .$f"
 
-    dune exec ucurry -- -s < $f | lli > $f.out
+    dune exec ucurry -- -b < $f | lli > $f.out
     diff $f.out $f.gold
     
     ecode=$?
