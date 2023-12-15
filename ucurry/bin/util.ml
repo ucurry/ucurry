@@ -68,7 +68,13 @@ let rec drop xs n =
   match (xs, n) with
   | xs, 0 -> xs
   | _ :: ys, n -> drop ys (n - 1)
-  | _ -> raise (Impossible "should not be reached")
+  | _ -> raise (Impossible "try to drop too many elements")
+
+let rec take xs n =
+  match (xs, n) with
+  | xs, 0 -> xs
+  | y :: ys, n -> y :: take ys (n - 1)
+  | _ -> raise (Impossible "try to take too many elemetns")
 
 let typ_of_value = function
   | A.INT _ -> INT_TY
