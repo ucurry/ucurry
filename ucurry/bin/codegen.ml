@@ -54,17 +54,17 @@ let build_main_body defs =
     | None -> ignore (instr builder)
   in
 
-  let delay_fun_t = L.function_type i32_t [||] in 
+  let delay_fun_t = L.function_type void_ptr [||] in 
   let thunk_t = 
-    L.struct_type context [| L.pointer_type i1_t; L.pointer_type delay_fun_t; i1_t |]
+    L.struct_type context [| L.pointer_type delay_fun_t; void_ptr; i1_t |]
   in
 
-  let force_t = L.function_type i32_t [||] in
+  let force_t = L.function_type void_ptr [| L.pointer_type thunk_t |] in
   let force_func = L.declare_function "Force" force_t the_module in 
    
   let rec exprWithVarmap builder captured_param varmap =
     let rec expr builder (ty, top_exp) =
-      match top_exp with//
+      match top_exp with
       | C.Literal l -> build_lit l
       | C.Var name -> L.build_load (lookup name varmap) name builder
       | C.Apply (((ft, _) as sf), args) ->
@@ -283,22 +283,34 @@ let build_main_body defs =
           ignore (Util.set_data_field tl_ptr 1 list_ptr builder);
           list_ptr
       | C.Thunk delay_fun -> 
-          (* malloc a thunk struct *)
-          (* let thunk_ptr = L.build_malloc (ltype_of_type ty) "thunk_ptr" builder in  *)
-          
-          (* populate the delay_fun *)
+      (* failwith "not yet implement thunk" *)
+           (* malloc thunk struct *)
+          let thunk_ptr = L.build_malloc thunk_t "thunk_sturct" builder in 
 
-          (* return the thunk struct pointer *)
-          let 
+          (* put the delay_fun into the thunk struct *)
+          let delay_funp = exprWithVarmap builder null_captured_param varmap delay_fun in 
+          let casted_delay_funp = L.build_bitcast delay_funp (L.pointer_type (delay_fun_t)) "casted_delay_fun" builder in
+          let _ = U.set_data_field casted_delay_funp 0 thunk_ptr builder in (* set delay fun *)
+          (* TODO HERE: the delay_funp does not match the universal funp in the thunk struct -> need casting *)
+          let _ = U.set_data_field (L.const_null void_ptr) 1 thunk_ptr builder in  (* set val *)
+          let _ = U.set_data_field (L.const_int i1_t 0) 2 thunk_ptr builder in (* set evaled to false *)
 
-      | C.Force e -> failwith "not yet implement force"
+          (* return struct pointer *)
+          thunk_ptr
+          (* let reg = L.build_alloca (L.pointer_type thunk_t) "thunk" builder in 
+          let _ = L.build_store thunk_ptr reg builder in 
+          reg *)
+
+      | C.Force e -> 
+      (* failwith "not yet implement force" *)
           (* TODO: need to generate the code for this function once -> so that not repeatedly generate it *)
           (* Call force function *)
           let e' = expr builder e in 
           let ret = L.build_call force_func [| e' |] "Force" builder in 
-          (* Cast the returned result *)
-          let casted_ret = L.build_bitcast ret (ltype_of_type ty) "casted_ret" builder in 
-          casted_ret
+
+          (* bistcast a void pointer to int *)
+          let casted_ret = L.build_ptrtoint ret (L.i64_type context) "casted_ret" builder in (* void pointer to i64 *)
+          L.build_trunc_or_bitcast casted_ret (ltype_of_type ty) "trunc_ret" builder
           
     in
     expr builder
@@ -393,7 +405,22 @@ let build_main_body defs =
   in
   let stmt builder varmap = function
     | C.Val (name, e) ->
-        (* Handle string -> create a global string pointer and assign the global name to the name *)
+(*     
+        (* malloc thunk struct *)
+        let thunk_ptr = L.build_malloc thunk_t "thunk_sturct" builder in 
+
+        (* put the delay_fun into the thunk struct *)
+        let e' = exprWithVarmap builder null_captured_param varmap e in 
+        let _ = U.set_data_field e' 0 thunk_ptr builder in (* set delay fun *)
+        let _ = U.set_data_field (L.const_pointer_null i1_t) 1 thunk_ptr builder in  (* set val *)
+        let _ = U.set_data_field (L.const_int i1_t 0) 2 thunk_ptr builder in (* set evaled to false *)
+
+      (* return struct pointer *)
+        let reg = L.build_alloca (L.pointer_type thunk_t) name builder in 
+        let _ = L.build_store thunk_ptr reg builder in 
+        let varmap' = StringMap.add name reg varmap in 
+        (builder, varmap') *)
+
         let tau, _ = e in
         let reg = L.build_alloca (ltype_of_type tau) name builder in
         let varmap' = StringMap.add name reg varmap in

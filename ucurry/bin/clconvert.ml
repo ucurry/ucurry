@@ -132,7 +132,7 @@ let close (def : SA.sdef) : Cast.def =
      can only capture global veriables*)
   | SA.SFunction (t, name, lambda) -> 
       let closure = asClosure t lambda [] in
-      C.Function (t, name, closure)
+    C.Function (t, name, closure)
   | SA.SDatatype (t, cons) -> C.Datatype (t, cons)
   | SA.SCheckTypeError _ ->
       raise (CLOSURE_NOT_YET_IMPLEMENTED "check type error")

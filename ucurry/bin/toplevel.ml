@@ -51,7 +51,7 @@ let () =
       let cast = Clconvert.close_program sast in
       let _ = print_string (Cast.string_of_program cast) in
       print_newline ()
-  (* | LAZY ->
+  | LAZY ->
       let lexbuf = Lexing.from_channel !channel in
       let ast = Parser.program Scanner.token lexbuf in
       let curried = Curry.curry ast in

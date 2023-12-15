@@ -13,8 +13,9 @@ f=$1
 echo "Generating LLVM code to $f.ll"
 dune exec ucurry -- -s < $f > $f.ll 
 
+gcc -c force.c
 
 echo "Generating the executable to $f.exe"
 llc -relocation-model=pic -O3 $f.ll 
-cc -O3 -o $f.exe $f.s 
+cc -O3 -o $f.exe $f.s force.o
 ./$f.exe

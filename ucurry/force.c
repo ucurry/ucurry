@@ -1,9 +1,10 @@
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 struct thunk {
-    void *value;
     void *(*delay_function);
+    void *value;
     bool evaled;
 };
 
@@ -13,6 +14,7 @@ void *Force(struct thunk *input) {
         return input->value;
     }
     input->value = (void *) (uintptr_t)input->delay_function;
+    printf("*(input->value): %d", (int)(uintptr_t)input->value);
     input->evaled = true;
     return input->value;
 }
@@ -25,6 +27,8 @@ struct thunk *MakeThunk(void *(*delay_function)) {
     return ptr;
 }
 
+#ifdef BUILD_TEST
 int main() {
     return 0;
 }
+#endif

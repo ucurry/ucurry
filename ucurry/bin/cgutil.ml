@@ -16,7 +16,7 @@ type type_env = typ StringMap.t
 exception UNIMPLEMENTED of string
 
 (* get the ltype for a corresponding ast type *)
-let rec ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
+let ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
     (context : L.llcontext) (ty : typ) =
   let void_ptr = L.pointer_type (L.i8_type context) in
   let rec ltype_of = function
@@ -53,12 +53,13 @@ let rec ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
             L.pointer_type list_ty)
     | ANY_TY -> L.i32_type context
     | THUNK_TY _ -> 
-        (* let thunk_fun_type = ltype_of_type ty_map llmodule context tau in  *)
-        let thunk_fun_type = L.pointer_type (L.function_type (L.i32_type context) [||]) in
+        (* Should be consistent with the one in codegen `thunk_t` *)
+        let void_ptr = L.pointer_type (L.i8_type context) in
+        let thunk_fun_type = L.function_type void_ptr [||] in (* consistent with void ptr in codegen *)
         let thunk_struct_type = 
           L.struct_type context [| L.pointer_type thunk_fun_type; 
-                                   L.i1_type context; 
-                                   L.pointer_type (L.void_type context) |] 
+                                   void_ptr;
+                                   L.i1_type context |] 
         in 
         L.pointer_type thunk_struct_type
   in
