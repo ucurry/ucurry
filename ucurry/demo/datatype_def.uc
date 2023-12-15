@@ -1,0 +1,1 @@
+datatype IntList = Nil | Cons of (int * IntList);

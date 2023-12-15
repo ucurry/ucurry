@@ -1,15 +1,14 @@
 datatype IntList = Nil | Cons of (int * IntList);
 
 fun : unit -> IntList:
-ones u = (Cons (1, (ones ())));
+ones u = (Cons (1, (ones ())));    -- ones recursively cons ones to itself
 
 fun: IntList -> unit:
 printList l = (case l of
                     Nil => ()
                   | Cons (y, ys) => (begin println y, (printList ys)));
 
-(printList (ones ()));
-
+-- (printList (ones ()));
 
 fun : IntList -> int -> IntList:
 take l i = if i == 0 

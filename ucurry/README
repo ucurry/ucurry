@@ -9,13 +9,17 @@
 
 ## Command lines:
 
-    dune build                 # to compile
+    make                       # to compile and get toplevel compiler executable
+    make clean                 # to clean up all the executable or output files
 
-    dune exec ucurry -- -a     # to open the interpreter for scanning and parsing 
+    dune exec ucurry -- -a     # to parse the program and pretty print it
     dune exec ucurry -- -l     # to further include the lazy evaluation pass 
+    dune exec ucurry -- -p     # to further include the case expr desugar pass
     dune exec ucurry -- -c     # to further include the closure conversion and rename passes 
     dune exec ucurry -- -s     # to further include the code generation
+    dune exec ucurry -- -b     # to generate llvm code without laziness
 
+## Scripts (should be run in the ./scripts directory)
     ./sptest.sh                # to run the tests script for scanner and parser 
     ./typetest.sh              # to run the tests for typechecking
     ./codegen.sh               # to run the tests for codegen
@@ -24,7 +28,6 @@
     ./testafile.sh <filename>  # generates the executable for the given file 
                                  name and any intermediate representations
     
-    make clean                 # to clean up all the executable or output files
 
 # The µcurry Compiler
 Coded in OCaml, this compiler takes a minimal functional language and compiles 
@@ -39,49 +42,12 @@ and pretty-prints back to strings.
 Run `dune exec ucurry -- -s` to run the compiler that would produce the 
 Llvm code.
 Run `dune exec ucurry -- -s < {filename} | lli` to compile the program specified 
-by the filename and execute the program.
+by the filename and interpret the program.
+Run `dune exec ucurry -- -b < {filename} | lli` to compile the program specified 
+by the filename and interpret the program without laziness.
 
-## Positive Integration Test Suite
-auto_curry.uc: Tests if auto-currying works when a function is defined to take 
-               in multiple formals and only partially applied.
-
-hof.uc: Test if a function can be passed in as argument.
-        We also have a map function that operatates on
-        an integer list.
-
-lambda.uc: Define and apply anonymous functions, and bind anonymous functions 
-           to a variable.
-
-let_exp.uc: Refer to global variables in let expressions; Test a nested let 
-            expression; Have multiple let bindings in a single let expression.
-
-tuple.uc : Test expression to create and consume tuple value. 
-
-rec_fun.uc: Test recursive function to calculate factorial and fibonacci numbers. 
-
-list_op.uc: Test expression to create and consume list value. Operator `::` 
-            creates list, and operator `hd` and `tl` access the head and tail of 
-            a list.  Including. two functions that take in list values 
-            `compare` and `copy_list`.
-
-## Negative Integration Test Suite
-negative_assign.uc: Compiler will detect a type error when an assignment 
-                    expression tries to assign an integer variable to a 
-                    boolean value. 
-negative_capture.uc: A function cannot mutate its captured variable, 
-                    x is a captured variable in function f, and the function
-                    body assign x to other value, which is disallowed in 
-                    ucurry semantic.
-negative_func_apply1.uc: A type error is raised when extra arguments are applied. 
-negative_func_apply2.uc:
-                       Type Error. res should be `int -> int` because 
-                       a partial application will return back a function. 
-negative_value_1.uc: list cannot contain elements of different types 
-negative_value_2.uc: case expression on list does not match with the type of the 
-                     scrutinee  
-negative_value_3.uc: value constructor `IntList` expects an int list but receives 
-                     a string list  
-
+To compile and run a program, you can consult `runafile.sh` in the toplevel 
+directory. You can also use this shell script to run a file.
 
 ## Test Script for scanning and parsing
 
@@ -91,12 +57,6 @@ the reverse may not be true becuase parsing removes comments and unnecessary whi
 To verify this, our script runs `unparse o parse o unparse o parse = id`, 
 the first `unparse o parse` gives us a trimmed concrete syntax of the µcurry language, and
 it should be the same as the output of the second `unparse o parse` pair.
-
-## Test Script for codegen 
-
-To validate our codegen, we created the gold standard of the output when 
-executing a program, and compare the gold standard to running the LLVM code 
-produced by our compilation.
 
 ## Test Script for integration tests
 

@@ -1,3 +1,4 @@
+#! /bin/sh
 f=$1 
 
 echo "Generating LLVM code to $f.ll"

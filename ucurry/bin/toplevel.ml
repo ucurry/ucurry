@@ -13,7 +13,7 @@ let () =
       ("-b", Arg.Unit (set_action BARE), "Compile without lazy");
     ]
   in
-  let usage_msg = "usage: ./ucurry [-a|-s|-l|-c] [file.uc]\n" in
+  let usage_msg = "usage: ./ucurry [-a|-s|-l|-c|-b] [file.uc]\n" in
   let channel = ref stdin in
   Arg.parse speclist (fun filename -> channel := open_in filename) usage_msg;
   (* commented out path for lazy  *)
@@ -68,4 +68,4 @@ let () =
       let llvmir = Codegen.build_main_body cast in
       let _ = print_string (Llvm.string_of_llmodule llvmir) in
       print_newline ()
-  | Default -> print_newline ()
+  | Default -> print_endline usage_msg
