@@ -41,7 +41,6 @@ type expr =
   | Apply of expr * expr list
   | If of expr * expr * expr
   | Let of (name * expr) list * expr
-    (* TODO: consider combine the two nodes to avoid repeated code, pattern matching inside LET node *)
   | Letrec of (name * expr) list * expr
   | Begin of expr list
   | Binop of expr * binop * expr
@@ -54,9 +53,10 @@ type expr =
   | EmptyList of typ
   | Tuple of expr list
   | Construct of vcon_name * expr
-  | GetTag of expr (* Only for testing - need to be deleted; return a string *)
-  | GetField of expr * vcon_name
-    (* Only for testing - need to be deleted; return the field value of the value constructor *)
+  | GetTag of expr (* Should only appear from after Desugar (case convert) *)
+  | GetField of
+      expr
+      * vcon_name (* Should only appear from after Desugar (case convert) *)
   | Noexpr
   | NoMatch
 

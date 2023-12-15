@@ -44,9 +44,6 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let branch_tau = SU.get_checked_types then_tau else_tau in
         (branch_tau, A.If (cond', then', else'))
     | A.Let (bindings, e) ->
-        (* let check_e (xi, ei) =
-             typ_of vcon_env vcon_sets (SU.add_let_type (xi, ei) type_env) ei
-           in *)
         let check_e (_, ei) = ty ei in
         let vars, _ = List.split bindings in
         let taus, es' = List.split @@ List.map check_e bindings in

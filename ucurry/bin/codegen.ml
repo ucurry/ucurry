@@ -109,7 +109,6 @@ let build_main_body defs =
               (fun vm (name, e) ->
                 let tau, _ = e in
                 let e' = expr builder e in
-                (*TODO: error here with function types*)
                 let reg = L.build_alloca (ltype_of_type tau) name builder in
                 let vm' = StringMap.add name reg vm in
                 let _ = L.build_store e' (lookup name vm') builder in
@@ -307,9 +306,6 @@ let build_main_body defs =
         "cap" builder
     in
 
-    (* let localvarmap = StringMap.add "cap" cap_param StringMap.empty in *)
-
-    (* TODO: dont think this is necessary *)
     let localvarmap = StringMap.empty in
     let formaltypes, _, formals, body, _ = deconstructClosure closure in
     let formal_lltypes = List.map ltype_of_type formaltypes in

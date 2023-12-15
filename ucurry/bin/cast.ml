@@ -104,7 +104,8 @@ and string_of_sexpr (delim : string) ((ty, expr) : sexpr) : string =
     | GetTag e -> string_of_typ ty ^ " " ^ string_of_sexpr delim e
     | Noexpr -> ""
     | Nomatch -> "No match"
-    | List (_, _) -> "[]" (* TODO: PP for list  *)
+    | List (_, _) ->
+        failwith "string_of_expr not implemented for non-empty list"
     | EmptyList _ -> "[]"
   in
   "(" ^ string_of_typ ty ^ "," ^ string_of_expr expr ^ ")"

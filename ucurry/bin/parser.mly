@@ -98,7 +98,7 @@ exp:
 
 cons_cell:
   | exp  COMMA cons_cell   { List ($1, $3)}
-  | exp               { List ($1, EmptyList UNIT_TY) } // TODO: reconsider this
+  | exp                    { List ($1, EmptyList UNIT_TY) } 
 
 exp_tuple:
   | exp COMMA exp { [$3;$1] }

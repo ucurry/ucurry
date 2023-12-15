@@ -241,7 +241,7 @@ let desugar (scrutinee : A.expr) (cases : A.case_expr list) : A.case_expr list =
   in
   List.combine (List.map simplify_pat pats) (List.map add_let cases)
 
-type tree = Test of (A.expr * tree) list * tree | Leaf of A.expr 
+type tree = Test of (A.expr * tree) list * tree | Leaf of A.expr
 
 let rec string_repeat s n =
   match n with 0 -> s | _ -> s ^ string_repeat s (n - 1)

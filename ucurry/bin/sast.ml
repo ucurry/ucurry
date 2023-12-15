@@ -21,7 +21,7 @@ and sx =
   | SUnop of A.uop * sexpr
   | SLambda of lambda
   | SConstruct of (vcon_id * vcon_name) * sexpr
-  | STuple of sexpr list (* TODO: redundant type annotation?? *)
+  | STuple of sexpr list
   | SAt of sexpr * int
   | SGetTag of sexpr
   | SGetField of sexpr * int

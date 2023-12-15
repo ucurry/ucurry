@@ -69,4 +69,3 @@ let () =
       let _ = print_string (Llvm.string_of_llmodule llvmir) in
       print_newline ()
   | Default -> print_newline ()
-(* | _ -> print_newline () *)
