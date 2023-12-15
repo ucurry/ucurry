@@ -1,0 +1,26 @@
+datatype List = Nil of (unit -> unit) | Cons of (unit -> ((unit -> int) * (unit -> List)));
+
+fun : (unit -> ((unit -> ((unit -> int) -> int)) -> ((unit -> List) -> List))):
+map unit = \(((unit -> ((unit -> int) -> int)) -> ((unit -> List) -> List)))f -> \(((unit -> List) -> List))xs -> if (xs ()).T == "Cons" 
+ then let y = (THUNK: (((xs ())@Cons ()).0 ())), ys = (THUNK: (((xs ())@Cons ()).1 ())) in Cons (THUNK: ((THUNK: ((f ()) (THUNK: (y ())))), (THUNK: (((map ()) (THUNK: (f ()))) (THUNK: (ys ())))))) 
+ else if (xs ()).T == "Nil" 
+ then Nil (THUNK: ) 
+ else (begin println"Case not matched", no match);
+
+fun : (unit -> ((unit -> int) -> int)):
+addone unit = \(((unit -> int) -> int))x -> (x ()) + 1;
+
+fun : (unit -> ((unit -> unit) -> List)):
+nat unit = \(((unit -> unit) -> List))u -> Cons (THUNK: ((THUNK: 1), (THUNK: (((map ()) (THUNK: (addone ()))) (THUNK: ((nat ()) (THUNK: ())))))));
+
+fun : (unit -> ((unit -> List) -> ((unit -> int) -> int))):
+takePrint unit = \(((unit -> List) -> ((unit -> int) -> int)))l -> 
+                    \(((unit -> int) -> int))i -> 
+ if (i ()) == 0 
+ then 0 
+ else if (l ()).T == "Cons" 
+ then let y = (THUNK: (((l ())@Cons ()).0 ())), ys = (THUNK: (((l ())@Cons ()).1 ())) in (begin println(y ()), (((takePrint ()) (THUNK: (ys ()))) (THUNK: (i ()) - 1))) 
+ else if (l ()).T == "Nil" 
+ then 0 
+ else (begin println"Case not matched", no match);
+(((takePrint ()) (THUNK: ((nat ()) (THUNK: ())))) (THUNK: 6));

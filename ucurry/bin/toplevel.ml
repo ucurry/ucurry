@@ -45,12 +45,13 @@ let () =
   | CAST ->
       let lexbuf = Lexing.from_channel !channel in
       let ast = Parser.program Scanner.token lexbuf in
-      let desugared = Desugar.desugar ast in
+      let curried = Curry.curry ast in 
+      let desugared = Desugar.desugar curried in
       let sast, _ = Semant.semant_check desugared in
       let cast = Clconvert.close_program sast in
       let _ = print_string (Cast.string_of_program cast) in
       print_newline ()
-  | LAZY ->
+  (* | LAZY ->
       let lexbuf = Lexing.from_channel !channel in
       let ast = Parser.program Scanner.token lexbuf in
       let curried = Curry.curry ast in
@@ -72,3 +73,5 @@ let () =
       let _ = print_string (Llvm.string_of_llmodule llvmir) in
       print_newline ()
   | Default -> print_endline usage_msg
+      print_newline () *)
+| _ -> print_newline ()

@@ -5,7 +5,10 @@
 open Typing
 module A = Ast
 
-let rec to_thunk_ty (ty : typ) : typ = FUNCTION_TY (UNIT_TY, transform_ty ty)
+let rec to_thunk_ty (ty : typ) : typ = THUNK_TY (FUNCTION_TY (UNIT_TY, transform_ty ty))
+and to_fun_ty (ty: typ) : typ = FUNCTION_TY (UNIT_TY, transform_ty ty)
+
+(* let rec to_thunk_ty (ty : typ) : typ = FUNCTION_TY (UNIT_TY, transform_ty ty) *)
 
 and transform_ty ty =
   match ty with
@@ -18,10 +21,10 @@ and transform_ty ty =
 let unitv = A.Literal Ast.UNIT
 
 let rec lazy_expr (exp : A.expr) : A.expr =
-  let to_thunk e = A.Thunk (lazy_expr e) in
+  let to_thunk e = A.Thunk (lazy_expr e) in (* would turn into Thunk (() -> e) in Semant *)
   match exp with
   | A.Literal _ -> exp
-  | A.Var n -> A.Apply (A.Var n, [ unitv ])
+  | A.Var n -> A.Force (A.Var n)
   | A.Apply (e, es) ->
       let lazy_fun = lazy_expr e in
       let lazy_args = List.map to_thunk es in
@@ -43,16 +46,17 @@ let rec lazy_expr (exp : A.expr) : A.expr =
   | A.Tuple es -> A.Tuple (List.map to_thunk es)
   | A.List (hd, tl) -> A.List (lazy_expr hd, lazy_expr tl)
   | A.EmptyList tau -> A.EmptyList tau
-  | A.At (e, idx) -> A.Apply (A.At (lazy_expr e, idx), [ unitv ])
+  | A.At (e, idx) -> A.Force (A.At (lazy_expr e, idx))
   | A.Noexpr -> A.Noexpr
   | A.GetTag e -> A.GetTag (lazy_expr e)
-  | A.GetField (e, i) -> A.Apply (A.GetField (lazy_expr e, i), [ unitv ])
+  | A.GetField (e, i) -> A.Force (A.GetField (lazy_expr e, i))
   | A.Case (scrutinee, cases) ->
       let scrutinee' = lazy_expr scrutinee and ps, cs' = List.split cases in
       let cs' = List.combine ps (List.map lazy_expr cs') in
       A.Case (scrutinee', cs')
   | A.NoMatch -> A.NoMatch
-  | A.Thunk _ -> failwith "Illegal thunk"
+  | A.Thunk e -> A.Thunk (lazy_expr e)
+  | A.Force _ -> failwith "Illegal force"
 
 let rec lazy_def def =
   match def with
@@ -64,7 +68,8 @@ let rec lazy_def def =
   | A.CheckTypeError e -> A.CheckTypeError (lazy_def e)
   | A.Variable (ty, name, e) ->
       let lazy_tau = to_thunk_ty ty in
-      A.Variable (lazy_tau, name, A.Lambda (lazy_tau, [ "unit" ], lazy_expr e))
+      (* A.Variable (lazy_tau, name, A.Thunk (A.Lambda (to_fun_ty ty , [ "unit" ], lazy_expr e))) *)
+      A.Variable (lazy_tau, name, A.Thunk (lazy_expr e))
   | A.Datatype (t, vcon_list) ->
       let vcon_names, arg_taus = List.split vcon_list in
       let new_arg_taus = List.map to_thunk_ty arg_taus in

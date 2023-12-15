@@ -84,6 +84,7 @@ let rec get_checked_types tau1 tau2 =
       TUPLE_TY tys
   | ANY_TY, t -> t
   | t, ANY_TY -> t
+  | THUNK_TY t1, THUNK_TY t2 -> THUNK_TY (get_checked_types t1 t2)
   | tau1, tau2 ->
       raise
         (TypeError

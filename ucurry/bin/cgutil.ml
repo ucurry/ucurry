@@ -16,7 +16,7 @@ type type_env = typ StringMap.t
 exception UNIMPLEMENTED of string
 
 (* get the ltype for a corresponding ast type *)
-let ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
+let rec ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
     (context : L.llcontext) (ty : typ) =
   let void_ptr = L.pointer_type (L.i8_type context) in
   let rec ltype_of = function
@@ -52,6 +52,15 @@ let ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
             let _ = L.struct_set_body list_ty [| hd_ty; tl_ty |] false in
             L.pointer_type list_ty)
     | ANY_TY -> L.i32_type context
+    | THUNK_TY _ -> 
+        (* let thunk_fun_type = ltype_of_type ty_map llmodule context tau in  *)
+        let thunk_fun_type = L.pointer_type (L.function_type (L.i32_type context) [||]) in
+        let thunk_struct_type = 
+          L.struct_type context [| L.pointer_type thunk_fun_type; 
+                                   L.i1_type context; 
+                                   L.pointer_type (L.void_type context) |] 
+        in 
+        L.pointer_type thunk_struct_type
   in
   ltype_of ty
 
@@ -109,6 +118,7 @@ let ty_fmt_string ty (builder : L.llbuilder) : L.llvalue =
     | UNIT_TY -> " "
     | FUNCTION_TY _ -> raise (Impossible "function cannot be printed")
     | ANY_TY -> "%d"
+    | THUNK_TY _ -> raise (Impossible "thunk type cannot be printed")
   in
   L.build_global_stringptr (string_matcher ty) "fmt" builder
 
@@ -163,6 +173,8 @@ let build_string_pool (program : C.program) (builder : L.llbuilder) :
     | C.Noexpr -> pool
     | C.Captured _ -> pool
     | C.Nomatch -> pool
+    | C.Thunk e -> mk_expr_string_pool builder pool e 
+    | C.Force e -> mk_expr_string_pool builder pool e
   in
   let mk_defs_string_pool builder pool sdef =
     match sdef with

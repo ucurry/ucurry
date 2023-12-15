@@ -54,9 +54,17 @@ let build_main_body defs =
     | None -> ignore (instr builder)
   in
 
+  let delay_fun_t = L.function_type i32_t [||] in 
+  let thunk_t = 
+    L.struct_type context [| L.pointer_type i1_t; L.pointer_type delay_fun_t; i1_t |]
+  in
+
+  let force_t = L.function_type i32_t [||] in
+  let force_func = L.declare_function "Force" force_t the_module in 
+   
   let rec exprWithVarmap builder captured_param varmap =
     let rec expr builder (ty, top_exp) =
-      match top_exp with
+      match top_exp with//
       | C.Literal l -> build_lit l
       | C.Var name -> L.build_load (lookup name varmap) name builder
       | C.Apply (((ft, _) as sf), args) ->
@@ -274,6 +282,24 @@ let build_main_body defs =
           ignore (Util.set_data_field hd_v 0 list_ptr builder);
           ignore (Util.set_data_field tl_ptr 1 list_ptr builder);
           list_ptr
+      | C.Thunk delay_fun -> 
+          (* malloc a thunk struct *)
+          (* let thunk_ptr = L.build_malloc (ltype_of_type ty) "thunk_ptr" builder in  *)
+          
+          (* populate the delay_fun *)
+
+          (* return the thunk struct pointer *)
+          let 
+
+      | C.Force e -> failwith "not yet implement force"
+          (* TODO: need to generate the code for this function once -> so that not repeatedly generate it *)
+          (* Call force function *)
+          let e' = expr builder e in 
+          let ret = L.build_call force_func [| e' |] "Force" builder in 
+          (* Cast the returned result *)
+          let casted_ret = L.build_bitcast ret (ltype_of_type ty) "casted_ret" builder in 
+          casted_ret
+          
     in
     expr builder
   and alloc_function name fun_tau =

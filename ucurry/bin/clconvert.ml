@@ -64,6 +64,8 @@ let rec free ((t, exp) : SA.sexpr) : S.t =
   | SA.SGetField (se, _) -> free se
   | SA.SNoexpr -> S.empty
   | SA.SNomatch -> S.empty
+  | SA.SThunk se -> free se 
+  | SA.SForce se -> free se
 
 let indexOf (x : string) (xs : freevar list) : int option =
   let rec indexOf' (x : string) (xs : freevar list) (i : int) : int option =
@@ -116,7 +118,9 @@ and close_exp (captured : freevar list) (le : SA.sexpr) : C.sexpr =
       | SA.SAt (se, i) -> C.At (exp se, i)
       | SA.SGetField (se, i) -> C.GetField (exp se, i)
       | SA.SGetTag se -> C.GetTag (exp se)
-      | SA.SNomatch -> C.Nomatch )
+      | SA.SNomatch -> C.Nomatch 
+      | SA.SThunk se -> C.Thunk (exp se)
+      | SA.SForce se -> C.Force (exp se))
   in
   exp le
 
@@ -126,7 +130,7 @@ let close (def : SA.sdef) : Cast.def =
   | SA.SExp e -> C.Exp (close_exp [] e)
   (* 106 uses C.Funcode, probably because toplevel function
      can only capture global veriables*)
-  | SA.SFunction (t, name, lambda) ->
+  | SA.SFunction (t, name, lambda) -> 
       let closure = asClosure t lambda [] in
       C.Function (t, name, closure)
   | SA.SDatatype (t, cons) -> C.Datatype (t, cons)

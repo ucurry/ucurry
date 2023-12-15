@@ -17,6 +17,7 @@ type typ =
   | CONSTRUCTOR_TY of dt_name
   | TUPLE_TY of typ list
   | ANY_TY
+  | THUNK_TY of typ
 
 let rec string_of_typ = function
   | INT_TY -> "int"
@@ -30,3 +31,4 @@ let rec string_of_typ = function
   | TUPLE_TY typs ->
       "(" ^ String.concat " * " (List.map string_of_typ typs) ^ ")"
   | ANY_TY -> "anytyp"
+  | THUNK_TY typ -> "(thunk_ty " ^ string_of_typ typ ^ ")"

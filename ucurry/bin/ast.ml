@@ -49,6 +49,7 @@ type expr =
   | Unop of uop * expr
   | Lambda of typ * arg_name list * expr
   | Thunk of expr
+  | Force of expr 
   | Case of expr * case_expr list
   | At of expr * int
   | List of expr * expr
@@ -131,11 +132,11 @@ let rec string_of_expr exp =
         "(begin " ^ String.concat ", " (List.map string_of_expr el) ^ ")"
     | Binop (e1, o, e2) ->
         string_of_expr e1 ^ " " ^ string_of_binop o ^ " " ^ string_of_expr e2
-    | Unop (o, e) -> string_of_uop o ^ string_of_expr e
+    | Unop (o, e) -> string_of_uop o ^ " " ^ string_of_expr e
     | Lambda (t, vl, e) ->
         "\\(" ^ string_of_typ t ^ ")" ^ String.concat " " vl ^ " -> "
         ^ string_of_expr e
-    | Construct (n, e) -> n ^ string_of_expr e
+    | Construct (n, e) -> n ^ " " ^ string_of_expr e
     | Case (e, cel) ->
         "(case " ^ string_of_expr e ^ " of\n\t" ^ "  "
         ^ String.concat " \n\t| "
@@ -157,15 +158,18 @@ let rec string_of_expr exp =
     | Tuple es -> "(" ^ String.concat ", " (List.map string_of_expr es) ^ ")"
     | At (e, i) -> string_of_expr e ^ "." ^ string_of_int i
     | Noexpr -> ""
-    | Thunk e -> "THUNK: " ^ string_of_expr e
+    | Thunk e -> "(THUNK: " ^ string_of_expr e ^ ")"
     | GetField (e, v) -> string_of_expr e ^ "@" ^ v
     | GetTag e -> string_of_expr e ^ ".T"
     | EmptyList t -> "[" ^ string_of_typ t ^ "]"
     | List (x, xs) -> string_of_expr x ^ " :: " ^ string_of_expr xs
     | NoMatch -> "no match"
+    | Force e -> "(Force " ^ string_of_expr e ^ ")"
   in
 
-  match exp with Noexpr -> "" | _ -> "(" ^ flat_string_of_exp exp ^ ")"
+  match exp with Noexpr -> "" 
+  | _ -> flat_string_of_exp exp 
+  (* | _ -> "(" ^ flat_string_of_exp exp ^ ")" *)
 
 and string_of_literal = function
   | INT l -> string_of_int l
@@ -186,7 +190,7 @@ let rec string_of_def = function
       ^ String.concat " | " (List.map string_of_constructor cls)
       ^ ";"
   | Exp e -> string_of_expr e ^ ";"
-  | Variable (ty, name, e) ->
+  | Variable (ty, name, e)  ->
       string_of_typ ty ^ " " ^ name ^ " = " ^ string_of_expr e ^ ";"
   | CheckTypeError e -> "check_type_error " ^ string_of_def e
 

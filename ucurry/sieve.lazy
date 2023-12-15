@@ -1,0 +1,56 @@
+datatype List = Nil of (unit -> unit) | Cons of (unit -> ((unit -> int) * (unit -> List)));
+
+fun : (unit -> ((unit -> ((unit -> int) -> int)) -> ((unit -> List) -> List))):
+map unit = \(((unit -> ((unit -> int) -> int)) -> ((unit -> List) -> List)))f -> \(((unit -> List) -> List))xs -> if (xs ()).T == "Cons" 
+ then let y = (THUNK: (((xs ())@Cons ()).0 ())), ys = (THUNK: (((xs ())@Cons ()).1 ())) in Cons (THUNK: ((THUNK: ((f ()) (THUNK: (y ())))), (THUNK: (((map ()) (THUNK: (f ()))) (THUNK: (ys ())))))) 
+ else if (xs ()).T == "Nil" 
+ then Nil (THUNK: ) 
+ else (begin println"Case not matched", no match);
+
+fun : (unit -> ((unit -> int) -> int)):
+addone unit = \(((unit -> int) -> int))x -> (x ()) + 1;
+
+fun : (unit -> ((unit -> unit) -> List)):
+nat unit = \(((unit -> unit) -> List))u -> Cons (THUNK: ((THUNK: 2), (THUNK: (((map ()) (THUNK: (addone ()))) (THUNK: ((nat ()) (THUNK: ())))))));
+
+fun : (unit -> ((unit -> List) -> ((unit -> int) -> List))):
+take unit = \(((unit -> List) -> ((unit -> int) -> List)))l -> \(((unit -> int) -> List))i -> if (i ()) == 0 
+ then Nil (THUNK: ) 
+ else if (l ()).T == "Cons" 
+ then let y = (THUNK: (((l ())@Cons ()).0 ())), ys = (THUNK: (((l ())@Cons ()).1 ())) in Cons (THUNK: ((THUNK: (y ())), (THUNK: (((take ()) (THUNK: (ys ()))) (THUNK: (i ()) - 1))))) 
+ else if (l ()).T == "Nil" 
+ then Nil (THUNK: ) 
+ else (begin println"Case not matched", no match);
+
+fun : (unit -> ((unit -> List) -> int)):
+printList unit = \(((unit -> List) -> int))l -> if (l ()).T == "Cons" 
+ then let y = (THUNK: (((l ())@Cons ()).0 ())), 
+         ys = (THUNK: (((l ())@Cons ()).1 ())) 
+       in (begin println(y ()), ((printList ()) (THUNK: (ys ())))) 
+ else if (l ()).T == "Nil" 
+ then 0 
+ else (begin println"Case not matched", no match);
+
+fun : (unit -> ((unit -> ((unit -> int) -> bool)) -> ((unit -> List) -> List))):
+filter unit = \(((unit -> ((unit -> int) -> bool)) -> ((unit -> List) -> List)))f -> \(((unit -> List) -> List))xs -> if (xs ()).T == "Cons" 
+ then let y = (THUNK: (((xs ())@Cons ()).0 ())), ys = (THUNK: (((xs ())@Cons ()).1 ())) in if ((f ()) (THUNK: (y ()))) 
+ then Cons (THUNK: ((THUNK: (y ())), (THUNK: (((filter ()) (THUNK: (f ()))) (THUNK: (ys ())))))) 
+ else (((filter ()) (THUNK: (f ()))) (THUNK: (ys ()))) 
+ else if (xs ()).T == "Nil" 
+ then Nil (THUNK: ) 
+ else (begin println"Case not matched", no match);
+
+fun : (unit -> ((unit -> int) -> ((unit -> int) -> bool))):
+notDivisible unit = \(((unit -> int) -> ((unit -> int) -> bool)))x -> \(((unit -> int) -> bool))y -> (y ()) % (x ()) != 0;
+
+fun : (unit -> ((unit -> List) -> List)):
+sieve unit = \(((unit -> List) -> List))l -> 
+ if (l ()).T == "Cons" 
+ then let x = (THUNK: (((l ())@Cons ()).0 ())),
+         xs = (THUNK: (((l ())@Cons ()).1 ())) 
+      in Cons (THUNK: ((THUNK: (x ())), 
+                       (THUNK: ((sieve ()) (THUNK: (((filter ()) (THUNK: ((notDivisible ()) (THUNK: (x ()))))) (THUNK: (xs ())))))))) 
+ else if (l ()).T == "Nil" 
+ then Nil (THUNK: ) 
+ else (begin println"Case not matched", no match);
+((printList ()) (THUNK: (((take ()) (THUNK: ((sieve ()) (THUNK: ((nat ()) (THUNK: ())))))) (THUNK: 4))));

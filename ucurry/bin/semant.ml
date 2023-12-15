@@ -170,7 +170,16 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         (TUPLE_TY taus, S.STuple ses)
     | A.Thunk body ->
         let tau, e = ty body in
-        (FUNCTION_TY (UNIT_TY, tau), S.SLambda ([ "unit" ], (tau, e)))
+        let delay_t = FUNCTION_TY (UNIT_TY, tau) in 
+        (THUNK_TY delay_t, S.SThunk (delay_t, S.SLambda ([ "unit" ], (tau, e))))
+    | A.Force e -> 
+        let tau, e' = ty e in 
+        (match tau with 
+          | THUNK_TY (FUNCTION_TY (UNIT_TY, t)) -> 
+          (* let _ = print_string ( "in forcing: " ^ (string_of_typ t)) in  *)
+          (t, S.SForce (tau, e'))
+          | _ -> raise (SemantUtil.TypeError ("Cannot force an expression of non-thunk type: " ^ (string_of_typ tau))))
+        (* failwith "not yet implemented" *)
     | A.GetTag e ->
         let tau, e' = ty e in
         ignore
@@ -205,17 +214,20 @@ let rec typ_def (def : A.def) (semant_envs : semant_envs) : S.sdef * S.type_env
     =
   let { type_env; vcon_env; vcon_sets } = semant_envs in
   let ty = function
-    | A.Function (tau, funname, args, body) ->
-        let new_env = bindUnique funname tau type_env in
-        let tau', sx =
-          typ_of vcon_env vcon_sets new_env (Lambda (tau, args, body))
-        in
-        let final_tau = get_checked_types tau tau' in
-        let match_retrun = function
-          | S.SLambda body -> (S.SFunction (final_tau, funname, body), new_env)
-          | e -> (S.SVal (funname, (final_tau, e)), new_env)
-        in
-        match_retrun sx
+    | A.Function (tau, funname, args, body) -> 
+        (match tau with 
+          | THUNK_TY t -> 
+              let new_env = bindUnique funname tau type_env in
+              let tau', sx =
+                typ_of vcon_env vcon_sets new_env (Lambda (tau, args, body))
+              in
+              let final_tau = get_checked_types t tau' in
+              let match_retrun = function
+                | S.SLambda body -> (S.SFunction (final_tau, funname, body), new_env)
+                | e -> (S.SVal (funname, (final_tau, e)), new_env)
+              in
+              match_retrun sx
+          | _ -> failwith "Top-level function must have a thunk type")
     | A.Datatype (tau, val_cons) ->
         let vcons, argtaus = List.split val_cons in
         let func_taus =
@@ -223,9 +235,16 @@ let rec typ_def (def : A.def) (semant_envs : semant_envs) : S.sdef * S.type_env
         in
         (S.SDatatype (tau, val_cons), bindAllUnique vcons func_taus type_env)
     | A.Variable (tau, name, e) ->
-        let tau', se = typ_of vcon_env vcon_sets type_env e in
-        let var_tau = get_checked_types tau tau' in
-        (S.SVal (name, (var_tau, se)), bindUnique name tau type_env)
+          let tau', se = typ_of vcon_env vcon_sets type_env e in
+          let var_tau = get_checked_types tau tau' in
+          (* let _ = print_string (string_of_typ var_tau) in  *)
+          (S.SVal (name, (var_tau, se)), bindUnique name var_tau type_env)
+        (* (match tau with 
+          | THUNK_TY t -> 
+              let tau', se = typ_of vcon_env vcon_sets type_env e in
+              let var_tau = get_checked_types t tau' in
+              (S.SVal (name, (var_tau, se)), bindUnique name tau type_env)
+          | _ -> failwith "Val must have a thunk type") *)
     | A.Exp e ->
         let tau, e' = typ_of vcon_env vcon_sets type_env e in
         (S.SExp (tau, e'), type_env)

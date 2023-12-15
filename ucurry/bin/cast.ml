@@ -28,6 +28,8 @@ and expr =
   | GetField of sexpr * int
   | Noexpr
   | Nomatch
+  | Thunk of sexpr
+  | Force of sexpr
 
 (* and case_expr = S.pattern * sexpr *)
 and closure = (string list * sexpr) * sexpr list (* (lambda, captured list) *)
@@ -109,6 +111,8 @@ and string_of_sexpr (delim : string) ((ty, expr) : sexpr) : string =
     | List (_, _) ->
         failwith "string_of_expr not implemented for non-empty list"
     | EmptyList _ -> "[]"
+    | Thunk t -> "(Thunk: " ^ string_of_sexpr delim t ^ ")"
+    | Force e -> string_of_sexpr delim e ^ ".force"
   in
   "(" ^ string_of_typ ty ^ "," ^ string_of_expr expr ^ ")"
 

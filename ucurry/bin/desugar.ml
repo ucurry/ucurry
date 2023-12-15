@@ -179,6 +179,7 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
             (LIST_TY (SU.get_checked_types hd_tau sub_tau), A.List (hd', tl'))
         | _ -> raise (SU.TypeError "tail is not a list"))
     | A.NoMatch -> (ANY_TY, A.NoMatch)
+    | A.Force _ -> failwith "force not possible"
   in
   ty exp
 

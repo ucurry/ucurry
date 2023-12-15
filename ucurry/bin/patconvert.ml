@@ -106,6 +106,7 @@ let rec is_exhaustive (vcon_sets : S.vcon_sets) (vcon_env : S.vcon_env)
     | UNIT_TY -> raise (SU.TypeError "cannot pattern match on unit")
     | FUNCTION_TY _ -> raise (SU.TypeError "cannot pattern match on function")
     | ANY_TY -> raise (SU.TypeError "any type cannot pattern match on function")
+    | THUNK_TY _ -> raise (SU.TypeError "any type ")
 
 (*  return the list of non-fall-through case and an optional default case *)
 let fall_through_case cases =
@@ -424,7 +425,7 @@ let match_compile (scrutinee : A.expr) (cases : A.case_expr list)
         | (p, matched_e) :: rest ->
             let resume' = match_resume scrutinee rest tau nearest_resume in
             match_pat scrutinee p (Leaf matched_e) resume')
-    | INT_TY | STRING_TY | BOOL_TY | UNIT_TY | FUNCTION_TY _ | ANY_TY -> (
+    | INT_TY | STRING_TY | BOOL_TY | UNIT_TY | FUNCTION_TY _ | ANY_TY | THUNK_TY _-> (
         match default with Some e -> Leaf e | None -> resume)
   in
   (* preprecessing  *)

@@ -33,6 +33,8 @@ and sx =
   | SList of sexpr * sexpr
   | SNoexpr
   | SNomatch
+  | SThunk of sexpr (* a lambda expression for thunk_fun *)
+  | SForce of sexpr (* a expression of THUNK_TY t type*)
 
 and scase_expr = A.pattern * sexpr
 and lambda = string list * sexpr
