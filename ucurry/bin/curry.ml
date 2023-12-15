@@ -35,13 +35,13 @@ let rec curry_expr (exp : A.expr) : A.expr =
       A.Case (new_scrutinee, new_cases)
   | A.Tuple es -> A.Tuple (List.map curry_expr es)
   | A.At (e, idx) -> A.At (curry_expr e, idx)
-  | A.GetTag e -> A.GetTag (curry_expr e)
-  | A.GetField (e, i) -> A.GetField (curry_expr e, i)
   | A.Noexpr -> A.Noexpr
   | A.EmptyList tau -> A.EmptyList tau
   | A.List (hd, tl) -> A.List (curry_expr hd, curry_expr tl)
   | A.Thunk _ as thunk -> A.Thunk thunk
   | A.NoMatch -> A.NoMatch
+  | A.GetTag _ -> failwith "Impossible getTag operation before case converting"
+  | A.GetField _ -> failwith "Impossible getFiled operation before case converting"
 
 let curry (program : A.program) : A.program =
   let rec curry_def (def : A.def) : A.def =
