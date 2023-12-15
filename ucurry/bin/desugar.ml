@@ -86,7 +86,7 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
           | (Geq | Less | Leq | Greater) when same && SU.eqType tau1 INT_TY ->
               BOOL_TY
           | (And | Or) when same && SU.eqType tau1 BOOL_TY -> BOOL_TY
-          | (Equal | Neq) when same -> BOOL_TY
+          | (Equal | Neq) when same && SU.isPrimitiveType tau1 -> BOOL_TY
           | _ ->
               raise
                 (SU.TypeError
@@ -102,8 +102,10 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
           | Print, STRING_TY
           | Println, STRING_TY
           | Print, INT_TY
-          | Println, INT_TY ->
-              INT_TY
+          | Println, INT_TY 
+          | Print, UNIT_TY
+          | Println, UNIT_TY ->
+             INT_TY
           | Print, BOOL_TY | Println, BOOL_TY -> INT_TY
           | IsNull, LIST_TY _ -> BOOL_TY
           | _ -> raise (SU.TypeError "type error in unary operaion")),
