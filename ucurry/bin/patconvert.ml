@@ -45,7 +45,7 @@ let rec is_exhaustive (vcon_sets : S.vcon_sets) (vcon_env : S.vcon_env)
   else
     match scrutinee_tau with
     | TUPLE_TY _ ->
-        () (* HACK : too much work to check exhaustive pattern on tuple *)
+        () (* TOOD: exhaustive pattern on tuple is not checked against yet *)
     | CONSTRUCTOR_TY name ->
         let must_have = StringMap.find name vcon_sets in
         let rec collect_all pats must_have collected =

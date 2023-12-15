@@ -15,22 +15,23 @@ check_type_error (case nested of (G One, G Two) =>  1
                | (G One, G One) =>  2
                | _ => 3);
 
-check_type_error (case nested of (G One, G Two) =>  1
+check_type_error (case nested of 
+                 (G One, G Two) =>  1
                | (_, G One) =>  2
-               | (_, G Two) =>  2
-               | (G One, G Two) =>  2
+               | (G Two, G One) =>  2
                | _ => 3);
+
+check_type_error (case scrutinee of 
+                  (_, Two, _) => 1
+                | (One, Two, Three) => 3
+                | (One, Three, _) => 2
+                | _ => 3);
 
 check_type_error (case num_nested of 
                       (One, (One, One)) => 1
                     | (One, (One, One)) => 2
                     | _ => 3);
 
--- TODO: this nested case is currently not being checked
-check_type_error (case num_nested of 
-                      (One, (_, One)) => 1
-                    | (One, (One, One)) => 2
-                    | _ => 3);
 
 println (case num_nested of 
                       (One, (One, One)) => 1
