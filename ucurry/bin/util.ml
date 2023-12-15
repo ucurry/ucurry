@@ -1,3 +1,6 @@
+(* all sorts of utility functions *)
+(* Authors: Stephanie Xu, Vivian Li *)
+
 open Typing
 module L = Llvm
 module A = Ast

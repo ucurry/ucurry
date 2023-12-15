@@ -1,3 +1,6 @@
+(* Utility functions for code generation *)
+(* Authors: Stephanie Xu, Vivian Li, Matt Zhou *)
+
 open Typing
 module L = Llvm
 module A = Ast

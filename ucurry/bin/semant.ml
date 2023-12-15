@@ -1,3 +1,6 @@
+(* Semantic Analysis: type checking and other semantic analysis *)
+(* Authors: Stephanie Xu, Vivian Li, Matt Zhou *)
+
 open Typing
 module A = Ast
 module S = Sast

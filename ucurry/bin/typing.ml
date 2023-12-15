@@ -1,3 +1,6 @@
+(* AST for types, used by SAST *)
+(* Authors: Stephanie Xu, Vivian Li *)
+
 type name = string
 type dt_name = string
 type vcon_name = string

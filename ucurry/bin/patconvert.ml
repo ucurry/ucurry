@@ -1,3 +1,6 @@
+(* patconvert: compute the decision tree for desugaring pattern matching *)
+(* Authors: Vivian Li, Stephanie Xu *)
+
 open Typing
 open Util
 module S = Sast

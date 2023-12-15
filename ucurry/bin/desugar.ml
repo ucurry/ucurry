@@ -1,3 +1,6 @@
+(* Desugar, change case expression into if expressions *)
+(* Authors: Stephanie Xu, Vivian Li *)
+
 open Typing
 module SU = SemantUtil
 module U = Util

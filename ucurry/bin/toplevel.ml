@@ -1,3 +1,6 @@
+(* main file for compiler *)
+(* Authors: Alex Bai, Stephanie Xu, Vivian Li, Matt Zhou *)
+
 type action = Ast | PAST | CAST | LAST | Default | LAZY | BARE
 
 let () =

@@ -1,4 +1,6 @@
-(* module A = Ast *)
+(* Closure Conversion (SAST -> CAST) *)
+(* Authors: Alex Bai, Stephanie Xu, Vivian Li, Matt Zhou *)
+
 open Typing
 module A = Ast
 module SA = Sast

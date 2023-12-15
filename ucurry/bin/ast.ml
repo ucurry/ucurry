@@ -1,4 +1,6 @@
 (* Abstract Syntax Tree and functions for printing it *)
+(* Authors: Alex Bai, Stephanie Xu, Vivian Li, Matt Zhou *)
+
 open Typing
 
 type binop =

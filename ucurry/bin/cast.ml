@@ -1,4 +1,6 @@
-(* Abstract Syntax Tree and functions for printing it *)
+(* Closures Abstract Syntax Tree and functions for printing it *)
+(* Authors: Stephanie Xu, Vivian Li, Matt Zhou *)
+
 open Typing
 module A = Ast
 module S = Sast

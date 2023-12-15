@@ -1,3 +1,7 @@
+(* Semantic AST: AST with type information  *)
+(* Authors: Stephanie Xu, Vivian Li, Matt Zhou *)
+
+
 open Typing
 module A = Ast
 module StringSet = Set.Make (String)

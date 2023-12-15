@@ -1,3 +1,6 @@
+(* Curry, all lambda expressions only have one input parameter after this pass *)
+(* Authors: Stephanie Xu, Vivian Li *)
+
 module A = Ast
 
 let rec curry_expr (exp : A.expr) : A.expr =

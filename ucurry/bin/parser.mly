@@ -1,3 +1,6 @@
+/* ocamlyacc parser for ucurry */
+(* Authors: Alex Bai, Stephanie Xu, Vivian Li, Matt Zhou *)
+
 %{
     open Ast
 %}

@@ -1,3 +1,7 @@
+(* Lazy, delay name binding by putting into a lambda expression,
+   and force evaluation in VAR *)
+(* Authors: Stephanie Xu, Vivian Li *)
+
 open Typing
 module A = Ast
 

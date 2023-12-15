@@ -1,3 +1,6 @@
+(* Code Generation (CAST -> LLVM-IR) *)
+(* Authors: Stephanie Xu, Vivian Li, Matt Zhou *)
+
 open Typing
 module L = Llvm
 module A = Ast

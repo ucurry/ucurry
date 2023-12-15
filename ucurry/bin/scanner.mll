@@ -1,4 +1,5 @@
 (* Ocamllex scanner for uCurry *)
+(* Authors: Alex Bai, Stephanie Xu, Vivian Li, Matt Zhou *)
 
 { open Parser }
 
