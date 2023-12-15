@@ -29,7 +29,7 @@ type uop =
 
 type pattern =
   | VAR_PAT of name
-  | CON_PAT of vcon_name * pattern 
+  | CON_PAT of vcon_name * pattern
   | PATS of pattern list
   | CONCELL of pattern * pattern
   | WILDCARD
@@ -105,7 +105,7 @@ let rec string_of_pattern = function
   | VAR_PAT s -> s
   | CON_PAT (c, p) -> (
       match p with PATS [] -> c | _ -> c ^ " " ^ string_of_pattern p)
-  | PATS [] -> ""
+  | PATS [] -> "()"
   | PATS ps -> "(" ^ String.concat ", " (List.map string_of_pattern ps) ^ ")"
   | WILDCARD -> "_"
   | NIL -> "[]"
