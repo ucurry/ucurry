@@ -106,3 +106,10 @@ let rec eqType tau1 tau2 =
 
 let add_let_type (s, e) env =
   match e with A.Lambda (t, _, _) -> StringMap.add s t env | _ -> env
+
+let isPrimitiveType = function 
+  | INT_TY -> true 
+  | STRING_TY -> true
+  | BOOL_TY -> true 
+  | UNIT_TY -> true
+  | _ -> false

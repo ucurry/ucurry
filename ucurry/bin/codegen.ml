@@ -40,6 +40,8 @@ let build_main_body defs =
   and string_format_str = L.build_global_stringptr "%s" "fmt" builder
   and int_nl_format_str = L.build_global_stringptr "%d\n" "fmt" builder
   and string_nl_format_str = L.build_global_stringptr "%s\n" "fmt" builder
+  and unit_str = L.build_global_stringptr "()" "unit" builder 
+  and unit_strln = L.build_global_stringptr "()\n" "unitln" builder 
   and string_pool = CGUtil.build_string_pool defs builder in
   let build_lit = CGUtil.build_literal context string_pool in
   let lookup n varmap = StringMap.find n varmap in
@@ -146,13 +148,12 @@ let build_main_body defs =
           | A.Or -> L.build_or e1' e2' "temp" builder
           | A.Equal -> (
               match tau_e with
-              | INT_TY | BOOL_TY ->
+              | INT_TY | BOOL_TY | STRING_TY | UNIT_TY ->
                   L.build_icmp L.Icmp.Eq e1' e2' "temp" builder
-              | STRING_TY -> L.build_icmp L.Icmp.Eq e1' e2' "temp" builder
               | _ ->
                   raise
-                    (CODEGEN_NOT_YET_IMPLEMENTED
-                       "other equality type not implemented"))
+                    (SHOULDNT_RAISED
+                       "other equality type not supported (should raise Type error)"))
           | A.Neq -> L.build_icmp L.Icmp.Ne e1' e2' "temp" builder
           | A.Less -> L.build_icmp L.Icmp.Slt e1' e2' "temp" builder
           | A.Leq -> L.build_icmp L.Icmp.Sle e1' e2' "temp" builder
@@ -188,8 +189,12 @@ let build_main_body defs =
                 "printf" builder
           | A.Print, BOOL_TY ->
               L.build_call printf_func [| int_format_str; e' |] "printf" builder
-          | A.Print, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "print")
-          | A.Println, _ -> raise (CODEGEN_NOT_YET_IMPLEMENTED "println")
+          | A.Print, UNIT_TY ->
+              L.build_call printf_func [| unit_str |] "printf" builder 
+          | A.Println, UNIT_TY ->
+              L.build_call printf_func [| unit_strln |] "printf" builder
+          | A.Print, _ -> raise (SHOULDNT_RAISED "printing non-primitve type value not supported (should raise type error)")
+          | A.Println, _ -> raise (SHOULDNT_RAISED "printing non-primitve type value not supported (should raise type error)")
           | A.Neg, _ -> L.build_neg e' "temp" builder
           | A.Not, _ -> L.build_not e' "temp" builder
           | A.Hd, _ ->

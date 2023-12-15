@@ -99,7 +99,7 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
             (BOOL_TY, S.SBinop ((tau1, se1), b, (tau2, se2)))
         | (And | Or) when same && eqType tau1 BOOL_TY ->
             (BOOL_TY, S.SBinop ((tau1, se1), b, (tau2, se2)))
-        | (Equal | Neq) when same ->
+        | (Equal | Neq) when same && isPrimitiveType tau1 ->
             (BOOL_TY, S.SBinop ((tau1, se1), b, (tau2, se2)))
         | _ ->
             raise
@@ -114,7 +114,9 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         | Print, STRING_TY
         | Println, STRING_TY
         | Print, INT_TY
-        | Println, INT_TY ->
+        | Println, INT_TY
+        | Print, UNIT_TY
+        | Println, UNIT_TY ->
             (INT_TY, S.SUnop (u, (tau, se)))
         | Print, BOOL_TY | Println, BOOL_TY ->
             ty
