@@ -443,7 +443,7 @@ let match_compile (scrutinee : A.expr) (cases : A.case_expr list)
         let default_err =
           A.Begin
             [
-              A.Unop (A.Println, A.Literal (A.STRING "Case not matched"));
+              A.Unop (A.Println, A.Literal (A.STRING "Expression is not matched to any cases."));
               A.NoMatch;
             ]
         in
