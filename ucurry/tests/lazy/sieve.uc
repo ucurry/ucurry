@@ -9,7 +9,7 @@ fun : int -> int:
 addone x = x + 1;
 
 fun : unit -> List :
-nat u = (Cons (2, (map addone (nat ()))));
+from2 u = (Cons (2, (map addone (from2 ()))));
 
 fun : List -> int -> List :
 take l i = if i == 0 then (Nil)
@@ -38,6 +38,4 @@ sieve l = (case l of
             | Cons (x, xs) => (Cons (x, 
                                     (sieve ((filter (notDivisible x)) xs)))));
 
-(printList (take (sieve (nat ())) 4));
-
-
+(printList (take (sieve (from2 ())) 4));

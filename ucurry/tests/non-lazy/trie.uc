@@ -1,3 +1,4 @@
+-- this should be run with the non-lazy compiler (with -b)
 datatype Trie = Node of (string * Trie) list | Leaf ;
 
 fun : ((string * Trie) -> int)  -> (string * Trie) list  -> int list :
@@ -46,7 +47,6 @@ string_exists s trie =
             node -> (node.0 == c and (string_exists rest node.1))
         in (any_true (map_bool search tries)));
 
--- this does not work since no let rec is supported
 fun : string list -> Trie -> Trie :
 add s trie =
     (case (trie, s) 
