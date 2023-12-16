@@ -1,6 +1,3 @@
-(* patconvert: compute the decision tree for desugaring pattern matching *)
-(* Authors: Vivian Li, Stephanie Xu *)
-
 open Typing
 open Util
 module S = Sast
@@ -34,7 +31,20 @@ module StringSet = Set.Make (String)
 
 (* helper function  *)
 let print_pattern = Util.o print_string A.string_of_pattern
+let eq_pat p1 p2 = Pattern.compare p1 p2 == 0
 
+(* TODO : test *)
+let rec next_satisfied p i xs =
+  if List.length xs <= i then -1
+  else
+    let sublist = drop xs i in
+    let rec find_i ys acc =
+      match ys with
+      | z :: zs -> if p z then acc else find_i zs (acc + 1)
+      | [] -> -1
+    in
+    let next = find_i sublist 0 in 
+    if next != -1 then next + i else -1
 let extract_patlist = function
   | A.PATS patlist -> patlist
   | _ -> raise (SU.TypeError "not a tuple patern")
@@ -113,7 +123,7 @@ let fall_through_case cases =
   let scrutinee, default = check_repeat_pat_acc cases [] in
   (List.rev scrutinee, default)
 
-let remove_indices never_used xs =
+let rec remove_indices never_used xs =
   fold_left_i
     (fun x idx acc ->
       match IntSet.find_opt idx never_used with
@@ -122,7 +132,7 @@ let remove_indices never_used xs =
     0 [] xs
 
 (* return a set of index that a patlist has wildcard in those postion *)
-let search_wildcard patlist =
+let rec search_wildcard patlist =
   fold_left_i
     (fun p idx set ->
       match p with A.WILDCARD -> IntSet.add idx set | _ -> set)
@@ -244,7 +254,7 @@ let desugar (scrutinee : A.expr) (cases : A.case_expr list) : A.case_expr list =
   in
   List.combine (List.map simplify_pat pats) (List.map add_let cases)
 
-type tree = Test of (A.expr * tree) list * tree | Leaf of A.expr
+type tree = Test of (A.expr * tree) list * tree | Leaf of A.expr | Failure
 
 let rec string_repeat s n =
   match n with 0 -> s | _ -> s ^ string_repeat s (n - 1)
@@ -271,6 +281,7 @@ let rec print_tree n tree =
       List.iter print_single tests;
       print_with_space " DEFAULT ";
       print_tree (n + 1) default
+  | Failure -> print_with_space "faiure"
   | Leaf e ->
       print_string "  MATCHED ";
       print_endline @@ " " ^ A.string_of_expr e
@@ -286,6 +297,7 @@ let rec compile_tree tree =
       let then_exp = compile_tree tree'
       and else_exp = compile_tree (Test (rest, default)) in
       A.If (cond, then_exp, else_exp)
+  | Failure -> raise (Impossible "impossible")
 
 let match_compile (scrutinee : A.expr) (cases : A.case_expr list)
     (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets) (tau : typ) : tree =
@@ -365,9 +377,50 @@ let match_compile (scrutinee : A.expr) (cases : A.case_expr list)
     | TUPLE_TY _ -> (
         match shrinked_cases with
         | [] -> nearest_resume
-        | (p, matched_e) :: rest ->
-            let resume' = match_resume scrutinee rest tau nearest_resume in
-            match_pat scrutinee p (Leaf matched_e) resume')
+        | cases ->
+            let filter_dup idx to_avoid cases =
+              List.filter
+                (fun (patlist, _) ->
+                  not (eq_pat (List.nth patlist idx) to_avoid))
+                cases
+            in
+            let next_refutable patlist idx =
+              next_satisfied (o not fall_through) patlist idx
+            in
+            let pats, matches = List.split cases in
+            let patlists = List.map extract_patlist pats in
+            let rec build_tree (cases : (A.pattern list * A.expr) list) resume =
+              match cases with
+              | [] ->
+                  resume
+              | (patlist, e) :: rest ->
+                  (* return a tree examaine the pattern at current idx in the patlist *)
+                  let rec compile_matrix (patlist : A.pattern list) (idx : int)
+                      (resume_cases : (A.pattern list * A.expr) list)
+                      (matched : tree) (resume : tree) : tree =
+                    let refutable_idx = next_refutable idx patlist in 
+                    if refutable_idx == -1 then matched 
+                    else 
+                      let refutable_idx = next_refutable idx patlist in
+                      let refutable = List.nth patlist refutable_idx in
+                      let can_resume =
+                        filter_dup refutable_idx refutable resume_cases
+                      in
+                      let resume' = build_tree can_resume resume in
+                      let continue =
+                        compile_matrix patlist (refutable_idx + 1) rest 
+                          matched resume'
+                      in
+                      match_pat
+                        (A.At (scrutinee, refutable_idx)) refutable continue resume'
+                  in
+                  compile_matrix patlist 0 rest (Leaf e) resume
+            in
+            build_tree (List.combine patlists matches) nearest_resume
+            (* | (p, matched_e) :: rest ->
+                let resume' = match_resume scrutinee rest tau nearest_resume in
+                match_pat scrutinee p (Leaf matched_e) resume' *)
+                )
     | LIST_TY _ -> (
         match shrinked_cases with
         | [] -> nearest_resume
