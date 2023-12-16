@@ -254,7 +254,7 @@ let desugar (scrutinee : A.expr) (cases : A.case_expr list) : A.case_expr list =
   in
   List.combine (List.map simplify_pat pats) (List.map add_let cases)
 
-type tree = Test of (A.expr * tree) list * tree | Leaf of A.expr | Failure
+type tree = Test of (A.expr * tree) list * tree | Leaf of A.expr 
 
 let rec string_repeat s n =
   match n with 0 -> s | _ -> s ^ string_repeat s (n - 1)
@@ -281,7 +281,6 @@ let rec print_tree n tree =
       List.iter print_single tests;
       print_with_space " DEFAULT ";
       print_tree (n + 1) default
-  | Failure -> print_with_space "faiure"
   | Leaf e ->
       print_string "  MATCHED ";
       print_endline @@ " " ^ A.string_of_expr e
@@ -297,8 +296,6 @@ let rec compile_tree tree =
       let then_exp = compile_tree tree'
       and else_exp = compile_tree (Test (rest, default)) in
       A.If (cond, then_exp, else_exp)
-  | Failure -> raise (Impossible "impossible")
-
 let match_compile (scrutinee : A.expr) (cases : A.case_expr list)
     (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets) (tau : typ) : tree =
   (* Assuming that the list of cases is exahustive *)
