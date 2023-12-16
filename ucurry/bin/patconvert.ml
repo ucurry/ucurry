@@ -34,7 +34,7 @@ let print_pattern = Util.o print_string A.string_of_pattern
 let eq_pat p1 p2 = Pattern.compare p1 p2 == 0
 
 (* TODO : test *)
-let rec next_satisfied p i xs =
+let next_satisfied p i xs =
   if List.length xs <= i then -1
   else
     let sublist = drop xs i in
@@ -123,7 +123,7 @@ let fall_through_case cases =
   let scrutinee, default = check_repeat_pat_acc cases [] in
   (List.rev scrutinee, default)
 
-let rec remove_indices never_used xs =
+let remove_indices never_used xs =
   fold_left_i
     (fun x idx acc ->
       match IntSet.find_opt idx never_used with
@@ -132,7 +132,7 @@ let rec remove_indices never_used xs =
     0 [] xs
 
 (* return a set of index that a patlist has wildcard in those postion *)
-let rec search_wildcard patlist =
+let search_wildcard patlist =
   fold_left_i
     (fun p idx set ->
       match p with A.WILDCARD -> IntSet.add idx set | _ -> set)
