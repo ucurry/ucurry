@@ -44,6 +44,9 @@ let rec curry_expr (exp : A.expr) : A.expr =
   | A.Thunk _ as thunk -> A.Thunk thunk
   | A.NoMatch -> A.NoMatch
   | A.Force _ -> failwith "force not possible"
+  | A.GetTag _ -> failwith "Impossible getTag operation before case converting"
+  | A.GetField _ ->
+      failwith "Impossible getFiled operation before case converting"
 
 let curry (program : A.program) : A.program =
   let rec curry_def (def : A.def) : A.def =

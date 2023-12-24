@@ -288,7 +288,7 @@ let build_main_body defs =
           let thunk_ptr = L.build_malloc thunk_t "thunk_sturct" builder in 
 
           (* put the delay_fun into the thunk struct *)
-          let delay_funp = exprWithVarmap builder null_captured_param varmap delay_fun in 
+          let delay_funp = exprWithVarmap builder captured_param varmap delay_fun in 
           let casted_delay_funp = L.build_bitcast delay_funp (L.pointer_type (delay_fun_t)) "casted_delay_fun" builder in
           let _ = U.set_data_field casted_delay_funp 0 thunk_ptr builder in (* set delay fun *)
           (* TODO HERE: the delay_funp does not match the universal funp in the thunk struct -> need casting *)
