@@ -66,6 +66,11 @@ let rec free ((t, exp) : SA.sexpr) : S.t =
   | SA.SNomatch -> S.empty
   | SA.SThunk se -> free se 
   | SA.SForce se -> free se
+  | SA.SGetClosure se -> free se
+  | SA.SGetEvaled se -> free se
+  | SA.SGetValue se -> free se
+  | SA.SSetEvaled se -> free se
+  | SA.SSetValue (se1, se2) -> unionFree [ se1; se2]
 
 let indexOf (x : string) (xs : freevar list) : int option =
   let rec indexOf' (x : string) (xs : freevar list) (i : int) : int option =
@@ -120,7 +125,12 @@ and close_exp (captured : freevar list) (le : SA.sexpr) : C.sexpr =
       | SA.SGetTag se -> C.GetTag (exp se)
       | SA.SNomatch -> C.Nomatch 
       | SA.SThunk se -> C.Thunk (exp se)
-      | SA.SForce se -> C.Force (exp se))
+      | SA.SForce se -> C.Force (exp se)
+      | SA.SGetClosure se -> C.GetClosure (exp se)
+      | SA.SGetEvaled se -> C.GetEvaled (exp se)
+      | SA.SGetValue se -> C.GetValue (exp se)
+      | SA.SSetEvaled se -> C.SetEvaled (exp se)
+      | SA.SSetValue (se1, se2) -> C.SetValue (exp se1, exp se2))
   in
   exp le
 

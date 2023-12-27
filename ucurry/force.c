@@ -19,19 +19,19 @@ void *Force(struct thunk *input) {
         return input->value;
     }
     struct closure *cl = (struct closure *)input->delay_closure;
-    input->value = (void *) (uintptr_t)cl->fun('u', cl->captured);
+    input->value = (void *) (uintptr_t)cl->fun('u', cl->captured); /* here should be a normal function call  */
     // printf("*(input->value): %d", (int)(uintptr_t)input->value);
     input->evaled = true;
     return input->value;
 }
 
-struct thunk *MakeThunk(void *(*delay_function)) {
-    struct thunk *ptr = malloc(sizeof(struct thunk));
-    ptr->evaled = false;
-    ptr->value = NULL;
-    ptr->delay_closure = delay_function;
-    return ptr;
-}
+// struct thunk *MakeThunk(void *(*delay_function)) {
+//     struct thunk *ptr = malloc(sizeof(struct thunk));
+//     ptr->evaled = false;
+//     ptr->value = NULL;
+//     ptr->delay_closure = delay_function;
+//     return ptr;
+// }
 
 #ifdef BUILD_TEST
 int main() {

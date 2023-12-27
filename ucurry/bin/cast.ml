@@ -30,6 +30,11 @@ and expr =
   | Nomatch
   | Thunk of sexpr
   | Force of sexpr
+  | GetEvaled of sexpr
+  | GetValue of sexpr 
+  | GetClosure of sexpr
+  | SetEvaled of sexpr
+  | SetValue of sexpr * sexpr
 
 (* and case_expr = S.pattern * sexpr *)
 and closure = (string list * sexpr) * sexpr list (* (lambda, captured list) *)
@@ -113,6 +118,12 @@ and string_of_sexpr (delim : string) ((ty, expr) : sexpr) : string =
     | EmptyList _ -> "[]"
     | Thunk t -> "(Thunk: " ^ string_of_sexpr delim t ^ ")"
     | Force e -> string_of_sexpr delim e ^ ".force"
+    | GetEvaled e -> "(GetEvaled " ^ string_of_sexpr delim  e ^ ")"
+    | GetValue e -> "(GetValue " ^ string_of_sexpr delim  e ^ ")"
+    | GetClosure e -> "(GetClosure " ^ string_of_sexpr delim  e ^ ")"
+    | SetEvaled e -> "(SetEvaled " ^ string_of_sexpr delim  e ^ ")"
+    | SetValue (e1, e2) -> "(SetValue " ^ string_of_sexpr delim  e1 ^ " " ^ string_of_sexpr delim  e2 ^ ")"
+    | _ -> failwith "cast pp not implemented for forceeval"
   in
   "(" ^ string_of_typ ty ^ "," ^ string_of_expr expr ^ ")"
 

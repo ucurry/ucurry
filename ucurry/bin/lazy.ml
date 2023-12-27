@@ -22,9 +22,15 @@ let unitv = A.Literal Ast.UNIT
 
 let rec lazy_expr (exp : A.expr) : A.expr =
   let to_thunk e = A.Thunk (lazy_expr e) in (* would turn into Thunk (() -> e) in Semant *)
+  let force_eval e = 
+    (* let else_exp = A.Begin [A.SetEvaled e; A.SetValue (e, A.Apply (A.GetClosure e, [unitv]))] in 
+                   else_exp  *)
+    let else_exp = A.Begin [A.SetEvaled e; A.SetValue (e, A.Apply (A.GetClosure e, [(A.Literal A.UNIT)]))] in 
+                   A.If (A.GetEvaled e, A.GetValue e, else_exp) 
+  in 
   match exp with
   | A.Literal _ -> exp
-  | A.Var n -> A.Force (A.Var n)
+  | A.Var n -> force_eval (A.Var n)
   | A.Apply (e, es) ->
       let lazy_fun = lazy_expr e in
       let lazy_args = List.map to_thunk es in
@@ -46,10 +52,10 @@ let rec lazy_expr (exp : A.expr) : A.expr =
   | A.Tuple es -> A.Tuple (List.map to_thunk es)
   | A.List (hd, tl) -> A.List (lazy_expr hd, lazy_expr tl)
   | A.EmptyList tau -> A.EmptyList tau
-  | A.At (e, idx) -> A.Force (A.At (lazy_expr e, idx))
+  | A.At (e, idx) -> force_eval (A.At (lazy_expr e, idx))
   | A.Noexpr -> A.Noexpr
   | A.GetTag e -> A.GetTag (lazy_expr e)
-  | A.GetField (e, i) -> A.Force (A.GetField (lazy_expr e, i))
+  | A.GetField (e, i) -> force_eval (A.GetField (lazy_expr e, i))
   | A.Case (scrutinee, cases) ->
       let scrutinee' = lazy_expr scrutinee and ps, cs' = List.split cases in
       let cs' = List.combine ps (List.map lazy_expr cs') in
@@ -57,6 +63,7 @@ let rec lazy_expr (exp : A.expr) : A.expr =
   | A.NoMatch -> A.NoMatch
   | A.Thunk e -> A.Thunk (lazy_expr e)
   | A.Force _ -> failwith "Illegal force"
+  | _ -> failwith "Illegal getValue, getEvalued or EvalFun"
 
 let rec lazy_def def =
   match def with

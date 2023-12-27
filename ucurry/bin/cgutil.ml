@@ -176,6 +176,13 @@ let build_string_pool (program : C.program) (builder : L.llbuilder) :
     | C.Nomatch -> pool
     | C.Thunk e -> mk_expr_string_pool builder pool e 
     | C.Force e -> mk_expr_string_pool builder pool e
+    | C.GetClosure e -> mk_expr_string_pool builder pool e
+    | C.GetEvaled e -> mk_expr_string_pool builder pool e
+    | C.GetValue e -> mk_expr_string_pool builder pool e
+    | C.SetValue (e1, e2) -> 
+          let pool' = mk_expr_string_pool builder pool e1 in 
+          mk_expr_string_pool builder pool' e2 
+    | C.SetEvaled e -> mk_expr_string_pool builder pool e
   in
   let mk_defs_string_pool builder pool sdef =
     match sdef with

@@ -47,6 +47,7 @@ let rec curry_expr (exp : A.expr) : A.expr =
   | A.GetTag _ -> failwith "Impossible getTag operation before case converting"
   | A.GetField _ ->
       failwith "Impossible getFiled operation before case converting"
+  | _ -> failwith "Impossible getEvaled, getValue or EvalFun before lazy"
 
 let curry (program : A.program) : A.program =
   let rec curry_def (def : A.def) : A.def =

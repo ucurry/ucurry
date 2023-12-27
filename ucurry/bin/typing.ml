@@ -17,7 +17,7 @@ type typ =
   | CONSTRUCTOR_TY of dt_name
   | TUPLE_TY of typ list
   | ANY_TY
-  | THUNK_TY of typ
+  | THUNK_TY of typ (* stores the lambda type of a thunk *)
 
 let rec string_of_typ = function
   | INT_TY -> "int"

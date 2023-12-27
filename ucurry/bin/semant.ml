@@ -172,6 +172,30 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         let tau, e = ty body in
         let delay_t = FUNCTION_TY (UNIT_TY, tau) in 
         (THUNK_TY delay_t, S.SThunk (delay_t, S.SLambda ([ "unit" ], (tau, e))))
+    | A.GetEvaled e -> 
+        let tau, e' = ty e in 
+        (match tau with THUNK_TY (FUNCTION_TY (UNIT_TY, _)) -> (BOOL_TY, S.SGetEvaled (tau, e')) 
+            | _ -> raise (SemantUtil.TypeError ("Cannot get evaled field of non-thunk expr")))
+    | A.GetValue e ->
+        let tau, e' = ty e in 
+        (match tau with THUNK_TY (FUNCTION_TY (UNIT_TY, t)) -> (t, S.SGetValue (tau, e')) 
+            | _ -> raise (SemantUtil.TypeError ("Cannot get value field of non-thunk expr")))
+    | A.GetClosure e -> 
+        let tau, e' = ty e in 
+        (match tau with THUNK_TY t -> (t, S.SGetClosure (tau, e')) 
+            | _ -> raise (SemantUtil.TypeError ("Cannot getClosure field of non-thunk expr"))) 
+    | A.SetEvaled e -> 
+        let tau, e' = ty e in 
+        (match tau with THUNK_TY (FUNCTION_TY (UNIT_TY, _)) -> (BOOL_TY, S.SSetEvaled (tau, e')) 
+            | _ -> raise (SemantUtil.TypeError ("Cannot setEvaled field of non-thunk expr"))) 
+    | A.SetValue (thunk, value) -> 
+        let tau, e' = ty thunk in 
+        let tau2, v2 = ty value in 
+        (match tau with 
+            THUNK_TY (FUNCTION_TY (UNIT_TY, t)) -> 
+                let final_tau = get_checked_types t tau2 in 
+                (final_tau, S.SSetValue ((tau, e'), (tau2, v2)))
+            | _ -> raise (SemantUtil.TypeError ("Cannot set value field of non-thunk expr")))
     | A.Force e -> 
         let tau, e' = ty e in 
         (match tau with 
@@ -179,7 +203,6 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
           (* let _ = print_string ( "in forcing: " ^ (string_of_typ t)) in  *)
           (t, S.SForce (tau, e'))
           | _ -> raise (SemantUtil.TypeError ("Cannot force an expression of non-thunk type: " ^ (string_of_typ tau))))
-        (* failwith "not yet implemented" *)
     | A.GetTag e ->
         let tau, e' = ty e in
         ignore
@@ -227,7 +250,17 @@ let rec typ_def (def : A.def) (semant_envs : semant_envs) : S.sdef * S.type_env
                 | e -> (S.SVal (funname, (final_tau, e)), new_env)
               in
               match_retrun sx
-          | _ -> failwith "Top-level function must have a thunk type")
+          | _ -> (* For non-lazy pass *)
+              let new_env = bindUnique funname tau type_env in
+              let tau', sx =
+                typ_of vcon_env vcon_sets new_env (Lambda (tau, args, body))
+              in
+              let final_tau = get_checked_types tau tau' in
+              let match_retrun = function
+                | S.SLambda body -> (S.SFunction (final_tau, funname, body), new_env)
+                | e -> (S.SVal (funname, (final_tau, e)), new_env)
+              in
+              match_retrun sx)
     | A.Datatype (tau, val_cons) ->
         let vcons, argtaus = List.split val_cons in
         let func_taus =

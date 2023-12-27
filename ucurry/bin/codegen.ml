@@ -19,6 +19,7 @@ let get_dt_name = function
 
 let build_main_body defs =
   let context = L.global_context () in
+  let i64_t = L.i64_type context in
   let i32_t = L.i32_type context in
   let i8_t = L.i8_type context in
   let i1_t = L.i1_type context in
@@ -283,27 +284,64 @@ let build_main_body defs =
           ignore (Util.set_data_field tl_ptr 1 list_ptr builder);
           list_ptr
       | C.Thunk delay_fun -> 
-      (* failwith "not yet implement thunk" *)
-           (* malloc thunk struct *)
+          (* malloc thunk struct *)
           let thunk_ptr = L.build_malloc thunk_t "thunk_sturct" builder in 
 
+          (* TODO: NEXT here -> reexamnie the delay_funp type -> shouldn't it be a closure? *)
           (* put the delay_fun into the thunk struct *)
-          let delay_funp = exprWithVarmap builder captured_param varmap delay_fun in 
-          let casted_delay_funp = L.build_bitcast delay_funp (L.pointer_type (delay_fun_t)) "casted_delay_fun" builder in
+          let delay_clp = exprWithVarmap builder captured_param varmap delay_fun in 
+          let casted_delay_funp = L.build_bitcast delay_clp (L.pointer_type (delay_fun_t)) "casted_delay_fun" builder in
           let _ = U.set_data_field casted_delay_funp 0 thunk_ptr builder in (* set delay fun *)
-          (* TODO HERE: the delay_funp does not match the universal funp in the thunk struct -> need casting *)
           let _ = U.set_data_field (L.const_null void_ptr) 1 thunk_ptr builder in  (* set val *)
           let _ = U.set_data_field (L.const_int i1_t 0) 2 thunk_ptr builder in (* set evaled to false *)
 
           (* return struct pointer *)
           thunk_ptr
-          (* let reg = L.build_alloca (L.pointer_type thunk_t) "thunk" builder in 
-          let _ = L.build_store thunk_ptr reg builder in 
-          reg *)
-
-      | C.Force e -> 
-      (* failwith "not yet implement force" *)
+      | C.GetClosure e -> 
+          let thunk_ptr = expr builder e in 
+          let cl_ptr = Util.get_data_field 0 thunk_ptr builder "closure_ptr" in 
+          let formaltype, retty = Util.get_ft ty in
+          let formal_lltypes = void_ptr :: List.map ltype_of_type [ formaltype ] in
+          let ftype =
+            L.function_type (ltype_of_type retty) (Array.of_list formal_lltypes)
+          in
+          let cl_type = L.struct_type context [| L.pointer_type ftype; void_ptr|] in 
+          let casted_cl_ptr = L.build_bitcast cl_ptr (L.pointer_type cl_type) "casted_clptr" builder in 
+          casted_cl_ptr
+      | C.GetEvaled e -> 
+          let thunk_ptr = expr builder e in 
+          Util.get_data_field 2 thunk_ptr builder "evaled"
+      | C.GetValue e -> 
+          let thunk_ptr = expr builder e in 
+          let value = Util.get_data_field 1 thunk_ptr builder "value" in 
+          L.build_ptrtoint value (ltype_of_type ty) "casted_value" builder
+      | C.SetValue (e1, e2) -> 
+          let thunk_ptr = expr builder e1 in 
+          let value = expr builder e2 in 
+          let casted_value = L.build_inttoptr value void_ptr "casted_value" builder in 
+          let _ = Util.set_data_field casted_value 1 thunk_ptr builder in 
+          value
+      | C.SetEvaled e -> 
+          let thunk_ptr = expr builder e in 
+          Util.set_data_field (L.const_int i1_t 1) 2 thunk_ptr builder
+      | C.Force e -> failwith "temporarily disabled"
           (* TODO: need to generate the code for this function once -> so that not repeatedly generate it *)
+
+          (* TODO NEXT HERE: 
+            #A: delegate to upper stream
+                  implement getClosure and use Apply from upperstream 
+                  implement setValue
+                  implement setEvaled and getEvaled
+
+            DRAWBACK: re-generate the code for the thunk in the forceEval body
+           *)
+
+
+
+          (* TODO2. generate if-else from codegen *)
+
+          (* BELOW: C function *)
+(*
           (* Call force function *)
           let e' = expr builder e in 
           let ret = L.build_call force_func [| e' |] "Force" builder in 
@@ -311,7 +349,7 @@ let build_main_body defs =
           (* bistcast a void pointer to int *)
           let casted_ret = L.build_ptrtoint ret (L.i64_type context) "casted_ret" builder in (* void pointer to i64 *)
           L.build_trunc_or_bitcast casted_ret (ltype_of_type ty) "trunc_ret" builder
-          
+*)       
     in
     expr builder
   and alloc_function name fun_tau =

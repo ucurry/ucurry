@@ -50,6 +50,11 @@ type expr =
   | Lambda of typ * arg_name list * expr
   | Thunk of expr
   | Force of expr 
+  | GetEvaled of expr 
+  | GetValue of expr
+  | GetClosure of expr
+  | SetEvaled of expr
+  | SetValue of expr * expr (* the first being the thunk, the second being the value *)
   | Case of expr * case_expr list
   | At of expr * int
   | List of expr * expr
@@ -165,6 +170,11 @@ let rec string_of_expr exp =
     | List (x, xs) -> string_of_expr x ^ " :: " ^ string_of_expr xs
     | NoMatch -> "no match"
     | Force e -> "(Force " ^ string_of_expr e ^ ")"
+    | GetEvaled e -> "(GetEvaled " ^ string_of_expr e ^ ")"
+    | GetValue e -> "(GetValue " ^ string_of_expr e ^ ")"
+    | GetClosure e -> "(GetClosure " ^ string_of_expr e ^ ")"
+    | SetEvaled e -> "(SetEvaled " ^ string_of_expr e ^ ")"
+    | SetValue (e1, e2) -> "(SetValue " ^ string_of_expr e1 ^ " " ^ string_of_expr e2 ^ ")"
   in
 
   match exp with Noexpr -> "" 

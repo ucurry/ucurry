@@ -47,7 +47,8 @@ let () =
       let ast = Parser.program Scanner.token lexbuf in
       let curried = Curry.curry ast in 
       let desugared = Desugar.desugar curried in
-      let sast, _ = Semant.semant_check desugared in
+      let lazied = Lazy.lazy_convert desugared in 
+      let sast, _ = Semant.semant_check lazied in
       let cast = Clconvert.close_program sast in
       let _ = print_string (Cast.string_of_program cast) in
       print_newline ()

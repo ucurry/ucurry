@@ -180,6 +180,7 @@ let rec typ_of (vcon_env : S.vcon_env) (vcon_sets : S.vcon_sets)
         | _ -> raise (SU.TypeError "tail is not a list"))
     | A.NoMatch -> (ANY_TY, A.NoMatch)
     | A.Force _ -> failwith "force not possible"
+    | _ -> failwith "impossible getEvaled, getValue or EvalFun"
   in
   ty exp
 
