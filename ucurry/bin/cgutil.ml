@@ -56,8 +56,9 @@ let ltype_of_type (ty_map : L.lltype StringMap.t) (llmodule : L.llmodule)
         (* Should be consistent with the one in codegen `thunk_t` *)
         let void_ptr = L.pointer_type (L.i8_type context) in
         let thunk_fun_type = L.function_type void_ptr [||] in (* consistent with void ptr in codegen *)
+        let thunk_cl_type =  L.struct_type context [| L.pointer_type thunk_fun_type; void_ptr |] in
         let thunk_struct_type = 
-          L.struct_type context [| L.pointer_type thunk_fun_type; 
+          L.struct_type context [| L.pointer_type thunk_cl_type; 
                                    void_ptr;
                                    L.i1_type context |] 
         in 

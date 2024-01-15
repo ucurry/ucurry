@@ -242,7 +242,7 @@ let rec typ_def (def : A.def) (semant_envs : semant_envs) : S.sdef * S.type_env
           | THUNK_TY t -> 
               let new_env = bindUnique funname tau type_env in
               let tau', sx =
-                typ_of vcon_env vcon_sets new_env (Lambda (tau, args, body))
+                typ_of vcon_env vcon_sets new_env (Lambda (t, args, body))
               in
               let final_tau = get_checked_types t tau' in
               let match_retrun = function
