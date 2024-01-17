@@ -140,8 +140,7 @@ let build_main_body defs =
               (fun (builder, vm) (name, (tau, e)) ->
                 match e with
                 | C.Closure (lambda, cap) ->
-                    build_named_function tau name lambda cap captured_param vm
-                      builder
+                    build_named_function tau name lambda cap captured_param vm builder 
                 | _ -> failwith "impossible letrec not binds with closure")
               (builder, varmap) bindings
           in
@@ -228,8 +227,10 @@ let build_main_body defs =
       | C.Captured index ->
           U.get_data_field index captured_param builder "capvar"
       | C.Closure (_, cap) ->
-          (* Alloc function *)
+          (* Define function *)
           let funtype, function_ptr = alloc_function lambda_name ty in
+
+          (* Malloc closure and build captured list *)
           let cl_struct_type =
             L.struct_type context [| L.pointer_type funtype; void_ptr |]
           in
@@ -242,8 +243,12 @@ let build_main_body defs =
           let casted_capstruct_ptr =
             L.build_bitcast capstruct_ptr void_ptr "capstruct" builder
           in
+
+          (* Set the function ptr and captured struct of the closure *)
           let _ = U.set_data_field function_ptr 0 closure_ptr builder in
           let _ = U.set_data_field casted_capstruct_ptr 1 closure_ptr builder in
+
+          (* Build function body *)
           let _ =
             build_function_body function_ptr capstruct_type (ty, top_exp)
           in
@@ -289,14 +294,10 @@ let build_main_body defs =
           list_ptr
       | C.Thunk delay_fun -> 
           (* malloc thunk struct *)
-          let thunk_ptr = L.build_malloc thunk_t "thunk_sturct" builder in 
+          let thunk_ptr = L.build_malloc thunk_t "thunk_struct" builder in 
 
-          (* TODO: NEXT here -> reexamnie the delay_funp type -> shouldn't it be a closure? *)
-          (* put the delay_fun into the thunk struct *)
+          (* put the delay_closure into the thunk struct *)
           let delay_clp = exprWithVarmap builder captured_param varmap delay_fun in 
-          (* TODO: do i need to cast two levels down? *)
-          (* TODO: why do we need casting types? i.e. to ensure all thunk have the same type? *)
-          
           let casted_delay_clp = L.build_bitcast delay_clp (L.pointer_type delay_cl_t) "casted_delay_fun" builder in
           let _ = U.set_data_field casted_delay_clp 0 thunk_ptr builder in (* set delay closure *)
           let _ = U.set_data_field (L.const_null void_ptr) 1 thunk_ptr builder in  (* set val *)
@@ -382,6 +383,7 @@ let build_main_body defs =
          (fun v i -> U.set_data_field v i struct_ptr builder)
          0 captured_values);
     (struct_type, struct_ptr)
+  
   and build_function_body the_function captured_type closure : unit =
     let builder = L.builder_at_end context (L.entry_block the_function) in
 
@@ -401,6 +403,7 @@ let build_main_body defs =
     let formaltypes, _, formals, body, _ = deconstructClosure closure in
     let formal_lltypes = List.map ltype_of_type formaltypes in
     let formalsandtypes = List.combine formal_lltypes formals in
+
     (* build the function body *)
     let add_formal m (t, n) p =
       let _ = L.set_value_name n p in
@@ -417,10 +420,13 @@ let build_main_body defs =
     in
     let e' = exprWithVarmap builder cap_param localvarmap' body in
     ignore (add_terminal builder (fun b -> L.build_ret e' b))
+  
   (* varmap is the variable environment that maps (variable : string |---> to reg : llvale) *)
   and build_named_function tau name lambda cap captured_param varmap builder =
+    (* Define the function *)
     let funtype, function_ptr = alloc_function name tau in
-    (* Alloc the closure struct and adds it into varmap *)
+    
+    (* Alloc the closure struct and binds the name to the closure *)
     let cl_struct_type =
       L.struct_type context [| L.pointer_type funtype; void_ptr |]
     in
@@ -430,6 +436,7 @@ let build_main_body defs =
     in
     let _ = L.build_store closure_ptr closure_pp builder in
     let varmap' = StringMap.add name closure_pp varmap in
+    
     (* Populate the capture struct  *)
     let capstruct_type, capstruct_ptr =
       build_captured_struct builder varmap' captured_param cap
@@ -450,45 +457,22 @@ let build_main_body defs =
   
 
   and build_named_thunk tau name lambda cap captured_param varmap builder =
-    let funtype, function_ptr = alloc_function name tau in
-
-    (* Alloc the closure struct *)
-    let cl_struct_type =
-      L.struct_type context [| L.pointer_type funtype; void_ptr |]
-    in
-    let closure_ptr = L.build_malloc cl_struct_type "fun_closure" builder in
-    let closure_pp =
-      L.build_alloca (L.pointer_type cl_struct_type) "closurepp" builder
-    in
-    let _ = L.build_store closure_ptr closure_pp builder in
-    let casted_closure_pp = L.build_bitcast closure_pp (L.pointer_type (delay_fun_t)) "void_closure_ptr" builder in
-
+    let delay_fun = (tau, C.Closure (lambda, cap)) in 
     (* malloc thunk struct *)
     let thunk_ptr = L.build_malloc thunk_t "thunk_struct" builder in 
-    let _ = U.set_data_field casted_closure_pp 0 thunk_ptr builder in 
-    let _ = U.set_data_field (L.const_null void_ptr) 1 thunk_ptr builder in 
-    let _ = U.set_data_field (L.const_int i1_t 0) 2 thunk_ptr builder in
 
-    (* add fun_name to varmap *)
-    let varmap' = StringMap.add name thunk_ptr varmap in
+    (* binds name to the alloced thunk_ptr *)
+    let reg = L.build_alloca (ltype_of_type (THUNK_TY tau)) name builder in 
+    let varmap' = StringMap.add name reg varmap in 
+    let _ = L.build_store thunk_ptr reg builder in 
 
-    (* Populate the capture struct  *)
-    let capstruct_type, capstruct_ptr =
-      build_captured_struct builder varmap' captured_param cap
-    in
-    let casted_capstruct_ptr =
-      L.build_bitcast capstruct_ptr void_ptr "capstruct" builder
-    in
+    (* put the delay_closure into the thunk struct *)
+    let delay_clp = exprWithVarmap builder captured_param varmap' delay_fun in 
+    let casted_delay_clp = L.build_bitcast delay_clp (L.pointer_type delay_cl_t) "casted_delay_fun" builder in
+    let _ = U.set_data_field casted_delay_clp 0 thunk_ptr builder in (* set delay closure *)
+    let _ = U.set_data_field (L.const_null void_ptr) 1 thunk_ptr builder in  (* set val *)
+    let _ = U.set_data_field (L.const_int i1_t 0) 2 thunk_ptr builder in (* set evaled to false *)
 
-    (* Populate the closure struct *)
-    let _ = U.set_data_field function_ptr 0 closure_ptr builder in
-    let _ = U.set_data_field casted_capstruct_ptr 1 closure_ptr builder in
-
-    
-    (* Build the function body *)
-    ignore
-      (build_function_body function_ptr capstruct_type
-         (tau, C.Closure (lambda, cap)));
     (builder, varmap')
   in
 
@@ -503,17 +487,18 @@ let build_main_body defs =
     | C.Function (tau, name, (lambda, cap)) ->
         (match tau with 
           THUNK_TY t -> 
-            (* build_named_thunk tau name lambda cap null_captured_param varmap builder *)
-            let e' = exprWithVarmap builder null_captured_param varmap (tau, C.Thunk (t, C.Closure (lambda, cap))) in 
+            build_named_thunk t name lambda cap null_captured_param varmap builder
+            
+            (* Below is proven to work with non-recursive function *)
+            (* let e' = exprWithVarmap builder null_captured_param varmap (tau, C.Thunk (t, C.Closure (lambda, cap))) in 
             let reg = L.build_alloca (ltype_of_type tau) name builder in 
             let varmap' = StringMap.add name reg varmap in 
             let _ = L.build_store e' reg builder in 
-            (builder, varmap')
+            (builder, varmap') *)
           
           | _ -> 
-            ignore (raise (REACHED "not a thunk type"));
-          build_named_thunk tau name lambda cap null_captured_param varmap
-          builder)
+            raise (REACHED "not a thunk type")
+        ) 
     | C.Exp e ->
         let _ = exprWithVarmap builder null_captured_param varmap e in
         (builder, varmap)
