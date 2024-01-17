@@ -244,10 +244,10 @@ let rec typ_def (def : A.def) (semant_envs : semant_envs) : S.sdef * S.type_env
               let tau', sx =
                 typ_of vcon_env vcon_sets new_env (Lambda (t, args, body))
               in
-              let final_tau = get_checked_types t tau' in
+              let _ = get_checked_types t tau' in
               let match_retrun = function
-                | S.SLambda body -> (S.SFunction (final_tau, funname, body), new_env)
-                | e -> (S.SVal (funname, (final_tau, e)), new_env)
+                | S.SLambda body -> (S.SFunction (tau, funname, body), new_env)
+                | e -> (S.SVal (funname, (tau, e)), new_env)
               in
               match_retrun sx
           | _ -> (* For non-lazy pass *)

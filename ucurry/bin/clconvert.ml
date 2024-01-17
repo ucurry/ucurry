@@ -141,8 +141,11 @@ let close (def : SA.sdef) : Cast.def =
   (* 106 uses C.Funcode, probably because toplevel function
      can only capture global veriables*)
   | SA.SFunction (t, name, lambda) -> 
-      let closure = asClosure t lambda [] in
-    C.Function (t, name, closure)
+    (match t with THUNK_TY tau ->
+      let closure = asClosure tau lambda [] in
+      C.Function (t, name, closure)
+    | _ -> failwith "not a thunk type in function defintiion in clconvert"
+      )
   | SA.SDatatype (t, cons) -> C.Datatype (t, cons)
   | SA.SCheckTypeError _ ->
       raise (CLOSURE_NOT_YET_IMPLEMENTED "check type error")

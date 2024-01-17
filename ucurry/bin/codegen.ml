@@ -494,22 +494,6 @@ let build_main_body defs =
 
   let stmt builder varmap = function
     | C.Val (name, e) ->
-(*     
-        (* malloc thunk struct *)
-        let thunk_ptr = L.build_malloc thunk_t "thunk_sturct" builder in 
-
-        (* put the delay_fun into the thunk struct *)
-        let e' = exprWithVarmap builder null_captured_param varmap e in 
-        let _ = U.set_data_field e' 0 thunk_ptr builder in (* set delay fun *)
-        let _ = U.set_data_field (L.const_pointer_null i1_t) 1 thunk_ptr builder in  (* set val *)
-        let _ = U.set_data_field (L.const_int i1_t 0) 2 thunk_ptr builder in (* set evaled to false *)
-
-      (* return struct pointer *)
-        let reg = L.build_alloca (L.pointer_type thunk_t) name builder in 
-        let _ = L.build_store thunk_ptr reg builder in 
-        let varmap' = StringMap.add name reg varmap in 
-        (builder, varmap') *)
-
         let tau, _ = e in
         let reg = L.build_alloca (ltype_of_type tau) name builder in
         let varmap' = StringMap.add name reg varmap in
@@ -526,7 +510,9 @@ let build_main_body defs =
             let _ = L.build_store e' reg builder in 
             (builder, varmap')
           
-          | _ -> build_named_function tau name lambda cap null_captured_param varmap
+          | _ -> 
+            ignore (raise (REACHED "not a thunk type"));
+          build_named_thunk tau name lambda cap null_captured_param varmap
           builder)
     | C.Exp e ->
         let _ = exprWithVarmap builder null_captured_param varmap e in

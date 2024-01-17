@@ -23,8 +23,9 @@ let unitv = A.Literal Ast.UNIT
 let rec lazy_expr (exp : A.expr) : A.expr =
   let to_thunk e = A.Thunk (lazy_expr e) in (* would turn into Thunk (() -> e) in Semant *)
   let force_eval e = 
-    let else_exp = A.Apply (A.GetClosure e, [unitv]) in 
-                   else_exp 
+    let else_exp = A.Apply (A.GetClosure e, [unitv]) in else_exp
+    (* A.Apply (A.GetClosure e, [unitv]) in 
+                   else_exp  *)
     (* let else_exp = A.Begin [A.SetEvaled e; A.SetValue (e, A.Apply (A.GetClosure e, [(A.Literal A.UNIT)]))] in 
                    A.If (A.GetEvaled e, A.GetValue e, else_exp)  *)
   in 
@@ -67,7 +68,7 @@ let rec lazy_expr (exp : A.expr) : A.expr =
 
 let rec lazy_def def =
   match def with
-  | A.Function (ty, funname, args, body) ->
+  | A.Function (ty, funname, args, body) -> (* The body has not yet wrapped with thunk => will be done in codegen *)
       let lazy_tau = to_thunk_ty ty in
       A.Function
         (lazy_tau, funname, [ "unit" ], lazy_expr (A.Lambda (ty, args, body)))
