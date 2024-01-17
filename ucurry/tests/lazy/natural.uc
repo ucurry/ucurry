@@ -23,11 +23,11 @@ takePrint l i =
     else  (case l of 
             Cons (y, ys) => (begin println y, (takePrint ys (i - 1)))
             | Nil => 0);
-(takePrint (nat ()) 2);
+(takePrint (nat ()) 50);
 
 --fun : List -> int:
 --printList l = (case l of
                     --Nil => 0
                     --| Cons (y, ys) => (begin println y, (printList ys)));
 
-(printList (take (nat ()) 11));
+--(printList (take (nat ()) 11));

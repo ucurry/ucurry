@@ -322,11 +322,22 @@ let build_main_body defs =
       | C.GetValue e -> 
           let thunk_ptr = expr builder e in 
           let value = Util.get_data_field 1 thunk_ptr builder "value" in 
-          L.build_ptrtoint value (ltype_of_type ty) "casted_value" builder
-      | C.SetValue (e1, e2) -> 
-          let thunk_ptr = expr builder e1 in 
-          let value = expr builder e2 in 
-          let casted_value = L.build_inttoptr value void_ptr "casted_value" builder in 
+          (match ty with 
+            | FUNCTION_TY _ | THUNK_TY _ | CONSTRUCTOR_TY _ | TUPLE_TY _ ->  
+              L.build_bitcast value (ltype_of_type ty) "casted_ptr" builder
+            | _ ->
+              L.build_ptrtoint value (ltype_of_type ty) "casted_value" builder)
+      | C.SetValue (e1, (t, e2)) -> 
+          let thunk_ptr = expr builder e1 in (* TODO: worry that this not gonna use the same thunk for every ref *)
+          let value = expr builder (t, e2) in 
+          
+          (* casting differs depends on the type of the value *)
+          let casted_value = 
+            (match t with 
+                | FUNCTION_TY _ | THUNK_TY _ | CONSTRUCTOR_TY _ | TUPLE_TY _ -> 
+                       L.build_bitcast value void_ptr "casted_ptr" builder 
+                | _ -> L.build_inttoptr value void_ptr "casted_value" builder)
+          in 
           let _ = Util.set_data_field casted_value 1 thunk_ptr builder in 
           value
       | C.SetEvaled e -> 
@@ -334,19 +345,6 @@ let build_main_body defs =
           Util.set_data_field (L.const_int i1_t 1) 2 thunk_ptr builder
       | C.Force e -> failwith "temporarily disabled"
           (* TODO: need to generate the code for this function once -> so that not repeatedly generate it *)
-
-          (* TODO NEXT HERE: 
-            #A: delegate to upper stream
-                  implement getClosure and use Apply from upperstream 
-                  implement setValue
-                  implement setEvaled and getEvaled
-
-            DRAWBACK: re-generate the code for the thunk in the forceEval body
-           *)
-
-
-
-          (* TODO2. generate if-else from codegen *)
 
           (* BELOW: C function *)
 (*

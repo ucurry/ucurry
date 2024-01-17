@@ -38,4 +38,4 @@ sieve l = (case l of
             | Cons (x, xs) => (Cons (x, 
                                     (sieve ((filter (notDivisible x)) xs)))));
 
-(printList (take (sieve (from2 ())) 4));
+(printList (take (sieve (from2 ())) 1000));
